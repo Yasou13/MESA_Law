@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     
+    mesa_backend_url: str = "http://localhost:8000"
+    mesa_api_key: str = "dev-api-key"
+    
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property

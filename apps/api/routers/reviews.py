@@ -6,7 +6,7 @@ from datetime import timedelta
 from pydantic import BaseModel
 
 from apps.api.core.database import get_db
-from apps.api.core.models import TenantContext
+from apps.api.core.storage import storage_service
 from apps.api.main import setup_tenant_context
 from apps.api.models.review import ReviewQueue, AuditLog
 from apps.api.core.utils import utc_now
@@ -27,11 +27,11 @@ class CorrectReviewRequest(BaseModel):
 @router.get("", response_model=List[ReviewItemResponse])
 async def list_pending_reviews(
     matter_id: Optional[str] = None,
-    context: TenantContext = Depends(setup_tenant_context),
+    context: str = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
     query = select(ReviewQueue).where(
-        ReviewQueue.tenant_id == context.tenant_id,
+        ReviewQueue.tenant_id == context,
         ReviewQueue.status == "pending"
     )
     if matter_id:
@@ -43,10 +43,10 @@ async def list_pending_reviews(
 @router.post("/{review_id}/approve")
 async def approve_review(
     review_id: str,
-    context: TenantContext = Depends(setup_tenant_context),
+    context: str = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context))
     review = result.scalar_one_or_none()
     
     if not review:
@@ -64,7 +64,7 @@ async def approve_review(
     
     # Create immutable audit log
     audit = AuditLog(
-        tenant_id=context.tenant_id,
+        tenant_id=context,
         matter_id=review.matter_id,
         user_id=context.user_id,
         action="APPROVE_REVIEW",
@@ -80,10 +80,10 @@ async def approve_review(
 @router.post("/{review_id}/reject")
 async def reject_review(
     review_id: str,
-    context: TenantContext = Depends(setup_tenant_context),
+    context: str = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context))
     review = result.scalar_one_or_none()
     
     if not review:
@@ -94,7 +94,7 @@ async def reject_review(
     review.reviewed_at = utc_now()
     
     audit = AuditLog(
-        tenant_id=context.tenant_id,
+        tenant_id=context,
         matter_id=review.matter_id,
         user_id=context.user_id,
         action="REJECT_REVIEW",
@@ -111,10 +111,10 @@ async def reject_review(
 async def correct_review(
     review_id: str,
     request: CorrectReviewRequest,
-    context: TenantContext = Depends(setup_tenant_context),
+    context: str = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context))
     review = result.scalar_one_or_none()
     
     if not review:
@@ -127,7 +127,7 @@ async def correct_review(
     review.external_use_ready_at = utc_now() + timedelta(hours=2)
     
     audit = AuditLog(
-        tenant_id=context.tenant_id,
+        tenant_id=context,
         matter_id=review.matter_id,
         user_id=context.user_id,
         action="CORRECT_REVIEW",

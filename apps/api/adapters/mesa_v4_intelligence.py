@@ -6,11 +6,12 @@ from typing import Optional, List, Dict, Any
 from apps.api.core.ports.intelligence import (
     MesaIntelligencePort, IntelligenceQuery, IntelligenceResponse, OperationState, Evidence
 )
+from apps.api.core.ports.ingestion import MesaIngestionPort, IngestionItem
 from apps.api.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-class MesaV4HttpAdapter(MesaIntelligencePort):
+class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
     def __init__(self, backend_url: str = settings.mesa_backend_url, api_key: str = settings.mesa_api_key):
         self.backend_url = backend_url.rstrip("/")
         self.api_key = api_key
@@ -115,6 +116,56 @@ class MesaV4HttpAdapter(MesaIntelligencePort):
             evidence=evidence_list,
             summary=data.get("context", "Context provided by MESA")
         )
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)),
+        reraise=True
+    )
+    async def _post_insert(self, payload: dict) -> httpx.Response:
+        response = await self.client.post("/v4/insert", json=payload)
+        if response.status_code >= 500:
+            response.raise_for_status()
+        return response
+
+    async def ingest(self, item: IngestionItem) -> bool:
+        await self._ensure_capabilities()
+        
+        # Build memory insert payload
+        # idempotency_key ensures we don't index same page/revision twice
+        payload = {
+            "agent_id": item.tenant_id,
+            "session_id": item.matter_id or "default-session",
+            "source_name": item.source_name,
+            "source_type": item.source_type,
+            "payload": item.text_content,
+            "idempotency_key": f"{item.document_id}_{item.revision_id}_{item.page_number}",
+            "locator": {
+                "document_id": item.document_id,
+                "chunk_index": item.page_number,
+                "page_number": item.page_number,
+                "version_id": item.revision_id
+            }
+        }
+        
+        try:
+            response = await self._post_insert(payload)
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to ingest to MESA: {e}")
+            return False
+
+    async def rebuild_tenant(self, tenant_id: str) -> bool:
+        await self._ensure_capabilities()
+        try:
+            response = await self.client.post(f"/v4/rebuild", json={"agent_id": tenant_id})
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to rebuild MESA tenant {tenant_id}: {e}")
+            return False
 
     async def close(self):
         await self.client.aclose()

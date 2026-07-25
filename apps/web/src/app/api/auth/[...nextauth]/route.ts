@@ -2,11 +2,12 @@ import NextAuth from "next-auth"
 import KeycloakProvider from "next-auth/providers/keycloak"
 
 const handler = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     KeycloakProvider({
-      clientId: "mesa-client",
-      clientSecret: "mesa-client-secret",
-      issuer: "http://localhost:8080/realms/mesa_law",
+      clientId: process.env.KEYCLOAK_CLIENT_ID || "mesa-client",
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "",
+      issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/mesa_law",
     })
   ],
   callbacks: {

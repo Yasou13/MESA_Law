@@ -32,18 +32,25 @@ def _add_tenant_criteria(execute_state: ORMExecuteState):
 
 # Database-level RLS (PostgreSQL Row Level Security)
 @event.listens_for(Pool, "checkout")
-def set_tenant_on_checkout(dbapi_connection, connection_record, connection_proxy):
-    tenant_id = current_tenant_id.get()
+def reset_tenant_on_checkout(dbapi_connection, connection_record, connection_proxy):
     cursor = dbapi_connection.cursor()
     try:
-        if tenant_id:
-            # Safely set the config. Using parameterized query is better but SET LOCAL doesn't always support it in some drivers.
-            cursor.execute(f"SET LOCAL app.current_tenant = '{tenant_id}';")
-        else:
-            # Clear it if no tenant is set
-            cursor.execute("SET LOCAL app.current_tenant = '';")
+        cursor.execute("SET SESSION app.current_tenant = '';")
     except Exception as e:
         import logging
-        logging.error(f"Failed to set RLS tenant: {e}")
+        logging.error(f"CRITICAL: Failed to reset RLS tenant on pool checkout: {e}")
+        raise
     finally:
         cursor.close()
+
+@event.listens_for(Pool, "checkin")
+def reset_tenant_on_checkin(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("SET SESSION app.current_tenant = '';")
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to reset RLS tenant on pool checkin: {e}")
+    finally:
+        cursor.close()
+

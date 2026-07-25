@@ -4,6 +4,7 @@ import signal
 import sys
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.core.config import settings
 from apps.worker.core.queue import Worker
 from apps.worker.handlers.document import handle_scan_document
 from apps.worker.handlers.parser import handle_parse_document
@@ -25,6 +26,7 @@ async def main():
         "PARSE_DOCUMENT", 
         "OCR_DOCUMENT",
         "EXTRACT_LEGAL_FACTS",
+        "EXTRACT_LEGAL_DATA",
         "BUILD_LEXICAL_INDEX",
         "SYNC_MESA_DOCUMENT",
         "PUBLISH_OUTBOX",
@@ -35,9 +37,12 @@ async def main():
             worker.register(h, handle_scan_document)
         elif h == "PARSE_DOCUMENT":
             worker.register(h, handle_parse_document)
-        elif h == "EXTRACT_LEGAL_DATA":
+        elif h in ("EXTRACT_LEGAL_DATA", "EXTRACT_LEGAL_FACTS"):
             worker.register(h, handle_extract_legal_data)
         else:
+            if settings.env == "production":
+                raise RuntimeError(f"CRITICAL: No handler implemented for job type '{h}'. Dummy handlers are strictly prohibited in production.")
+            logger.warning(f"Registering dummy handler for {h}")
             worker.register(h, dummy_handler)
 
     loop = asyncio.get_running_loop()

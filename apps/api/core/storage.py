@@ -57,5 +57,19 @@ class StorageService:
                 ExpiresIn=expires_in
             )
             return url
+            
+    async def get_object_metadata(self, object_key: str) -> dict | None:
+        async with self.session.client('s3', endpoint_url=self.endpoint_url,
+                                     aws_access_key_id=self.aws_access_key_id,
+                                     aws_secret_access_key=self.aws_secret_access_key,
+                                     config=self.config) as s3:
+            try:
+                response = await s3.head_object(Bucket=self.bucket_name, Key=object_key)
+                return {
+                    "size": response.get("ContentLength", 0),
+                    "content_type": response.get("ContentType", "")
+                }
+            except Exception:
+                return None
 
 storage_service = StorageService()

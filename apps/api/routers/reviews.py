@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/reviews", tags=["reviews"])
+router = APIRouter(tags=["reviews"])
 
 class ReviewItemResponse(BaseModel):
     id: str

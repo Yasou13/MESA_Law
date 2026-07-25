@@ -3,6 +3,7 @@ import os
 
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
 from apps.api.adapters.mock_intelligence import MockMesaAdapter
+from apps.api.core.config import settings
 from apps.api.core.ports.intelligence import MesaIntelligencePort
 
 logger = logging.getLogger(__name__)
@@ -19,11 +20,12 @@ def get_intelligence_adapter() -> MesaIntelligencePort:
             "use PostgresLexicalAdapter(session=db) directly in endpoints. "
             "Falling back to MockMesaAdapter."
         )
-        if os.getenv("ENVIRONMENT") == "production":
+        if settings.env == "production":
             raise RuntimeError("Cannot fallback to MockMesaAdapter in production.")
         return MockMesaAdapter()
     else:
-        if os.getenv("ENVIRONMENT") == "production" and adapter_type == "mock":
+        if settings.env == "production" and adapter_type == "mock":
             raise RuntimeError("MockMesaAdapter is strictly prohibited in production. Set MESA_LAW_INTELLIGENCE_ADAPTER properly.")
         logger.info("Initializing MockMesaAdapter")
         return MockMesaAdapter()
+

@@ -45,6 +45,15 @@ class MockLegalExtractionAdapter(LegalExtractionAdapter):
             }
         ]
 
+from apps.api.core.config import settings
+
 def get_extraction_adapter() -> LegalExtractionAdapter:
-    # In a real app, this might read from config to return OpenAIAdapter, AnthropicAdapter, etc.
-    return MockLegalExtractionAdapter()
+    import os
+    adapter_type = os.getenv("MESA_LAW_EXTRACTION_ADAPTER", "heuristic").lower()
+    if adapter_type == "mock":
+        if settings.env == "production":
+            raise RuntimeError("CRITICAL: MockLegalExtractionAdapter is strictly prohibited in production.")
+        return MockLegalExtractionAdapter()
+    
+    from apps.api.services.legal_extraction import HeuristicLegalExtractionAdapter
+    return HeuristicLegalExtractionAdapter()

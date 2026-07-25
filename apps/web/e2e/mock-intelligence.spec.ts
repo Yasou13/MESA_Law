@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('mock intelligence UX interactions', async ({ page }) => {
-  // Setup local storage directly to simulate logged-in state and bypass login page delay
-  await page.goto('http://localhost:3000');
-  await page.evaluate(() => {
-    localStorage.setItem('tenant_id', 'e2e-tenant-123');
-    localStorage.setItem('user_id', 'test-user-id');
-  });
+  // Perform login via UI flow
+  await page.goto('http://localhost:3000/login');
+  await page.fill('input[type="text"]', 'e2e-tenant-123');
+  await page.click('button:has-text("Sign In")');
+  await expect(page).toHaveURL(/\/matters/);
 
   // Navigate to matters page and click on a matter ID (or just go to matter 1)
   await page.goto('http://localhost:3000/matters/1');

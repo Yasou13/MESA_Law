@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 
-export function QAShell() {
+export function QAShell({ matterId = "1" }: { matterId?: string }) {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[]}[]>([]);
   const [loading, setLoading] = useState(false);
   const [timeoutError, setTimeoutError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
@@ -16,27 +17,32 @@ export function QAShell() {
     setLoading(true);
     setTimeoutError(false);
 
-    // Simulate response delay and occasional timeout
-    setTimeout(() => {
-      if (Math.random() > 0.85) {
+    try {
+      const res = await axios.post('/api/v1/qa/ask', {
+        matter_id: matterId,
+        question: newQuery
+      }, { timeout: 15000 });
+      
+      const data = res.data;
+      const formattedCitations = data.citations?.map((c: any) => `${c.doc_title} (Page ${c.page_number})`) || [];
+      
+      setMessages(prev => [...prev, { 
+        role: 'ai', 
+        content: data.answer || 'No relevant answer found.', 
+        citations: formattedCitations 
+      }]);
+    } catch (error: any) {
+      if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
         setTimeoutError(true);
-        setLoading(false);
-        return;
-      }
-
-      let responseText = '';
-      let citations: string[] = [];
-
-      if (newQuery.toLowerCase().includes('tazminat')) {
-        responseText = 'Mevcut belgelere göre ihbar tazminatı talebi için yeterli delil bulunmamaktadır. Ancak kıdem tazminatı şartları oluşmuştur.';
-        citations = ['İhtarname (Sayfa 2)', 'Yargıtay 9. HD. 2021/1234 K.'];
       } else {
-        responseText = 'Bu konuyla ilgili yüklenen dosyalarda doğrudan bir eşleşme bulunamadı. Lütfen daha spesifik bir soru sorun veya ilgili belgeleri yükleyin.';
+        setMessages(prev => [...prev, { 
+          role: 'ai', 
+          content: `Error: ${error.response?.data?.detail || 'Failed to retrieve answer from Q&A service.'}` 
+        }]);
       }
-
-      setMessages(prev => [...prev, { role: 'ai', content: responseText, citations }]);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (

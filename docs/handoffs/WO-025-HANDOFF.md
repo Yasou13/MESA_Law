@@ -1,0 +1,1 @@
+# Draft Studio - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** Draft Studio skeleton built.\n

@@ -16,6 +16,8 @@ from apps.api.routers import firms, matters, documents, parser, reviews
 from apps.api.models.domain import Firm, Matter
 from apps.api.models.document import Document, DocumentRevision
 from apps.api.core.storage import storage_service
+from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
+from apps.api.services.mesa_sync import MesaSyncService
 
 app = FastAPI(title="MESA Law API", version="0.1.0")
 
@@ -85,6 +87,30 @@ async def create_matter(
     await db.commit()
     await db.refresh(matter)
     return {"id": matter.id, "title": matter.title, "status": matter.status}
+
+@app.post("/api/matters/{matter_id}/rebuild-mesa", operation_id="rebuildMatterMesa")
+async def rebuild_matter_mesa(
+    matter_id: str,
+    tenant_id: str = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    adapter = MesaV4HttpAdapter()
+    service = MesaSyncService(adapter)
+    synced = await service.sync_matter(db, tenant_id, matter_id)
+    await adapter.close()
+    return {"status": "success", "synced_pages": synced}
+
+@app.post("/api/admin/rebuild-tenant", operation_id="rebuildTenantMesa")
+async def rebuild_tenant_mesa(
+    tenant_id: str = Depends(setup_tenant_context)
+):
+    adapter = MesaV4HttpAdapter()
+    service = MesaSyncService(adapter)
+    success = await service.rebuild_tenant(tenant_id)
+    await adapter.close()
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to rebuild tenant")
+    return {"status": "success"}
 
 @app.post("/api/documents/upload-intent", response_model=UploadIntentResponse, operation_id="createUploadIntent")
 async def create_upload_intent(

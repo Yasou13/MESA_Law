@@ -45,24 +45,26 @@ export default function LoginPage() {
             )}
           </button>
           
-          <div className="pt-4 border-t border-zinc-800 mt-4">
-            <p className="text-xs text-zinc-500 mb-2">Developer / Test Login:</p>
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                placeholder="Enter Tenant ID (e.g. e2e-tenant-123)"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
-              />
-              <button
-                onClick={handleTestSignIn}
-                className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                Sign In
-              </button>
+          {process.env.NEXT_PUBLIC_MESA_LAW_DEMO_MODE === 'true' && (
+            <div className="pt-4 border-t border-zinc-800 mt-4">
+              <p className="text-xs text-zinc-500 mb-2">Developer / Test Login:</p>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter Tenant ID (e.g. e2e-tenant-123)"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={handleTestSignIn}
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Sign In
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

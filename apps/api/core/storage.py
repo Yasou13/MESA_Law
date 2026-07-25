@@ -72,4 +72,18 @@ class StorageService:
             except Exception:
                 return None
 
+    async def get_object_bytes(self, object_key: str, max_bytes: int = None) -> bytes | None:
+        async with self.session.client('s3', endpoint_url=self.endpoint_url,
+                                     aws_access_key_id=self.aws_access_key_id,
+                                     aws_secret_access_key=self.aws_secret_access_key,
+                                     config=self.config) as s3:
+            try:
+                response = await s3.get_object(Bucket=self.bucket_name, Key=object_key)
+                stream = response["Body"]
+                if max_bytes:
+                    return await stream.read(max_bytes)
+                return await stream.read()
+            except Exception:
+                return None
+
 storage_service = StorageService()

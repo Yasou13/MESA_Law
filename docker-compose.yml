@@ -75,7 +75,6 @@ services:
       /bin/sh -c "
       /usr/bin/mc config host add myminio http://minio:9000 admin password123;
       /usr/bin/mc mb myminio/mesa-law-docs --ignore-existing;
-      /usr/bin/mc anonymous set public myminio/mesa-law-docs;
       exit 0;
       "
 

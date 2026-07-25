@@ -1,6 +1,6 @@
 import urllib.request
 import json
-from functools import lru_cache
+import time
 from typing import Optional
 from jose import jwt, JWTError
 from fastapi import Depends, Header, HTTPException, Request
@@ -16,24 +16,39 @@ from apps.api.models.domain import User, Membership
 
 security = HTTPBearer()
 
-@lru_cache(maxsize=1)
-def get_jwks():
+_jwks_cache = {"keys": [], "expires_at": 0}
+
+def get_jwks(force_refresh: bool = False) -> dict:
+    global _jwks_cache
+    now = time.time()
+    if not force_refresh and _jwks_cache["keys"] and now < _jwks_cache["expires_at"]:
+        return _jwks_cache
     try:
-        with urllib.request.urlopen(settings.keycloak_jwks_url) as response:
-            return json.loads(response.read())
+        with urllib.request.urlopen(settings.keycloak_jwks_url, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            _jwks_cache = {"keys": data.get("keys", []), "expires_at": now + 300}
+            return _jwks_cache
     except Exception as e:
+        if _jwks_cache["keys"]:
+            return _jwks_cache
         return {"keys": []}
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
     try:
         jwks = get_jwks()
+        unverified_header = jwt.get_unverified_header(token)
+        kid = unverified_header.get("kid")
+        if kid and not any(key.get("kid") == kid for key in jwks.get("keys", [])):
+            jwks = get_jwks(force_refresh=True)
+            
         payload = jwt.decode(
             token, 
             jwks, 
             algorithms=["RS256"], 
             audience=[settings.keycloak_client_id, "account"],
-            options={"verify_aud": True, "verify_exp": True}
+            issuer=settings.keycloak_issuer,
+            options={"verify_aud": True, "verify_exp": True, "verify_iss": True}
         )
         
         user_id = payload.get("sub")
@@ -84,10 +99,10 @@ async def setup_tenant_context(
     
     set_tenant_id(tenant_id)
     try:
-        await db.execute(text(f"SET SESSION app.current_tenant = '{tenant_id}';"))
+        await db.execute(text("SELECT set_config('app.current_tenant', :tenant, false)"), {"tenant": str(tenant_id)})
     except Exception as e:
         import logging
-        logging.error(f"Failed to execute SET SESSION app.current_tenant: {e}")
+        logging.error(f"Failed to execute set_config for app.current_tenant: {e}")
         raise HTTPException(status_code=500, detail="Failed to initialize tenant security context") from e
 
     return RequestContext(

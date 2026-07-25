@@ -1,6 +1,6 @@
-
 import os
 import uuid6
+import hashlib
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.storage import storage_service
@@ -24,44 +24,80 @@ router = APIRouter()
 @limiter.limit("10/minute")
 async def create_upload_intent(
     request: Request,
-    req: UploadIntentRequest,
+    payload: UploadIntentRequest,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    doc = Document(matter_id=req.matter_id, title=req.filename, tenant_id=context.tenant_id)
+    # Enforce file size limit (max 100MB per file as per Phase 10 rules)
+    MAX_FILE_SIZE = 100 * 1024 * 1024
+    if payload.size_bytes > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail=f"File size exceeds maximum allowed limit of {MAX_FILE_SIZE} bytes.")
+
+    # Restrict allowed MIME types
+    ALLOWED_MIMES = {
+        "application/pdf", 
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
+        "image/jpeg", 
+        "image/png"
+    }
+    if payload.mime_type not in ALLOWED_MIMES:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {payload.mime_type}.")
+
+    # Generate immutable storage key
+    file_uuid = uuid6.uuid7()
+    ext = ".pdf"
+    if payload.mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        ext = ".docx"
+    elif payload.mime_type == "image/jpeg":
+        ext = ".jpg"
+    elif payload.mime_type == "image/png":
+        ext = ".png"
+        
+    s3_key = f"{context.tenant_id}/{payload.matter_id}/{file_uuid}{ext}"
+    
+    # 1. Create Parent Document
+    doc = Document(
+        tenant_id=context.tenant_id,
+        matter_id=payload.matter_id,
+        title=payload.filename
+    )
     db.add(doc)
-    await db.flush()
+    await db.flush() # get doc.id
     
-    ext = os.path.splitext(req.filename)[1].lower() if req.filename else ""
-    uuid_str = str(uuid6.uuid7())
-    s3_key = f"{context.tenant_id}/{req.matter_id}/{uuid_str}{ext}"
-    
+    # 2. Create Initial Revision (Quarantine State: uploading)
     rev = DocumentRevision(
         document_id=doc.id,
+        version=1,
         s3_key=s3_key,
-        mime_type=req.mime_type,
+        size_bytes=payload.size_bytes,
+        mime_type=payload.mime_type,
         scan_status="uploading"
     )
     db.add(rev)
+    
+    # 3. Generate presigned URL
+    url = await storage_service.generate_presigned_upload_url(s3_key, payload.mime_type)
+    
     await db.commit()
     
-    url = await storage_service.generate_presigned_upload_url(s3_key, req.mime_type)
-    
-    return {
-        "document_id": doc.id,
-        "revision_id": rev.id,
-        "presigned_url": url
-    }
+    return UploadIntentResponse(
+        document_id=doc.id,
+        revision_id=rev.id,
+        upload_url=url,
+        storage_key=s3_key
+    )
 
-@router.get("/matter/{matter_id}", response_model=list[DocumentResponse], operation_id="listDocuments")
-@limiter.limit("100/minute")
-async def list_documents(
+@router.get("/matters/{matter_id}", response_model=list[DocumentResponse], operation_id="listMatterDocuments")
+@limiter.limit("60/minute")
+async def list_matter_documents(
     request: Request,
     matter_id: str,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id))
+    # Enforce RLS by tenant_id
+    stmt = select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id)
+    result = await db.execute(stmt)
     docs = result.scalars().all()
     
     res = []
@@ -95,6 +131,34 @@ async def complete_upload(
         if not meta or meta["size"] == 0:
             raise HTTPException(status_code=400, detail="Uploaded file not found in storage or is empty")
             
+        if meta["size"] > 100 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size exceeds 100MB limit")
+            
+        file_bytes = await storage_service.get_object_bytes(rev.s3_key)
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Could not read file data from storage")
+            
+        if file_bytes.startswith(b"MZ") or file_bytes.startswith(b"\x7fELF") or file_bytes.startswith(b"#!"):
+            raise HTTPException(status_code=400, detail="Executable or script files are strictly prohibited")
+            
+        sha256_hash = hashlib.sha256(file_bytes).hexdigest()
+        
+        dup_res = await db.execute(
+            select(DocumentRevision)
+            .join(DocumentRevision.document)
+            .where(
+                Document.tenant_id == context.tenant_id,
+                Document.matter_id == doc.matter_id,
+                DocumentRevision.file_hash == sha256_hash,
+                DocumentRevision.id != rev.id
+            )
+        )
+        existing_dup = dup_res.scalars().first()
+        if existing_dup:
+            raise HTTPException(status_code=409, detail=f"Duplicate document detected: identical content exists in revision {existing_dup.id}")
+            
+        rev.file_hash = sha256_hash
+        rev.size_bytes = meta["size"]
         rev.scan_status = "scanning"
         # Queue the scanning job
         job = Job(

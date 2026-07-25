@@ -9,41 +9,27 @@ from apps.worker.core.queue import Worker
 from apps.worker.handlers.document import handle_scan_document
 from apps.worker.handlers.parser import handle_parse_document
 from apps.worker.handlers.extraction import handle_extract_legal_data
+from apps.worker.handlers.ocr import handle_ocr_document
+from apps.worker.handlers.export import handle_export_draft
+from apps.worker.handlers.sync import handle_sync_mesa_document, handle_publish_outbox, handle_build_lexical_index
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("worker")
-
-async def dummy_handler(payload: dict, session: AsyncSession):
-    logger.info(f"Dummy handler processing: {payload}")
 
 async def main():
     logger.info("Starting MESA Law Worker...")
     worker = Worker(batch_size=10, lease_minutes=5)
     
-    # Register handlers
-    handlers = [
-        "SCAN_DOCUMENT",
-        "PARSE_DOCUMENT", 
-        "OCR_DOCUMENT",
-        "EXTRACT_LEGAL_FACTS",
-        "EXTRACT_LEGAL_DATA",
-        "BUILD_LEXICAL_INDEX",
-        "SYNC_MESA_DOCUMENT",
-        "PUBLISH_OUTBOX",
-        "EXPORT_DRAFT"
-    ]
-    for h in handlers:
-        if h == "SCAN_DOCUMENT":
-            worker.register(h, handle_scan_document)
-        elif h == "PARSE_DOCUMENT":
-            worker.register(h, handle_parse_document)
-        elif h in ("EXTRACT_LEGAL_DATA", "EXTRACT_LEGAL_FACTS"):
-            worker.register(h, handle_extract_legal_data)
-        else:
-            if settings.env == "production":
-                raise RuntimeError(f"CRITICAL: No handler implemented for job type '{h}'. Dummy handlers are strictly prohibited in production.")
-            logger.warning(f"Registering dummy handler for {h}")
-            worker.register(h, dummy_handler)
+    # Register real handlers for all supported pipeline jobs
+    worker.register("SCAN_DOCUMENT", handle_scan_document)
+    worker.register("PARSE_DOCUMENT", handle_parse_document)
+    worker.register("OCR_DOCUMENT", handle_ocr_document)
+    worker.register("EXTRACT_LEGAL_FACTS", handle_extract_legal_data)
+    worker.register("EXTRACT_LEGAL_DATA", handle_extract_legal_data)
+    worker.register("BUILD_LEXICAL_INDEX", handle_build_lexical_index)
+    worker.register("SYNC_MESA_DOCUMENT", handle_sync_mesa_document)
+    worker.register("PUBLISH_OUTBOX", handle_publish_outbox)
+    worker.register("EXPORT_DRAFT", handle_export_draft)
 
     loop = asyncio.get_running_loop()
     

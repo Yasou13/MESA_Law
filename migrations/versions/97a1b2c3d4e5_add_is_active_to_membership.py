@@ -1,7 +1,7 @@
 """Add is_active to Membership
 
 Revision ID: 97a1b2c3d4e5
-Revises: e597de7abef9
+Revises: 860d9f8565ad
 Create Date: 2026-07-25 20:00:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '97a1b2c3d4e5'
-down_revision: str | Sequence[str] | None = 'e597de7abef9'
+down_revision: str | Sequence[str] | None = '860d9f8565ad'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

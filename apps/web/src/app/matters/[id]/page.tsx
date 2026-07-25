@@ -6,6 +6,10 @@ import { useState, useRef, use } from 'react'
 import { FileText, UploadCloud, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { Timeline } from '@/components/matters/Timeline'
+import { ClaimsEvidence } from '@/components/matters/ClaimsEvidence'
+import { ResearchShell } from '@/components/matters/ResearchShell'
+import { QAShell } from '@/components/matters/QAShell'
 
 type Document = {
   id: string
@@ -22,12 +26,20 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'claims' | 'research'>('overview')
 
   const { data: documents, isLoading: isLoadingDocs } = useQuery<Document[]>({
     queryKey: ['documents', matterId],
     queryFn: async () => {
       const res = await axios.get(`/api/v1/documents/matter/${matterId}`)
       return res.data
+    },
+    refetchInterval: (query) => {
+      const docs = query.state.data
+      if (docs?.some(d => d.status === 'uploading' || d.status === 'scanning' || d.status === 'processing')) {
+        return 3000
+      }
+      return false
     }
   })
 
@@ -101,10 +113,46 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
         <Link href="/matters" className="text-zinc-400 hover:text-white transition-colors text-sm mb-4 inline-block">
           &larr; Back to Matters
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Matter Documents</h1>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <h1 className="text-3xl font-bold tracking-tight">Matter {matterId}</h1>
+          <div className="flex gap-2 bg-zinc-900 p-1 rounded-lg border border-zinc-800">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'overview' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('timeline')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'timeline' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setActiveTab('claims')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'claims' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Claims
+            </button>
+            <button
+              onClick={() => setActiveTab('research')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'research' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Research
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Upload Area */}
+      {activeTab === 'overview' && (
+        <>
+          <div className="mb-12 bg-zinc-900/50 border border-zinc-800 rounded-xl p-6">
+            <QAShell matterId={matterId} />
+          </div>
+
+          <h2 className="text-xl font-semibold mb-6">Matter Documents</h2>
+
+          {/* Upload Area */}
       <div className="mb-10">
         <div 
           onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -235,6 +283,12 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
           )}
         </div>
       </div>
+      </>
+      )}
+
+      {activeTab === 'timeline' && <Timeline matterId={matterId} />}
+      {activeTab === 'claims' && <ClaimsEvidence matterId={matterId} />}
+      {activeTab === 'research' && <ResearchShell />}
     </div>
   )
 }

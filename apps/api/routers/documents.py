@@ -1,4 +1,5 @@
 
+import os
 import uuid6
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
@@ -14,7 +15,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.models.queue import Job
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.core.ratelimit import limiter
 
@@ -32,8 +32,9 @@ async def create_upload_intent(
     db.add(doc)
     await db.flush()
     
+    ext = os.path.splitext(req.filename)[1].lower() if req.filename else ""
     uuid_str = str(uuid6.uuid7())
-    s3_key = f"{context.tenant_id}/{req.matter_id}/{uuid_str}"
+    s3_key = f"{context.tenant_id}/{req.matter_id}/{uuid_str}{ext}"
     
     rev = DocumentRevision(
         document_id=doc.id,
@@ -62,7 +63,14 @@ async def list_documents(
 ):
     result = await db.execute(select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id))
     docs = result.scalars().all()
-    return [{"id": d.id, "title": d.title} for d in docs]
+    
+    res = []
+    for d in docs:
+        rev_res = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == d.id).order_by(DocumentRevision.version.desc()))
+        latest_rev = rev_res.scalars().first()
+        status = latest_rev.scan_status if latest_rev else "clean"
+        res.append({"id": d.id, "title": d.title, "status": status})
+    return res
 
 @router.post("/{document_id}/complete", operation_id="completeUpload")
 @limiter.limit("30/minute")
@@ -83,6 +91,10 @@ async def complete_upload(
         raise HTTPException(status_code=404, detail="Revision not found")
         
     if rev.scan_status == "uploading":
+        meta = await storage_service.get_object_metadata(rev.s3_key)
+        if not meta or meta["size"] == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file not found in storage or is empty")
+            
         rev.scan_status = "scanning"
         # Queue the scanning job
         job = Job(

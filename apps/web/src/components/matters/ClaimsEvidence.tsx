@@ -1,38 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-export function ClaimsEvidence() {
+type ClaimEvidenceItem = {
+  id: string | number;
+  claim: string;
+  evidence: string | null;
+  support: string;
+  confidence: string;
+};
+
+export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
   const [loading, setLoading] = useState(true);
-  const [claims, setClaims] = useState<any[]>([]);
+  const [claims, setClaims] = useState<ClaimEvidenceItem[]>([]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setClaims([
-        {
-          id: 1,
-          claim: 'Fazla mesai ücretleri ödenmemiştir',
-          evidence: 'Banka dekontları, bordrolar (019f99... belge)',
-          support: 'strong',
-          confidence: 'high'
-        },
-        {
-          id: 2,
-          claim: 'Haksız fesih yapılmıştır',
-          evidence: 'İhtarname metnindeki gerekçeler',
-          support: 'partial',
-          confidence: 'medium'
-        },
-        {
-          id: 3,
-          claim: 'İhbar tazminatı hakkı doğmuştur',
-          evidence: null,
-          support: 'none',
-          confidence: 'low'
+    let isMounted = true;
+    setLoading(true);
+    axios.get(`/api/v1/matters/${matterId}/claims-evidence`)
+      .then(res => {
+        if (isMounted) {
+          setClaims(res.data);
+          setLoading(false);
         }
-      ]);
-      setLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+      })
+      .catch(err => {
+        console.error("Failed to fetch claims evidence:", err);
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+    return () => { isMounted = false; };
+  }, [matterId]);
 
   if (loading) {
     return (
@@ -81,3 +79,4 @@ export function ClaimsEvidence() {
     </div>
   );
 }
+

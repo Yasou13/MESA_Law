@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from apps.api.models.document import Document, DocumentRevision
 from apps.api.models.parser import ParsedDocument, ParsedPage
+from apps.api.core.config import settings
 from apps.api.core.storage import storage_service
 
 try:
@@ -47,9 +48,12 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
         
     logger.info(f"Parsing document {document_id} (revision {revision_id})")
     
-    # Download file to temp
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-        temp_path = temp_pdf.name
+    # Download file to temp preserving extension
+    ext = os.path.splitext(s3_key)[1].lower() if s3_key else ".pdf"
+    if not ext:
+        ext = ".pdf"
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+        temp_path = temp_file.name
         
     try:
         async with storage_service.session.client('s3', endpoint_url=storage_service.endpoint_url,
@@ -64,13 +68,14 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             
             api_key = os.getenv("LLAMA_CLOUD_API_KEY")
             
-            # Simple file extension detection
-            is_docx = s3_key.lower().endswith(".docx")
+            is_docx = (ext == ".docx")
+            parser_used_name = "mock"
             
             if HAS_LLAMA_PARSE and api_key and not is_docx:
                 logger.info("Using LlamaParse for document extraction")
                 parser = LlamaParse(api_key=api_key, result_type="markdown")
                 documents = await asyncio.to_thread(parser.load_data, temp_path)
+                parser_used_name = "llama-parse"
                 
                 for i, d in enumerate(documents):
                     pages.append({"page_number": i + 1, "text": d.text, "layout": None})
@@ -78,10 +83,12 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             elif is_docx and HAS_DOCX2TXT:
                 logger.info("Using docx2txt for docx extraction")
                 text = await asyncio.to_thread(docx2txt.process, temp_path)
+                parser_used_name = "docx2txt"
                 pages = [{"page_number": 1, "text": text, "layout": None}]
                 parsed_text = text
             elif HAS_FITZ and not is_docx:
                 logger.info("Using PyMuPDF (fitz) for PDF extraction")
+                parser_used_name = "pymupdf-fitz"
                 
                 def extract_fitz():
                     local_pages = []
@@ -107,9 +114,10 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                     
                 pages, parsed_text = await asyncio.to_thread(extract_fitz)
             else:
-                if os.getenv("ENVIRONMENT") == "production":
+                if settings.env == "production":
                     raise RuntimeError("No parser available. Mock extraction is strictly prohibited in production.")
                 logger.warning("No parser available. Using mock extraction.")
+                parser_used_name = "mock"
                 pages = [
                     {"page_number": 1, "text": "Mock parsed content for page 1.", "layout": None}
                 ]
@@ -120,7 +128,7 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                 tenant_id=tenant_id,
                 document_id=document_id,
                 revision_id=revision_id,
-                parser_used="llama-parse" if HAS_LLAMA_PARSE and api_key else "mock",
+                parser_used=parser_used_name,
                 status="completed"
             )
             session.add(parsed_doc)

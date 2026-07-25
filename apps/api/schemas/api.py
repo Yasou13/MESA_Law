@@ -22,6 +22,7 @@ class UploadIntentResponse(BaseModel):
 class DocumentResponse(BaseModel):
     id: str
     title: str
+    status: str | None = "clean"
 
 class BoundingBox(BaseModel):
     x0: float

@@ -15,6 +15,7 @@ from apps.api.routers import (
     matters,
     parser,
     qa,
+    research,
     reviews,
     system,
 )
@@ -46,4 +47,6 @@ app.include_router(parser.router, prefix="/api/v1/parser")
 app.include_router(reviews.router, prefix="/api/v1/reviews")
 app.include_router(draft_studio.router, prefix="/api/v1")
 app.include_router(qa.router, prefix="/api/v1")
+app.include_router(research.router, prefix="/api/v1/research")
 app.include_router(system.router)
+

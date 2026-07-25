@@ -1,37 +1,38 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+
+type ResearchResult = {
+  id: string | number;
+  type: string;
+  title: string;
+  snippet: string;
+  matchScore: number;
+};
 
 export function ResearchShell() {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<ResearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
     
     setLoading(true);
     setSearched(true);
     
-    setTimeout(() => {
-      setResults([
-        {
-          id: 1,
-          type: 'Legislation',
-          title: 'Türk Borçlar Kanunu - Madde 417',
-          snippet: 'İşveren, hizmet ilişkisinde işçinin kişiliğini korumak ve saygı göstermek, işyerinde dürüstlük ilkelerine uygun bir düzeni sağlamakla yükümlüdür...',
-          matchScore: 92
-        },
-        {
-          id: 2,
-          type: 'Case Law',
-          title: 'Yargıtay 9. Hukuk Dairesi - 2021/456 K.',
-          snippet: 'Davacının fazla çalışma ücreti taleplerinin reddine karar verilmiş ise de, sunulan puantaj kayıtları incelendiğinde...',
-          matchScore: 85
-        }
-      ]);
+    try {
+      const res = await axios.get('/api/v1/research/search', {
+        params: { query }
+      });
+      setResults(res.data);
+    } catch (error) {
+      console.error("Research search failed:", error);
+      setResults([]);
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

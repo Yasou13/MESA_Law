@@ -1,5 +1,5 @@
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -18,6 +18,7 @@ class Membership(Base, AuditMixin):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     firm_id: Mapped[str] = mapped_column(ForeignKey("firms.id"), nullable=False, index=True)
     role: Mapped[str] = mapped_column(String, default="member", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     user = relationship("User")
     firm = relationship("Firm")

@@ -49,6 +49,7 @@ async def scan_with_clamav(stream) -> bool:
 async def handle_scan_document(payload: dict, session: AsyncSession):
     revision_id = payload.get("revision_id")
     s3_key = payload.get("s3_key")
+    document_id = payload.get("document_id")
     
     if not revision_id or not s3_key:
         logger.error("Missing revision_id or s3_key in payload")
@@ -72,10 +73,11 @@ async def handle_scan_document(payload: dict, session: AsyncSession):
                 rev.scan_status = "clean" if is_clean else "infected"
                 
                 if is_clean:
+                    doc_id = document_id or rev.document_id
                     # Queue the parsing job
                     job = Job(
                         type="PARSE_DOCUMENT",
-                        payload={"document_id": document_id, "revision_id": revision_id, "s3_key": s3_key}
+                        payload={"document_id": doc_id, "revision_id": revision_id, "s3_key": s3_key}
                     )
                     session.add(job)
                     logger.info(f"Queued PARSE_DOCUMENT for revision {revision_id}")

@@ -1,8 +1,12 @@
+from pydantic import Field, AliasChoices
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    env: str = "development"
+    env: str = Field(
+        default="development",
+        validation_alias=AliasChoices("MESA_LAW_ENVIRONMENT", "MESA_LAW_ENV", "ENVIRONMENT", "ENV", "env")
+    )
     secret_key: str = "MUST_BE_PROVIDED_IN_ENV"
     api_port: int = 8001
     postgres_user: str = "mesa"
@@ -14,10 +18,15 @@ class Settings(BaseSettings):
     # If set via MESA_LAW_DATABASE_URL env var, this takes priority
     database_url: str | None = None
     
-    algorithm: str = "HS256"
+    algorithm: str = "RS256"
     access_token_expire_minutes: int = 30
     mesa_backend_url: str = "http://localhost:8000"
     mesa_api_key: str = ""
+    
+    keycloak_client_id: str = Field(default="mesa-client", validation_alias=AliasChoices("KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"))
+    keycloak_client_secret: str = Field(default="mesa-client-secret", validation_alias=AliasChoices("KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"))
+    keycloak_issuer: str = Field(default="http://localhost:8080/realms/mesa_law", validation_alias=AliasChoices("KEYCLOAK_ISSUER", "MESA_LAW_KEYCLOAK_ISSUER"))
+    keycloak_jwks_url: str = Field(default="http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs", validation_alias=AliasChoices("KEYCLOAK_JWKS_URL", "MESA_LAW_KEYCLOAK_JWKS_URL"))
     
     model_config = SettingsConfigDict(env_prefix="MESA_LAW_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
@@ -28,4 +37,21 @@ class Settings(BaseSettings):
             return self.database_url
         return f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
+
 settings = Settings()
+
+
+def validate_production_settings():
+    if settings.env == "production":
+        insecure_defaults = [
+            "MUST_BE_PROVIDED_IN_ENV",
+            "password123",
+            "supersecret_dev_key",
+            "mesa-client-secret",
+            "supersecret_nextauth_key_for_dev_only"
+        ]
+        if settings.secret_key in insecure_defaults or settings.keycloak_client_secret in insecure_defaults:
+            raise RuntimeError("CRITICAL SECURITY ERROR: Production environment detected with insecure default secrets. Startup aborted.")
+
+validate_production_settings()
+

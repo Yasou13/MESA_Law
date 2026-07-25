@@ -1,13 +1,17 @@
 import pytest
 import uuid6
-from fastapi import FastAPI, Depends, Header
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from apps.api.core.rls import set_tenant_id
 from apps.api.core.database import AsyncSessionLocal, get_db
+from apps.api.core.errors import (
+    ProblemException,
+    global_exception_handler,
+    problem_exception_handler,
+)
+from apps.api.core.rls import set_tenant_id
 from apps.api.models.domain import Firm, Matter
-from apps.api.core.errors import ProblemException, global_exception_handler, problem_exception_handler
+from fastapi import Depends, FastAPI, Header
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 app = FastAPI()
 app.add_exception_handler(Exception, global_exception_handler)

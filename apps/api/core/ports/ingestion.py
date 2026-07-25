@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+
 from pydantic import BaseModel
+
 
 class IngestionItem(BaseModel):
     tenant_id: str
-    matter_id: Optional[str]
+    matter_id: str | None
     document_id: str
     revision_id: str
     page_number: int
@@ -19,11 +20,9 @@ class MesaIngestionPort(ABC):
         Sends an ingestion item to MESA Core.
         Returns True if successful, False otherwise.
         """
-        pass
         
     @abstractmethod
     async def rebuild_tenant(self, tenant_id: str) -> bool:
         """
         Triggers a rebuild for the tenant in MESA Core.
         """
-        pass

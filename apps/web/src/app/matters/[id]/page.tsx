@@ -103,7 +103,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
 
               <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 shadow-sm">
                 <h2 className="text-xl font-semibold mb-4 text-zinc-100">Documents</h2>
-                {documents && documents.length > 0 ? (
+                {Array.isArray(documents) && documents.length > 0 ? (
                   <ul className="space-y-3">
                     {documents.map((doc: any) => (
                       <li key={doc.id} className="text-zinc-300 bg-zinc-950 px-4 py-3 rounded-lg border border-zinc-800 flex items-center justify-between">

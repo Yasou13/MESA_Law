@@ -1,13 +1,22 @@
 import logging
-import httpx
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-from typing import Optional, List, Dict, Any
+from typing import Any
 
-from apps.api.core.ports.intelligence import (
-    MesaIntelligencePort, IntelligenceQuery, IntelligenceResponse, OperationState, Evidence
-)
-from apps.api.core.ports.ingestion import MesaIngestionPort, IngestionItem
+import httpx
 from apps.api.core.config import settings
+from apps.api.core.ports.ingestion import IngestionItem, MesaIngestionPort
+from apps.api.core.ports.intelligence import (
+    Evidence,
+    IntelligenceQuery,
+    IntelligenceResponse,
+    MesaIntelligencePort,
+    OperationState,
+)
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +29,7 @@ class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
             "X-Mesa-Api-Key": self.api_key,
         }
         self.client = httpx.AsyncClient(base_url=self.backend_url, headers=self.headers, timeout=30.0)
-        self._capabilities: Optional[Dict[str, Any]] = None
+        self._capabilities: dict[str, Any] | None = None
 
     async def _ensure_capabilities(self):
         if self._capabilities is None:
@@ -29,7 +38,7 @@ class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
                 response.raise_for_status()
                 self._capabilities = response.json()
                 logger.info(f"MESA Capabilities loaded: {self._capabilities}")
-            except Exception as e:
+            except (httpx.RequestError, httpx.HTTPStatusError) as e:
                 logger.warning(f"Failed to fetch MESA capabilities, assuming degraded mode: {e}")
                 self._capabilities = {}
 
@@ -153,17 +162,17 @@ class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
             response = await self._post_insert(payload)
             response.raise_for_status()
             return True
-        except Exception as e:
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
             logger.error(f"Failed to ingest to MESA: {e}")
             return False
 
     async def rebuild_tenant(self, tenant_id: str) -> bool:
         await self._ensure_capabilities()
         try:
-            response = await self.client.post(f"/v4/rebuild", json={"agent_id": tenant_id})
+            response = await self.client.post("/v4/rebuild", json={"agent_id": tenant_id})
             response.raise_for_status()
             return True
-        except Exception as e:
+        except (httpx.RequestError, httpx.HTTPStatusError) as e:
             logger.error(f"Failed to rebuild MESA tenant {tenant_id}: {e}")
             return False
 

@@ -11,7 +11,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     axios.defaults.baseURL = 'http://localhost:8001';
     // Add default mock tenant
     axios.interceptors.request.use((config) => {
-      config.headers['test-tenant'] = localStorage.getItem('tenant_id') || 'test-tenant';
+      config.headers['x-tenant-id'] = localStorage.getItem('tenant_id') || 'test-tenant';
       return config;
     });
   }, []);

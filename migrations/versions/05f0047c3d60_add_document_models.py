@@ -5,17 +5,16 @@ Revises: 130cbd278f22
 Create Date: 2026-07-25 16:33:04.598969
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = '05f0047c3d60'
-down_revision: Union[str, Sequence[str], None] = '130cbd278f22'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = '130cbd278f22'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -1,8 +1,9 @@
-import pytest
 import httpx
+import pytest
 import respx
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
 from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
+
 
 @pytest.fixture
 def adapter():

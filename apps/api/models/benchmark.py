@@ -1,6 +1,7 @@
-from sqlalchemy import String, Integer, JSON, ForeignKey, Boolean
+from apps.api.core.models import AuditMixin, Base
+from sqlalchemy import JSON, Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin
+
 
 class BenchmarkDataset(Base, AuditMixin):
     __tablename__ = "legal_benchmark_datasets"

@@ -1,8 +1,10 @@
-from sqlalchemy import String, JSON, Integer, select
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .models import Base, AuditMixin
+from sqlalchemy.orm import Mapped, mapped_column
+
 from .errors import ProblemException
+from .models import AuditMixin, Base
+
 
 class IdempotencyKey(Base, AuditMixin):
     __tablename__ = "idempotency_keys"

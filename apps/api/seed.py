@@ -1,8 +1,9 @@
 import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+import os
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
-import os
 
 # We can use the hardcoded DEV_DATABASE_URL or from env
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law")

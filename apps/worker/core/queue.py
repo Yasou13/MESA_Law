@@ -1,17 +1,18 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from datetime import timedelta
-from typing import Callable, Awaitable, Dict
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from apps.api.models.queue import Job, JobAttempt
+
 from apps.api.core.database import AsyncSessionLocal
 from apps.api.core.utils import utc_now
+from apps.api.models.queue import Job, JobAttempt
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 HandlerFunc = Callable[[dict, AsyncSession], Awaitable[None]]
 
 class Worker:
     def __init__(self, batch_size=10, lease_minutes=5):
-        self.handlers: Dict[str, HandlerFunc] = {}
+        self.handlers: dict[str, HandlerFunc] = {}
         self._running = False
         self.batch_size = batch_size
         self.lease_duration = timedelta(minutes=lease_minutes)
@@ -94,7 +95,7 @@ class Worker:
                 attempt.finished_at = utc_now()
                 await session.commit()
                 
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 — handlers may raise any exception
                 await session.rollback()
                 # Use a fresh session for failure update if needed, but since we rolled back, we can just use the same one
                 # but we need to re-fetch the objects.

@@ -1,18 +1,20 @@
+from datetime import UTC, date, datetime
+
 import pytest
-from datetime import date
-from pydantic import ValidationError
 from apps.api.schemas.legal_package import (
-    SourceManifest,
-    LegislationItem,
     CourtDecisionItem,
-    GoldenLegalPackage
+    GoldenLegalPackage,
+    LegislationItem,
+    SourceManifest,
 )
+from pydantic import ValidationError
+
 
 def test_valid_golden_package():
     manifest = SourceManifest(
         package_id="PKG-2026-01",
         publisher="MESA Law",
-        release_date=date.today(),
+        release_date=datetime.now(UTC).date(),
         license="PRIVATE",
         package_hash="some-valid-hash-1234"
     )
@@ -65,7 +67,7 @@ def test_public_license_requires_anonymization():
     manifest = SourceManifest(
         package_id="PKG-2026-02",
         publisher="MESA Law",
-        release_date=date.today(),
+        release_date=datetime.now(UTC).date(),
         license="PUBLIC",
         package_hash="valid-hash"
     )
@@ -91,7 +93,7 @@ def test_invalid_package_hash():
     manifest = SourceManifest(
         package_id="PKG-2026-03",
         publisher="MESA Law",
-        release_date=date.today(),
+        release_date=datetime.now(UTC).date(),
         license="PRIVATE",
         package_hash="FORCE_INVALID_HASH"
     )

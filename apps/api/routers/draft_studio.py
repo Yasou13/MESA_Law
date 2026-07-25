@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-router = APIRouter()
-@router.post("/drafts/autosave")
-async def autosave():
-    return {"status": "saved"}\n
+
+router = APIRouter(prefix="/draft-studio", tags=["draft-studio"])
+
+# TODO: Implement draft studio endpoints (WO-next)

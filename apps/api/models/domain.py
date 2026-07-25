@@ -1,6 +1,7 @@
-from sqlalchemy import String, ForeignKey
+from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+from sqlalchemy import ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin, TenantAwareMixin
+
 
 class Firm(Base, AuditMixin):
     __tablename__ = "firms"

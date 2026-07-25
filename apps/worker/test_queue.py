@@ -1,10 +1,10 @@
+
 import pytest
-import asyncio
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.core.database import AsyncSessionLocal
 from apps.api.models.queue import Job, JobAttempt
 from apps.worker.core.queue import Worker
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # Dummy idempotent handler
 executions = 0
@@ -93,8 +93,9 @@ async def test_duplicate_delivery_idempotency():
         
     # Worker 1 locks but dies before processing completes
     async with AsyncSessionLocal() as session:
-        from apps.api.core.utils import utc_now
         from datetime import timedelta
+
+        from apps.api.core.utils import utc_now
         # Simulate lock expired
         job = await session.get(Job, job_id)
         job.status = "processing"

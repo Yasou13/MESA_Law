@@ -1,10 +1,14 @@
 import pytest
-from fastapi import FastAPI, Depends, Header
-from fastapi.testclient import TestClient
-from apps.api.core.errors import ProblemException, problem_exception_handler, global_exception_handler
-from apps.api.core.middleware import TraceMiddleware
-from apps.api.core.database import get_db, AsyncSessionLocal
+from apps.api.core.database import AsyncSessionLocal, get_db
+from apps.api.core.errors import (
+    ProblemException,
+    global_exception_handler,
+    problem_exception_handler,
+)
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
+from apps.api.core.middleware import TraceMiddleware
+from fastapi import Depends, FastAPI, Header
+from fastapi.testclient import TestClient
 
 app = FastAPI()
 app.add_middleware(TraceMiddleware)

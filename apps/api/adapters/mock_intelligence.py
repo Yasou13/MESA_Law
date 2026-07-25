@@ -1,6 +1,11 @@
 from apps.api.core.ports.intelligence import (
-    MesaIntelligencePort, IntelligenceQuery, IntelligenceResponse, OperationState, Evidence
+    Evidence,
+    IntelligenceQuery,
+    IntelligenceResponse,
+    MesaIntelligencePort,
+    OperationState,
 )
+
 
 class MockMesaAdapter(MesaIntelligencePort):
     async def query(self, query: IntelligenceQuery) -> IntelligenceResponse:

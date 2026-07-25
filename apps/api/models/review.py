@@ -1,13 +1,14 @@
 from datetime import datetime
-from sqlalchemy import String, JSON, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin
-from apps.api.core.utils import utc_now
+
+from apps.api.core.models import AuditMixin, Base
+from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
+
 
 class ReviewQueue(Base, AuditMixin):
     __tablename__ = "legal_review_queue"
     
-    tenant_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    tenant_id: Mapped[str] = mapped_column(String, ForeignKey("firms.id"), index=True, nullable=False)
     matter_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     
     # What are we reviewing? (e.g. 'document_extraction', 'timeline_event', 'claim')

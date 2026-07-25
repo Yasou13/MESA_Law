@@ -1,8 +1,10 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, JSON, ForeignKey, DateTime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin
+
+from apps.api.core.models import AuditMixin, Base
 from apps.api.core.utils import utc_now
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class Job(Base, AuditMixin):
     __tablename__ = "legal_jobs"

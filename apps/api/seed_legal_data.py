@@ -1,16 +1,14 @@
 import asyncio
-import uuid6
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
 import logging
 
-from apps.api.core.database import AsyncSessionLocal
-from apps.api.models.domain import Firm, Matter
-from apps.api.models.document import Document, DocumentRevision
-from apps.api.models.parser import ParsedDocument, ParsedPage
+import uuid6
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
-from apps.api.services.mesa_sync import MesaSyncService
+from apps.api.core.database import AsyncSessionLocal
 from apps.api.core.rls import set_tenant_id
+from apps.api.models.document import Document, DocumentRevision
+from apps.api.models.domain import Firm, Matter
+from apps.api.models.parser import ParsedDocument, ParsedPage
+from apps.api.services.mesa_sync import MesaSyncService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

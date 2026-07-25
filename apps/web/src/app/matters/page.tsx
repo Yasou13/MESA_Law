@@ -52,7 +52,7 @@ export default function MattersPage() {
         </div>
 
         <div className="grid gap-4">
-          {matters?.map((matter) => (
+          {Array.isArray(matters) && matters.map((matter) => (
             <Link 
               key={matter.id}
               href={`/matters/${matter.id}`}
@@ -67,7 +67,7 @@ export default function MattersPage() {
               </div>
             </Link>
           ))}
-          {matters?.length === 0 && (
+          {Array.isArray(matters) && matters.length === 0 && (
             <div className="text-center text-zinc-500 py-12">No matters found. Create one above.</div>
           )}
         </div>

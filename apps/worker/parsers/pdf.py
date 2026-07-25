@@ -1,10 +1,13 @@
-import fitz  # PyMuPDF
 import asyncio
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
+
+import fitz  # PyMuPDF
+
 from .base import DocumentParser
 
+
 class PyMuPDFParser(DocumentParser):
-    async def parse(self, file_path_or_bytes: bytes) -> AsyncGenerator[dict, None]:
+    async def parse(self, file_path_or_bytes: bytes) -> AsyncGenerator[dict]:
         loop = asyncio.get_running_loop()
         
         def _extract_all():

@@ -1,9 +1,15 @@
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.core.ports.intelligence import (
-    MesaIntelligencePort, IntelligenceQuery, IntelligenceResponse, OperationState, Evidence
+    Evidence,
+    IntelligenceQuery,
+    IntelligenceResponse,
+    MesaIntelligencePort,
+    OperationState,
 )
-from apps.api.models.parser import ParsedPage, ParsedDocument
+from apps.api.models.parser import ParsedDocument, ParsedPage
+from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 class PostgresLexicalAdapter(MesaIntelligencePort):
     def __init__(self, session: AsyncSession):
@@ -50,5 +56,5 @@ class PostgresLexicalAdapter(MesaIntelligencePort):
                 summary=f"Found {len(pages)} matching pages.",
                 evidence=evidence_list
             )
-        except Exception as e:
+        except SQLAlchemyError as e:
             return IntelligenceResponse(state=OperationState.unavailable, error_message=str(e))

@@ -1,9 +1,11 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 import uuid6
+
 
 def utc_now() -> datetime:
     """Returns the current UTC time."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 def generate_uuid() -> str:
     """Generates a UUIDv7 string."""

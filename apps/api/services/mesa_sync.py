@@ -1,11 +1,10 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Optional
 import logging
 
-from apps.api.models.parser import ParsedDocument, ParsedPage
+from apps.api.core.ports.ingestion import IngestionItem, MesaIngestionPort
 from apps.api.models.document import Document
-from apps.api.core.ports.ingestion import MesaIngestionPort, IngestionItem
+from apps.api.models.parser import ParsedDocument, ParsedPage
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 

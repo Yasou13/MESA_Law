@@ -1,6 +1,8 @@
 import contextvars
+
 from sqlalchemy import event
-from sqlalchemy.orm import Session, ORMExecuteState, with_loader_criteria
+from sqlalchemy.orm import ORMExecuteState, Session, with_loader_criteria
+
 from .models import TenantAwareMixin
 
 current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_tenant_id", default=None)
@@ -12,6 +14,7 @@ def get_tenant_id() -> str | None:
     return current_tenant_id.get()
 
 from sqlalchemy import bindparam
+
 
 @event.listens_for(Session, "do_orm_execute")
 def _add_tenant_criteria(execute_state: ORMExecuteState):

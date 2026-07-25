@@ -1,6 +1,7 @@
-from sqlalchemy import String, Integer, ForeignKey
+from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin, TenantAwareMixin
+
 
 class Document(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "documents"

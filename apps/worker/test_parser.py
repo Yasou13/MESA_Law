@@ -1,14 +1,14 @@
-import pytest
 import fitz
+import pytest
 import uuid6
-from sqlalchemy import select, func, text
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.core.database import AsyncSessionLocal
 from apps.api.core.rls import set_tenant_id
-from apps.api.models.domain import Firm, Matter
 from apps.api.models.document import Document, DocumentRevision
+from apps.api.models.domain import Firm, Matter
 from apps.api.models.parser import ParsedDocument, ParsedPage
 from apps.worker.parsers.pdf import PyMuPDFParser
+from sqlalchemy import func, select, text
+
 
 def create_dummy_pdf() -> bytes:
     doc = fitz.open()
@@ -72,7 +72,7 @@ async def test_pdf_parsing_and_fts():
         # Populate FTS vector using PostgreSQL to_tsvector
         # Note: In a real app we could use a DB trigger or generate it here.
         await db.execute(
-            text(f"UPDATE parsed_pages SET fts_vector = to_tsvector('english', :text) WHERE id = :pid")
+            text("UPDATE parsed_pages SET fts_vector = to_tsvector('english', :text) WHERE id = :pid")
             .bindparams(text=parsed_page.text_content, pid=parsed_page.id)
         )
         await db.commit()

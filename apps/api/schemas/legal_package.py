@@ -1,8 +1,9 @@
 import hashlib
 import json
-from typing import List, Optional
-from datetime import date, datetime
+from datetime import date
+
 from pydantic import BaseModel, Field, field_validator, model_validator
+
 
 class SourceManifest(BaseModel):
     package_id: str = Field(..., description="Unique ID for this release snapshot")
@@ -15,20 +16,20 @@ class LegislationItem(BaseModel):
     id: str
     title: str
     legislation_type: str = Field(..., description="e.g., KANUN, YONETMELIK, KHK")
-    law_number: Optional[str] = None
+    law_number: str | None = None
     enactment_date: date
-    official_gazette_date: Optional[date] = None
-    official_gazette_number: Optional[str] = None
+    official_gazette_date: date | None = None
+    official_gazette_number: str | None = None
     # Historical normalization
     is_current: bool = True
     valid_from: date
-    valid_to: Optional[date] = None
+    valid_to: date | None = None
     content: str
     
 class CourtDecisionItem(BaseModel):
     id: str
     court: str = Field(..., description="e.g., YARGITAY, AYM")
-    chamber: Optional[str] = None
+    chamber: str | None = None
     base_number: str = Field(..., alias="esas_no")
     decision_number: str = Field(..., alias="karar_no")
     decision_date: date
@@ -43,8 +44,8 @@ class CourtDecisionItem(BaseModel):
 
 class GoldenLegalPackage(BaseModel):
     manifest: SourceManifest
-    legislation: List[LegislationItem] = []
-    court_decisions: List[CourtDecisionItem] = []
+    legislation: list[LegislationItem] = []
+    court_decisions: list[CourtDecisionItem] = []
 
     @model_validator(mode='after')
     def verify_package_hash(self):

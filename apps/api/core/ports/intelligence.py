@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+
 from pydantic import BaseModel
-from typing import List, Optional
+
 
 class OperationState(str, Enum):
     success = "success"
@@ -20,13 +21,13 @@ class Evidence(BaseModel):
 class IntelligenceQuery(BaseModel):
     tenant_id: str
     query_text: str
-    matter_id: Optional[str] = None
+    matter_id: str | None = None
 
 class IntelligenceResponse(BaseModel):
     state: OperationState
-    evidence: List[Evidence] = []
-    summary: Optional[str] = None
-    error_message: Optional[str] = None
+    evidence: list[Evidence] = []
+    summary: str | None = None
+    error_message: str | None = None
 
 class MesaIntelligencePort(ABC):
     @abstractmethod
@@ -34,4 +35,3 @@ class MesaIntelligencePort(ABC):
         """
         Executes an intelligence query and returns a response.
         """
-        pass

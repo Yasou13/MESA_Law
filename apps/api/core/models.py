@@ -1,7 +1,11 @@
 from datetime import datetime
-from sqlalchemy import DateTime, String, Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, declared_attr
-from .utils import utc_now, generate_uuid
+
+from pydantic import BaseModel
+from sqlalchemy import DateTime, Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
+
+from .utils import generate_uuid, utc_now
+
 
 class Base(DeclarativeBase):
     pass
@@ -26,3 +30,8 @@ class TenantAwareMixin:
         from sqlalchemy import ForeignKey, String
         from sqlalchemy.orm import mapped_column
         return mapped_column(String, ForeignKey("firms.id"), index=True, nullable=False)
+
+class RequestContext(BaseModel):
+    tenant_id: str
+    principal_id: str
+    roles: set[str]

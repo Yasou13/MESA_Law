@@ -144,19 +144,43 @@ services:
   # Application Services
   # ---------------------------------------------------------
   web:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
     profiles: ["core"]
-    command: sleep infinity
+    ports:
+      - "3000:3000"
 
   legal-api:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
     profiles: ["core"]
-    command: sleep infinity
+    environment:
+      MESA_LAW_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-mesa}:${POSTGRES_PASSWORD:-mesa}@postgres:5432/${POSTGRES_DB:-mesa_law}"
+      MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
+      MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
+      MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
+      MESA_LAW_SECRET_KEY: "supersecret_dev_key"
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres
 
   legal-worker:
-    image: alpine:latest
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
     profiles: ["core"]
-    command: sleep infinity
+    environment:
+      MESA_LAW_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-mesa}:${POSTGRES_PASSWORD:-mesa}@postgres:5432/${POSTGRES_DB:-mesa_law}"
+      MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
+      MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
+      MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
+      MESA_LAW_SECRET_KEY: "supersecret_dev_key"
+    depends_on:
+      - postgres
+      - redis
 
 volumes:
   postgres-data:

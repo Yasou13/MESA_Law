@@ -1,14 +1,15 @@
 import pytest
 import uuid6
-from sqlalchemy import text
-from apps.api.core.database import AsyncSessionLocal
-from apps.api.core.rls import set_tenant_id
-from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
 from apps.api.adapters.mock_intelligence import MockMesaAdapter
 from apps.api.adapters.pg_intelligence import PostgresLexicalAdapter
-from apps.api.models.domain import Firm, Matter
+from apps.api.core.database import AsyncSessionLocal
+from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
+from apps.api.core.rls import set_tenant_id
 from apps.api.models.document import Document, DocumentRevision
+from apps.api.models.domain import Firm, Matter
 from apps.api.models.parser import ParsedDocument, ParsedPage
+from sqlalchemy import text
+
 
 @pytest.fixture
 def mock_adapter():
@@ -58,7 +59,7 @@ async def test_pg_lexical_adapter():
         await db.flush()
         
         await db.execute(
-            text(f"UPDATE parsed_pages SET fts_vector = to_tsvector('english', :text) WHERE id = :pid")
+            text("UPDATE parsed_pages SET fts_vector = to_tsvector('english', :text) WHERE id = :pid")
             .bindparams(text=parsed_page.text_content, pid=parsed_page.id)
         )
         await db.commit()

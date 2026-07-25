@@ -1,9 +1,13 @@
 import asyncio
+
+import pytest
+from apps.api.core.database import AsyncSessionLocal
+from apps.api.models.review import AuditLog, ReviewQueue
 from httpx import AsyncClient
 from sqlalchemy import select
-from apps.api.core.database import AsyncSessionLocal
-from apps.api.models.review import ReviewQueue, AuditLog
 
+
+@pytest.mark.asyncio
 async def test_reviews():
     # 1. Insert a mock AI-generated review item
     async with AsyncSessionLocal() as db:

@@ -1,7 +1,8 @@
-from sqlalchemy import String, Integer, ForeignKey, Index, JSON
+from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+from sqlalchemy import JSON, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from apps.api.core.models import Base, AuditMixin, TenantAwareMixin
+
 
 class ParsedDocument(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "parsed_documents"

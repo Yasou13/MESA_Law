@@ -21,11 +21,12 @@ metadata:
   name: mesa-law-secrets
   namespace: default
 type: Opaque
+# TODO: Replace this hardcoded Secret with an ExternalSecret resource referencing AWS Secrets Manager, Vault, or SealedSecrets
 stringData:
-  POSTGRES_PASSWORD: "mesa"
-  MESA_LAW_STORAGE_SECRET_KEY: "password123"
-  MESA_LAW_SECRET_KEY: "supersecret_pilot_key"
-  NEXTAUTH_SECRET: "supersecret_nextauth_pilot_key"
+  POSTGRES_PASSWORD: "REPLACE_WITH_EXTERNAL_SECRET_POSTGRES"
+  MESA_LAW_STORAGE_SECRET_KEY: "REPLACE_WITH_EXTERNAL_SECRET_MINIO"
+  MESA_LAW_SECRET_KEY: "REPLACE_WITH_EXTERNAL_SECRET_DJANGO_KEY"
+  NEXTAUTH_SECRET: "REPLACE_WITH_EXTERNAL_SECRET_NEXTAUTH"
 ---
 apiVersion: apps/v1
 kind: Deployment

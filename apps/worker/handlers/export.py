@@ -1,7 +1,12 @@
 import logging
+import io
 from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.models.draft import Draft
 from apps.api.core.storage import storage_service
+import docx
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import inch
 
 logger = logging.getLogger("worker.export")
 
@@ -20,10 +25,31 @@ async def handle_export_draft(payload: dict, session: AsyncSession):
         
     logger.info(f"Exporting draft {draft_id} (version {draft.version}) as {fmt}")
     
-    # Simple export conversion representation
-    content_bytes = f"--- MESA Law Draft Export ({fmt.upper()}) ---\nTitle: {draft.title}\nVersion: {draft.version}\n\n{draft.content}".encode('utf-8')
+    content_bytes = b""
     content_type = "application/pdf" if fmt == "pdf" else "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     
+    if fmt == "docx":
+        doc = docx.Document()
+        doc.add_heading(draft.title, 0)
+        doc.add_paragraph(f"Version: {draft.version}")
+        doc.add_paragraph(draft.content)
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        content_bytes = buffer.getvalue()
+    else:
+        # Fallback PDF generation using reportlab
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        c.drawString(inch, 11*inch, f"Title: {draft.title}")
+        c.drawString(inch, 10.5*inch, f"Version: {draft.version}")
+        textobject = c.beginText(inch, 10*inch)
+        for line in draft.content.split('\n'):
+            textobject.textLine(line)
+        c.drawText(textobject)
+        c.showPage()
+        c.save()
+        content_bytes = buffer.getvalue()
+
     s3_key = f"{draft.tenant_id}/{draft.matter_id}/exports/draft_{draft.id}_v{draft.version}.{fmt}"
     
     try:

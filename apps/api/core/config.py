@@ -37,12 +37,17 @@ class Settings(BaseSettings):
             return self.database_url
         return f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
+    @property
+    def is_secure_environment(self) -> bool:
+        """Returns True if the environment is considered secure (production, staging, pilot)."""
+        return self.env.lower() in ("production", "staging", "pilot")
+
 
 settings = Settings()
 
 
 def validate_production_settings():
-    if settings.env == "production":
+    if settings.is_secure_environment:
         insecure_defaults = [
             "MUST_BE_PROVIDED_IN_ENV",
             "password123",
@@ -51,7 +56,7 @@ def validate_production_settings():
             "supersecret_nextauth_key_for_dev_only"
         ]
         if settings.secret_key in insecure_defaults or settings.keycloak_client_secret in insecure_defaults:
-            raise RuntimeError("CRITICAL SECURITY ERROR: Production environment detected with insecure default secrets. Startup aborted.")
+            raise RuntimeError(f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with insecure default secrets. Startup aborted.")
 
 validate_production_settings()
 

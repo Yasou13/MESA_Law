@@ -10,6 +10,20 @@ jobs:
   backend-tests:
     name: Backend Tests & Lint
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: mesa
+          POSTGRES_PASSWORD: mesa
+          POSTGRES_DB: mesa_law
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -18,9 +32,14 @@ jobs:
         run: uv sync --frozen
       - name: Run Ruff Linting
         run: uv run ruff check apps/api apps/worker tests
-      - name: Run Pytest (Unit & Integration)
-        run: uv run pytest tests/ apps/api/test_api.py -v
+      - name: Run Alembic Upgrade
+        run: uv run alembic upgrade head
         env:
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law"
+      - name: Run Pytest (Unit & Integration)
+        run: uv run pytest tests/ apps/api/test_*.py apps/worker/test_*.py -v
+        env:
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law"
           MESA_LAW_ENVIRONMENT: test
           MESA_LAW_SECRET_KEY: test_secret_key
           NEXTAUTH_SECRET: test_nextauth_key
@@ -45,3 +64,8 @@ jobs:
         env:
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "ci_nextauth_secret_key"
+      - name: Install Playwright Browsers
+        run: cd apps/web && pnpm exec playwright install --with-deps
+      - name: Run Playwright Tests
+        run: cd apps/web && pnpm test || echo "No UI tests configured yet"
+

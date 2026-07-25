@@ -3,7 +3,7 @@ from apps.api.core.errors import (
     global_exception_handler,
     problem_exception_handler,
 )
-from apps.api.core.middleware import TraceMiddleware
+from apps.api.core.middleware import TraceMiddleware, SecurityHeadersMiddleware
 from apps.api.core.ratelimit import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
@@ -19,10 +19,17 @@ from apps.api.routers import (
     reviews,
     system,
 )
-from fastapi import FastAPI
+from apps.api.core.security import verify_csrf
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="MESA Law API", version="0.1.0")
+app = FastAPI(
+    title="MESA Law API",
+    version="0.1.0",
+    dependencies=[Depends(verify_csrf)]
+)
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

@@ -60,3 +60,24 @@ class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
     assertion_text: Mapped[str] = mapped_column(String, nullable=False)
     source_locator: Mapped[str] = mapped_column(String, nullable=True) # JSON dump of SourceLocator
     review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+
+class MatterEvent(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "matter_events"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    event_date: Mapped[str] = mapped_column(String, nullable=False) # ISO 8601 string or Date
+    source_type: Mapped[str] = mapped_column(String, nullable=False) # e.g. "document", "manual", "system"
+    confidence: Mapped[str] = mapped_column(String, default="high")
+
+class ClaimEvidenceLink(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "claim_evidence_links"
+    claim_id: Mapped[str] = mapped_column(ForeignKey("claims.id", ondelete="CASCADE"), index=True, nullable=False)
+    evidence_id: Mapped[str] = mapped_column(ForeignKey("evidence_items.id", ondelete="CASCADE"), index=True, nullable=False)
+    support_type: Mapped[str] = mapped_column(String, default="supports") # supports, refutes, partial
+
+class ReviewItem(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "review_items"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    item_type: Mapped[str] = mapped_column(String, nullable=False) # claim, party, event
+    payload: Mapped[str] = mapped_column(String, nullable=False) # JSON payload of suggested data
+    status: Mapped[str] = mapped_column(String, default="pending", nullable=False) # pending, approved, rejected

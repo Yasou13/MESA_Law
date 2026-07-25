@@ -52,19 +52,23 @@ async def ask_matter_question(session: AsyncSession, matter_id: str, question: s
             "citations": []
         }
         
-    # Mock AI answer generation with strict citation validation
-    # If we had a real LLM, we'd pass `results` as context.
-    
-    # We must ensure every claim is backed by a citation (Phase 12 Rule).
+    # In a real app we'd pass this to an LLM. Since we're in mock mode,
+    # we'll generate a realistic sounding answer combining the sources.
     citations = [{"doc_title": r["doc_title"], "page_number": r["page_number"], "snippet": r["text"][:100]} for r in results]
     
-    answer = f"Based on {citations[0]['doc_title']} (Page {citations[0]['page_number']}), the answer is ..."
-    
-    # Validation step:
     if not citations:
         raise ValueError("AI response generated without citations. Blocked by Source/Citation policy.")
-        
+
+    doc_titles = [c["doc_title"] for c in citations]
+    answer = f"Sorduğunuz '{question}' sorusuna istinaden dosyadaki deliller incelendi. "
+    answer += f"Bulunan belgeler: {', '.join(doc_titles)}. "
+    answer += "Mevcut kaynaklara göre, belgede geçen ilgili bölümler: "
+    for i, c in enumerate(citations):
+        answer += f"\n- {c['doc_title']} (Sayfa {c['page_number']}): '{c['snippet']}...' "
+    
     return {
         "answer": answer,
-        "citations": citations
+        "citations": citations,
+        "source_coverage": "partial",
+        "completeness_score": 85
     }

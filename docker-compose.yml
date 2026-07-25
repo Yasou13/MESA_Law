@@ -1,0 +1,168 @@
+name: mesa-law
+
+x-common-env: &common-env
+  POSTGRES_USER: ${POSTGRES_USER:-mesa}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
+  POSTGRES_DB: ${POSTGRES_DB:-mesa_law}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  REDIS_URL: redis://redis:6379/0
+
+services:
+  # ---------------------------------------------------------
+  # Core Infrastructure
+  # ---------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    profiles: ["core"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mesa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
+      POSTGRES_DB: ${POSTGRES_DB:-mesa_law}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mesa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["core"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    profiles: ["core"]
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.0
+    profiles: ["core"]
+    command: start-dev
+    environment:
+      KC_DB: postgres
+      KC_DB_URL_HOST: postgres
+      KC_DB_URL_DATABASE: ${POSTGRES_DB:-mesa_law}
+      KC_DB_USERNAME: ${POSTGRES_USER:-mesa}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  clamav:
+    image: clamav/clamav:latest
+    profiles: ["core"]
+    ports:
+      - "3310:3310"
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["core"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+
+  # ---------------------------------------------------------
+  # Observability (OTel/Grafana Stack)
+  # ---------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    profiles: ["core"]
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["core"]
+    volumes:
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["core"]
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+
+  loki:
+    image: grafana/loki:latest
+    profiles: ["core"]
+    ports:
+      - "3100:3100"
+
+  tempo:
+    image: grafana/tempo:latest
+    profiles: ["core"]
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    ports:
+      - "3200:3200"
+
+  # ---------------------------------------------------------
+  # Application Services
+  # ---------------------------------------------------------
+  web:
+    image: alpine:latest
+    profiles: ["core"]
+    command: sleep infinity
+
+  legal-api:
+    image: alpine:latest
+    profiles: ["core"]
+    command: sleep infinity
+
+  legal-worker:
+    image: alpine:latest
+    profiles: ["core"]
+    command: sleep infinity
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+  caddy-data:
+  caddy-config:
+  prometheus-data:
+  grafana-data:

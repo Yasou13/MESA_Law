@@ -14,17 +14,16 @@ def get_intelligence_adapter() -> MesaIntelligencePort:
         logger.info("Initializing MesaV4HttpAdapter")
         return MesaV4HttpAdapter()
     elif adapter_type == "postgres_lexical":
-        # PostgresLexicalAdapter requires an AsyncSession which must be
-        # provided per-request via FastAPI Depends.  The factory cannot
-        # supply it at module-init time, so we fall back to mock and log
-        # a warning.  Use PostgresLexicalAdapter directly in endpoints
-        # that inject a DB session.
         logger.warning(
             "postgres_lexical adapter requires a DB session; "
             "use PostgresLexicalAdapter(session=db) directly in endpoints. "
             "Falling back to MockMesaAdapter."
         )
+        if os.getenv("ENVIRONMENT") == "production":
+            raise RuntimeError("Cannot fallback to MockMesaAdapter in production.")
         return MockMesaAdapter()
     else:
+        if os.getenv("ENVIRONMENT") == "production" and adapter_type == "mock":
+            raise RuntimeError("MockMesaAdapter is strictly prohibited in production. Set MESA_LAW_INTELLIGENCE_ADAPTER properly.")
         logger.info("Initializing MockMesaAdapter")
         return MockMesaAdapter()

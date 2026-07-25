@@ -18,6 +18,10 @@ class Worker:
         self.lease_duration = timedelta(minutes=lease_minutes)
     
     def register(self, job_type: str, handler: HandlerFunc):
+        if getattr(handler, "__name__", "") == "dummy_handler" or "dummy" in getattr(handler, "__name__", ""):
+            from apps.api.core.config import settings
+            if settings.env == "production":
+                raise RuntimeError(f"CRITICAL: No handler implemented for job type '{job_type}'. Dummy handlers are strictly prohibited in production.")
         self.handlers[job_type] = handler
         
     async def start(self):
@@ -72,7 +76,7 @@ class Worker:
                 
             handler = self.handlers.get(job.type)
             if not handler:
-                await self._fail_job(session, job, f"No handler registered for {job.type}")
+                await self._fail_job(session, job, f"FAILED_UNSUPPORTED_JOB_TYPE: No handler registered for {job.type}")
                 return
                 
             attempt = JobAttempt(

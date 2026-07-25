@@ -10,6 +10,7 @@ import { Timeline } from '@/components/matters/Timeline'
 import { ClaimsEvidence } from '@/components/matters/ClaimsEvidence'
 import { ResearchShell } from '@/components/matters/ResearchShell'
 import { QAShell } from '@/components/matters/QAShell'
+import { DraftStudioShell } from '@/components/matters/DraftStudioShell'
 
 type Document = {
   id: string
@@ -26,7 +27,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'claims' | 'research'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'claims' | 'research' | 'drafts'>('overview')
 
   const { data: documents, isLoading: isLoadingDocs } = useQuery<Document[]>({
     queryKey: ['documents', matterId],
@@ -139,6 +140,12 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'research' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
             >
               Research
+            </button>
+            <button
+              onClick={() => setActiveTab('drafts')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'drafts' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Draft Studio
             </button>
           </div>
         </div>
@@ -289,6 +296,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
       {activeTab === 'timeline' && <Timeline matterId={matterId} />}
       {activeTab === 'claims' && <ClaimsEvidence matterId={matterId} />}
       {activeTab === 'research' && <ResearchShell />}
+      {activeTab === 'drafts' && <DraftStudioShell matterId={matterId} />}
     </div>
   )
 }

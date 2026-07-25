@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mesa-law-api
+  name: mesa-law-web
   labels:
-    app: mesa-law-api
+    app: mesa-law-web
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: mesa-law-api
+      app: mesa-law-web
   template:
     metadata:
       labels:
-        app: mesa-law-api
+        app: mesa-law-web
     spec:
       containers:
-      - name: api
-        image: mesa-law-api:latest
+      - name: web
+        image: mesa-law-web:latest
         ports:
-        - containerPort: 8001
+        - containerPort: 3000
         envFrom:
         - secretRef:
             name: mesa-law-secrets
@@ -26,25 +26,25 @@ spec:
             name: mesa-law-config
         readinessProbe:
           httpGet:
-            path: /health/ready
-            port: 8001
+            path: /api/auth/providers
+            port: 3000
           initialDelaySeconds: 5
           periodSeconds: 10
         livenessProbe:
           httpGet:
-            path: /health/live
-            port: 8001
+            path: /
+            port: 3000
           initialDelaySeconds: 15
           periodSeconds: 20
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mesa-law-api
+  name: mesa-law-web
 spec:
   selector:
-    app: mesa-law-api
+    app: mesa-law-web
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8001
+      targetPort: 3000

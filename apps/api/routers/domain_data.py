@@ -2,6 +2,8 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.domain import Claim, EvidenceItem, MatterParty
+from apps.api.models.document import Document
+from apps.api.models.deadline import ApprovedDeadline
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,13 +56,33 @@ async def list_timeline_events(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    # Return chronological timeline events for the matter
-    return [
-        {"id": "1", "date": "2026-03-14", "title": "İş sözleşmesi feshedildi", "source": "İhtarname", "confidence": "high"},
-        {"id": "2", "date": "2026-04-01", "title": "Arabuluculuk görüşmesi yapıldı", "source": "Arabuluculuk Son Tutanağı", "confidence": "high"},
-        {"id": "3", "date": "2026-04-15", "title": "Dava açıldı", "source": "Dava Dilekçesi", "confidence": "high"},
-        {"id": "4", "date": "2026-05-10", "title": "Cevap dilekçesi sunuldu", "source": "Cevap Dilekçesi", "confidence": "medium"}
-    ]
+    # Construct chronological timeline from real documents and deadlines
+    doc_res = await db.execute(select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id))
+    docs = doc_res.scalars().all()
+    
+    dl_res = await db.execute(select(ApprovedDeadline).where(ApprovedDeadline.matter_id == matter_id, ApprovedDeadline.tenant_id == context.tenant_id))
+    deadlines = dl_res.scalars().all()
+    
+    events = []
+    for d in docs:
+        events.append({
+            "id": f"doc_{d.id}",
+            "date": d.created_at.strftime("%Y-%m-%d") if d.created_at else "N/A",
+            "title": f"Belge Yüklendi: {d.title}",
+            "source": "Sistem (Belge Yükleme)",
+            "confidence": "high"
+        })
+    for dl in deadlines:
+        events.append({
+            "id": f"dl_{dl.id}",
+            "date": dl.approved_date.strftime("%Y-%m-%d") if dl.approved_date else "N/A",
+            "title": f"Kesinleşmiş Süre: {dl.description}",
+            "source": "Takvim / Mevzuat",
+            "confidence": "high"
+        })
+        
+    events.sort(key=lambda x: x["date"] if x["date"] != "N/A" else "0000-00-00", reverse=True)
+    return events
 
 @router.get("/matters/{matter_id}/claims-evidence", operation_id="listClaimsWithEvidence")
 @limiter.limit("100/minute")
@@ -72,38 +94,18 @@ async def list_claims_with_evidence(
 ):
     claims_res = await db.execute(select(Claim).where(Claim.matter_id == matter_id, Claim.tenant_id == context.tenant_id))
     db_claims = claims_res.scalars().all()
-    if db_claims:
-        return [
-            {
-                "id": str(c.id),
-                "claim": c.description,
-                "evidence": "Extracted from matter documents",
-                "support": "strong",
-                "confidence": "high"
-            }
-            for c in db_claims
-        ]
-        
-    return [
-        {
-            "id": "1",
-            "claim": "Fazla mesai ücretleri ödenmemiştir",
-            "evidence": "Banka dekontları, bordrolar (019f99... belge)",
-            "support": "strong",
-            "confidence": "high"
-        },
-        {
-            "id": "2",
-            "claim": "Haksız fesih yapılmıştır",
-            "evidence": "İhtarname metnindeki gerekçeler",
-            "support": "partial",
-            "confidence": "medium"
-        },
-        {
-            "id": "3",
-            "claim": "İhbar tazminatı hakkı doğmuştur",
-            "evidence": None,
-            "support": "none",
-            "confidence": "low"
-        }
-    ]
+    
+    res = []
+    for c in db_claims:
+        # Check if there are evidence items linking to this claim's matter
+        ev_res = await db.execute(select(EvidenceItem).where(EvidenceItem.matter_id == matter_id, EvidenceItem.tenant_id == context.tenant_id))
+        ev_items = ev_res.scalars().all()
+        ev_desc = ", ".join([e.description for e in ev_items]) if ev_items else "Belgelerden inceleniyor"
+        res.append({
+            "id": str(c.id),
+            "claim": c.description,
+            "evidence": ev_desc,
+            "support": "strong" if ev_items else "partial",
+            "confidence": "high" if ev_items else "medium"
+        })
+    return res

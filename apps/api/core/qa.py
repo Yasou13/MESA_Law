@@ -47,13 +47,8 @@ async def ask_matter_question(session: AsyncSession, matter_id: str, question: s
     results = await adapter.search(matter_id, question)
     
     if not results:
-        if "tazminat" in question.lower():
-            return {
-                "answer": "Mevcut belgelere göre ihbar tazminatı talebi için yeterli delil bulunmamaktadır. Ancak kıdem tazminatı şartları oluşmuştur.",
-                "citations": [{"doc_title": "İhtarname", "page_number": 2, "snippet": "Kıdem tazminatı şartları..."}]
-            }
         return {
-            "answer": "No relevant context found in the matter documents to answer this question.",
+            "answer": "Dosya kapsamındaki belgelerde bu soruyu yanıtlamak için yeterli bilgi veya delil bulunamadı.",
             "citations": []
         }
         

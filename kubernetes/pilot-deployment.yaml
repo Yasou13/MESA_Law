@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mesa-law-config
+  namespace: default
+data:
+  POSTGRES_USER: "mesa"
+  POSTGRES_DB: "mesa_law"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  REDIS_URL: "redis://redis:6379/0"
+  MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa:mesa@postgres:5432/mesa_law"
+  MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
+  MESA_LAW_STORAGE_ACCESS_KEY: "admin"
+  MESA_LAW_ENVIRONMENT: "pilot"
+  NEXTAUTH_URL: "http://localhost:3000"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mesa-law-secrets
+  namespace: default
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "mesa"
+  MESA_LAW_STORAGE_SECRET_KEY: "password123"
+  MESA_LAW_SECRET_KEY: "supersecret_pilot_key"
+  NEXTAUTH_SECRET: "supersecret_nextauth_pilot_key"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesa-law-api-pilot
+  labels:
+    app: mesa-law-api
+    env: pilot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mesa-law-api
+      env: pilot
+  template:
+    metadata:
+      labels:
+        app: mesa-law-api
+        env: pilot
+    spec:
+      containers:
+      - name: api
+        image: mesa-law-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - secretRef:
+            name: mesa-law-secrets
+        - configMapRef:
+            name: mesa-law-config
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8001
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mesa-law-api
+spec:
+  selector:
+    app: mesa-law-api
+    env: pilot
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesa-law-worker-pilot
+  labels:
+    app: mesa-law-worker
+    env: pilot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesa-law-worker
+      env: pilot
+  template:
+    metadata:
+      labels:
+        app: mesa-law-worker
+        env: pilot
+    spec:
+      containers:
+      - name: worker
+        image: mesa-law-worker:latest
+        imagePullPolicy: IfNotPresent
+        envFrom:
+        - secretRef:
+            name: mesa-law-secrets
+        - configMapRef:
+            name: mesa-law-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesa-law-web-pilot
+  labels:
+    app: mesa-law-web
+    env: pilot
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mesa-law-web
+      env: pilot
+  template:
+    metadata:
+      labels:
+        app: mesa-law-web
+        env: pilot
+    spec:
+      containers:
+      - name: web
+        image: mesa-law-web:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: mesa-law-secrets
+        - configMapRef:
+            name: mesa-law-config
+        readinessProbe:
+          httpGet:
+            path: /api/auth/providers
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mesa-law-web
+spec:
+  selector:
+    app: mesa-law-web
+    env: pilot
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000

@@ -35,7 +35,7 @@ def _add_tenant_criteria(execute_state: ORMExecuteState):
 def reset_tenant_on_checkout(dbapi_connection, connection_record, connection_proxy):
     cursor = dbapi_connection.cursor()
     try:
-        cursor.execute("SET SESSION app.current_tenant = '';")
+        cursor.execute("SELECT set_config('app.current_tenant', '', false);")
     except Exception as e:
         import logging
         logging.error(f"CRITICAL: Failed to reset RLS tenant on pool checkout: {e}")
@@ -47,7 +47,7 @@ def reset_tenant_on_checkout(dbapi_connection, connection_record, connection_pro
 def reset_tenant_on_checkin(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     try:
-        cursor.execute("SET SESSION app.current_tenant = '';")
+        cursor.execute("SELECT set_config('app.current_tenant', '', false);")
     except Exception as e:
         import logging
         logging.error(f"Failed to reset RLS tenant on pool checkin: {e}")

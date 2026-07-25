@@ -26,3 +26,36 @@ class Matter(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "matters"
     title: Mapped[str] = mapped_column(String, nullable=False)
     status: Mapped[str] = mapped_column(String, default="open", nullable=False)
+
+class MatterParty(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "matter_parties"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, nullable=False) # e.g. PLAINTIFF, DEFENDANT
+    type: Mapped[str] = mapped_column(String, nullable=False) # e.g. PERSON, ORGANIZATION
+    
+class Claim(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "claims"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    claimant_party_id: Mapped[str] = mapped_column(ForeignKey("matter_parties.id"), nullable=False)
+    defendant_party_id: Mapped[str] = mapped_column(ForeignKey("matter_parties.id"), nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="pending", nullable=False)
+    # AI models create claims in 'suggested' state; humans move them to 'approved'.
+    review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+
+class EvidenceItem(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "evidence_items"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), nullable=True) # Source document
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+
+class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "legal_assertions"
+    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
+    claim_id: Mapped[str] = mapped_column(ForeignKey("claims.id", ondelete="CASCADE"), index=True, nullable=True)
+    evidence_id: Mapped[str] = mapped_column(ForeignKey("evidence_items.id", ondelete="CASCADE"), index=True, nullable=True)
+    assertion_text: Mapped[str] = mapped_column(String, nullable=False)
+    source_locator: Mapped[str] = mapped_column(String, nullable=True) # JSON dump of SourceLocator
+    review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)

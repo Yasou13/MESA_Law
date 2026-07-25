@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mesa-law-worker
+  labels:
+    app: mesa-law-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mesa-law-worker
+  template:
+    metadata:
+      labels:
+        app: mesa-law-worker
+    spec:
+      containers:
+      - name: worker
+        image: mesa-law-worker:latest
+        envFrom:
+        - secretRef:
+            name: mesa-law-secrets
+        - configMapRef:
+            name: mesa-law-config

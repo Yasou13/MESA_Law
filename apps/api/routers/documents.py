@@ -10,14 +10,20 @@ from apps.api.schemas.api import (
     UploadIntentRequest,
     UploadIntentResponse,
 )
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from apps.api.models.queue import Job
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.core.ratelimit import limiter
 
 router = APIRouter()
 
 @router.post("/upload-intent", response_model=UploadIntentResponse, operation_id="createUploadIntent")
+@limiter.limit("10/minute")
 async def create_upload_intent(
+    request: Request,
     req: UploadIntentRequest,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
@@ -47,7 +53,9 @@ async def create_upload_intent(
     }
 
 @router.get("/matter/{matter_id}", response_model=list[DocumentResponse], operation_id="listDocuments")
+@limiter.limit("100/minute")
 async def list_documents(
+    request: Request,
     matter_id: str,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
@@ -55,3 +63,60 @@ async def list_documents(
     result = await db.execute(select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id))
     docs = result.scalars().all()
     return [{"id": d.id, "title": d.title} for d in docs]
+
+@router.post("/{document_id}/complete", operation_id="completeUpload")
+@limiter.limit("30/minute")
+async def complete_upload(
+    request: Request,
+    document_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    # Verify document exists and belongs to tenant
+    doc = await db.get(Document, document_id)
+    if not doc or doc.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    result = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == document_id).order_by(DocumentRevision.version.desc()))
+    rev = result.scalars().first()
+    if not rev:
+        raise HTTPException(status_code=404, detail="Revision not found")
+        
+    if rev.scan_status == "uploading":
+        rev.scan_status = "scanning"
+        # Queue the scanning job
+        job = Job(
+            type="SCAN_DOCUMENT",
+            payload={"document_id": doc.id, "revision_id": rev.id, "s3_key": rev.s3_key}
+        )
+        db.add(job)
+        await db.commit()
+    
+    return {"status": "scanning", "revision_id": rev.id}
+
+@router.get("/{document_id}/download", operation_id="downloadDocument")
+@limiter.limit("60/minute")
+async def download_document(
+    request: Request,
+    document_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    doc = await db.get(Document, document_id)
+    if not doc or doc.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    result = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == document_id).order_by(DocumentRevision.version.desc()))
+    rev = result.scalars().first()
+    if not rev:
+        raise HTTPException(status_code=404, detail="Revision not found")
+        
+    if rev.scan_status == "infected":
+        raise HTTPException(status_code=403, detail="Document is infected and cannot be downloaded")
+    elif rev.scan_status != "clean":
+        # For development flexibility, we might allow downloading un-scanned docs, 
+        # but strict policy: wait for scan
+        raise HTTPException(status_code=425, detail="Document is still being scanned")
+        
+    url = await storage_service.generate_presigned_download_url(rev.s3_key)
+    return {"presigned_url": url}

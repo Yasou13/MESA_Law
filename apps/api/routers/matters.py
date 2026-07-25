@@ -6,14 +6,18 @@ from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.domain import Matter
 from apps.api.schemas.api import MatterCreate, MatterResponse
 from apps.api.services.mesa_sync import MesaSyncService
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.core.ratelimit import limiter
 
 router = APIRouter()
 
 @router.get("", response_model=list[MatterResponse], operation_id="listMatters")
+@limiter.limit("100/minute")
 async def list_matters(
+    request: Request,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
@@ -22,7 +26,9 @@ async def list_matters(
     return [{"id": m.id, "title": m.title, "status": m.status} for m in matters]
 
 @router.post("", response_model=MatterResponse, operation_id="createMatter")
+@limiter.limit("30/minute")
 async def create_matter(
+    request: Request,
     matter_data: MatterCreate,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
@@ -34,7 +40,9 @@ async def create_matter(
     return {"id": matter.id, "title": matter.title, "status": matter.status}
 
 @router.post("/{matter_id}/rebuild-mesa", operation_id="rebuildMatterMesa")
+@limiter.limit("5/minute")
 async def rebuild_matter_mesa(
+    request: Request,
     matter_id: str,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)

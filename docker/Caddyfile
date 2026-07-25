@@ -1,0 +1,8 @@
+:80 {
+    handle /api/* {
+        reverse_proxy legal-api:8001
+    }
+    handle /* {
+        reverse_proxy web:3000
+    }
+}

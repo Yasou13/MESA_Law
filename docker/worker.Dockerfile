@@ -10,4 +10,4 @@ RUN uv sync --frozen
 COPY apps/api ./apps/api
 COPY apps/worker ./apps/worker
 
-CMD ["uv", "run", "python", "-m", "apps.worker.core.queue"]
+CMD ["uv", "run", "python", "-m", "apps.worker.main"]

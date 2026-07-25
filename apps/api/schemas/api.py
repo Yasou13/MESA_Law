@@ -22,3 +22,15 @@ class UploadIntentResponse(BaseModel):
 class DocumentResponse(BaseModel):
     id: str
     title: str
+
+class BoundingBox(BaseModel):
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+
+class SourceLocator(BaseModel):
+    document_id: str
+    page_number: int
+    bbox: BoundingBox | None = None
+    text_snippet: str | None = None

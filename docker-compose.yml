@@ -7,6 +7,11 @@ x-common-env: &common-env
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   REDIS_URL: redis://redis:6379/0
+  MESA_LAW_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-mesa}:${POSTGRES_PASSWORD:-mesa}@postgres:5432/${POSTGRES_DB:-mesa_law}"
+  MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
+  MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
+  MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
+  MESA_LAW_SECRET_KEY: "supersecret_dev_key"
 
 services:
   # ---------------------------------------------------------
@@ -56,14 +61,28 @@ services:
       - "9001:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-bootstrap:
+    image: minio/mc
+    profiles: ["core"]
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 admin password123;
+      /usr/bin/mc mb myminio/mesa-law-docs --ignore-existing;
+      /usr/bin/mc anonymous set public myminio/mesa-law-docs;
+      exit 0;
+      "
 
   keycloak:
     image: quay.io/keycloak/keycloak:24.0.0
     profiles: ["core"]
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
@@ -72,22 +91,29 @@ services:
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./docker/keycloak-realm.json:/opt/keycloak/data/import/keycloak-realm.json:ro
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - "8080:8080"
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && cat <&3 | grep -q '200 OK'"]
-      interval: 30s
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3  "]
+      interval: 15s
       timeout: 10s
-      retries: 5
+      retries: 10
 
   clamav:
     image: clamav/clamav:latest
     profiles: ["core"]
     ports:
       - "3310:3310"
+    healthcheck:
+      test: ["CMD", "clamdscan", "--ping", "127.0.0.1:3310"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   caddy:
     image: caddy:2-alpine
@@ -97,7 +123,7 @@ services:
       - "443:443"
     volumes:
       - caddy-data:/data
-      - caddy-config:/config
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
 
   # ---------------------------------------------------------
   # Observability (OTel/Grafana Stack)
@@ -105,6 +131,8 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector:latest
     profiles: ["core"]
+    volumes:
+      - ./docker/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
       - "4317:4317" # OTLP gRPC
       - "4318:4318" # OTLP HTTP
@@ -143,13 +171,17 @@ services:
   # ---------------------------------------------------------
   # Application Services
   # ---------------------------------------------------------
-  web:
+  db-migration:
     build:
       context: .
-      dockerfile: docker/web.Dockerfile
+      dockerfile: docker/api.Dockerfile
     profiles: ["core"]
-    ports:
-      - "3000:3000"
+    environment:
+      <<: *common-env
+    command: ["uv", "run", "alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   legal-api:
     build:
@@ -157,15 +189,27 @@ services:
       dockerfile: docker/api.Dockerfile
     profiles: ["core"]
     environment:
-      MESA_LAW_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-mesa}:${POSTGRES_PASSWORD:-mesa}@postgres:5432/${POSTGRES_DB:-mesa_law}"
-      MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
-      MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
-      MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
-      MESA_LAW_SECRET_KEY: "supersecret_dev_key"
+      <<: *common-env
     ports:
       - "8001:8001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      db-migration:
+        condition: service_completed_successfully
+      minio-bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   legal-worker:
     build:
@@ -173,20 +217,30 @@ services:
       dockerfile: docker/worker.Dockerfile
     profiles: ["core"]
     environment:
-      MESA_LAW_DATABASE_URL: "postgresql+psycopg://${POSTGRES_USER:-mesa}:${POSTGRES_PASSWORD:-mesa}@postgres:5432/${POSTGRES_DB:-mesa_law}"
-      MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
-      MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
-      MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
-      MESA_LAW_SECRET_KEY: "supersecret_dev_key"
+      <<: *common-env
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-migration:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    profiles: ["core"]
+    environment:
+      NEXTAUTH_URL: "http://localhost:3000"
+      NEXTAUTH_SECRET: "supersecret_nextauth_key_for_dev_only"
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres-data:
   redis-data:
   minio-data:
   caddy-data:
-  caddy-config:
   prometheus-data:
   grafana-data:

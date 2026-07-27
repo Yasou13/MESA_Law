@@ -15,6 +15,33 @@ AXIOS_INSTANCE.interceptors.request.use(async (config) => {
   return config;
 });
 
+import { toast } from 'react-hot-toast';
+
+AXIOS_INSTANCE.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== 'undefined') {
+      const status = error.response?.status;
+      const message = error.response?.data?.detail || error.message || 'An unexpected error occurred';
+      
+      if (status === 401) {
+        // Handled by NextAuth/session expiry
+      } else if (status === 403) {
+        toast.error('Permission denied: You cannot access this resource.');
+      } else if (status === 404) {
+        toast.error('Resource not found.');
+      } else if (status === 422) {
+        toast.error(`Validation error: ${JSON.stringify(message)}`);
+      } else if (status >= 500) {
+        toast.error(`Server error: ${message}`);
+      } else {
+        toast.error(message);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const customInstance = <T>(
   url: string,
   options?: any,

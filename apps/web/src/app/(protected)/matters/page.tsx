@@ -1,52 +1,51 @@
 'use client'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import axios from 'axios'
+import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
 import { Plus, FolderOpen, Loader2, Search, ArrowRight, Activity, Clock } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { clsx } from 'clsx'
+import { useListMatters, useCreateMatter } from '@/api/endpoints/default/default'
 
-type Matter = {
-  id: string
-  title: string
-  status: string
-}
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+const matterSchema = z.object({
+  title: z.string().min(3, 'Matter name must be at least 3 characters'),
+})
+
+type MatterFormValues = z.infer<typeof matterSchema>
 
 export default function MattersPage() {
   const queryClient = useQueryClient()
-  const [newTitle, setNewTitle] = useState('')
   const [search, setSearch] = useState('')
 
-  const { data: matters, isLoading } = useQuery<Matter[]>({
-    queryKey: ['matters'],
-    queryFn: async () => {
-      const res = await axios.get('/api/v1/matters')
-      return res.data
+  const { data: mattersResponse, isLoading } = useListMatters()
+  const matters = Array.isArray(mattersResponse?.data) ? mattersResponse.data : []
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<MatterFormValues>({
+    resolver: zodResolver(matterSchema),
+    defaultValues: { title: '' }
+  })
+
+  const createMatter = useCreateMatter({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/v1/matters'] })
+        reset()
+        toast.success('Matter workspace initialized')
+      },
+      onError: () => {
+        toast.error('Failed to create workspace')
+      }
     }
   })
 
-  const createMatter = useMutation({
-    mutationFn: async (title: string) => {
-      const res = await axios.post('/api/v1/matters', { title })
-      return res.data
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['matters'] })
-      setNewTitle('')
-      toast.success('Matter workspace initialized')
-    },
-    onError: () => {
-      toast.error('Failed to create workspace')
-    }
-  })
-
-  const handleCreate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTitle.trim()) return
-    createMatter.mutate(newTitle)
+  const onSubmit = (data: MatterFormValues) => {
+    createMatter.mutate({ data: { title: data.title } as any })
   }
 
   const filteredMatters = matters?.filter(m => m.title.toLowerCase().includes(search.toLowerCase())) || []
@@ -55,27 +54,30 @@ export default function MattersPage() {
     <div className="max-w-7xl mx-auto p-8 lg:p-12">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight text-white mb-2">Matter Workspaces</h1>
-          <p className="text-zinc-400">Manage and analyze your legal cases with AI intelligence.</p>
+          <h1 className="text-4xl font-bold tracking-tight text-[var(--foreground)] mb-2">Matter Workspaces</h1>
+          <p className="text-[var(--color-anthracite-400)]">Manage and analyze your legal cases with AI intelligence.</p>
         </div>
         
-        <form onSubmit={handleCreate} className="flex gap-3 w-full md:w-auto relative group">
-          <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-          <input 
-            type="text" 
-            placeholder="New matter name..." 
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="px-5 py-3 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:border-blue-500/50 focus:bg-white/10 text-sm text-white w-full md:w-64 transition-all relative z-10 backdrop-blur-md placeholder:text-zinc-500"
-          />
-          <button 
-            type="submit" 
-            disabled={createMatter.isPending || !newTitle.trim()}
-            className="flex items-center justify-center gap-2 px-5 py-3 bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-xl font-medium transition-all text-sm relative z-10 shadow-lg shadow-blue-500/20 disabled:shadow-none hover:scale-105 active:scale-95"
-          >
-            {createMatter.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
-            <span className="hidden sm:inline">Initialize</span>
-          </button>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-1 w-full md:w-auto relative group">
+          <div className="flex gap-3 relative">
+            <input 
+              type="text" 
+              placeholder="New matter name..." 
+              {...register('title')}
+              className="px-5 py-3 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl focus:outline-none focus:border-[var(--color-lila-500)] text-sm text-[var(--foreground)] w-full md:w-64 transition-all relative z-10 placeholder:text-[var(--color-anthracite-400)]"
+            />
+            <button 
+              type="submit" 
+              disabled={createMatter.isPending}
+              className="flex items-center justify-center gap-2 px-5 py-3 bg-[var(--color-anthracite-800)] hover:bg-[var(--color-anthracite-700)] disabled:bg-[var(--bg-surface-hover)] disabled:text-[var(--color-anthracite-400)] text-white border border-[var(--border-surface)] rounded-xl font-medium transition-all text-sm relative z-10 shadow-sm disabled:shadow-none hover:scale-105 active:scale-95"
+            >
+              {createMatter.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-5 h-5" />}
+              <span className="hidden sm:inline">Initialize</span>
+            </button>
+          </div>
+          {errors.title && (
+            <p className="text-sm text-[var(--color-semantic-error)] px-2">{errors.title.message}</p>
+          )}
         </form>
       </div>
 

@@ -6,5 +6,10 @@
  */
 
 export interface MatterCreate {
+  /**
+     * The title of the matter
+     * @minLength 3
+     * @maxLength 255
+     */
   title: string;
 }

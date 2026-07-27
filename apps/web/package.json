@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test"
+    "test": "playwright test",
+    "api:generate": "orval"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",

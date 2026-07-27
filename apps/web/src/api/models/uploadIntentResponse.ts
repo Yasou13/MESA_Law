@@ -9,4 +9,5 @@ export interface UploadIntentResponse {
   document_id: string;
   revision_id: string;
   presigned_url: string;
+  storage_key: string;
 }

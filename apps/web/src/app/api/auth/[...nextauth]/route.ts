@@ -2,7 +2,12 @@ import NextAuth from "next-auth"
 import KeycloakProvider from "next-auth/providers/keycloak"
 
 const handler = NextAuth({
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "development_secret_only_do_not_use_in_prod",
+  session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
+  pages: {
+    signIn: '/login',
+    error: '/error',
+  },
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_CLIENT_ID || "mesa-client",
@@ -11,12 +16,33 @@ const handler = NextAuth({
       authorization: process.env.KEYCLOAK_PUBLIC_ISSUER ? `${process.env.KEYCLOAK_PUBLIC_ISSUER}/protocol/openid-connect/auth` : undefined,
       token: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/token` : undefined,
       userinfo: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/userinfo` : undefined,
-    })
+    }),
+    ...(process.env.NODE_ENV === 'development' ? [
+      require("next-auth/providers/credentials").default({
+        name: "Developer Login",
+        credentials: {
+          username: { label: "Username", type: "text", placeholder: "admin" },
+          password: { label: "Password", type: "password", placeholder: "admin" }
+        },
+        async authorize(credentials: any) {
+          if (credentials?.username === "admin" && credentials?.password === "admin") {
+            return {
+              id: "dev-user-1",
+              name: "Dev Admin",
+              email: "admin@mesa.law",
+              access_token: "mock_dev_token",
+            }
+          }
+          return null
+        }
+      })
+    ] : [])
   ],
   callbacks: {
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token
+        // Set id_token or other fields if necessary
       }
       return token
     },

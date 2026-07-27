@@ -1,43 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-
-type ClaimEvidenceItem = {
-  id: string | number;
-  claim: string;
-  evidence: string | null;
-  support: string;
-  confidence: string;
-};
+import React from 'react';
+import { useListClaimsWithEvidence } from '@/api/endpoints/default/default';
+import { Loader2, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 
 export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
-  const [loading, setLoading] = useState(true);
-  const [claims, setClaims] = useState<ClaimEvidenceItem[]>([]);
-
-  useEffect(() => {
-    let isMounted = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLoading(true);
-    axios.get(`/api/v1/matters/${matterId}/claims-evidence`)
-      .then(res => {
-        if (isMounted) {
-          setClaims(res.data);
-          setLoading(false);
-        }
-      })
-      .catch(err => {
-        console.error("Failed to fetch claims evidence:", err);
-        if (isMounted) {
-          setLoading(false);
-        }
-      });
-    return () => { isMounted = false; };
-  }, [matterId]);
+  const { data: claimsResponse, isLoading: loading } = useListClaimsWithEvidence(matterId);
+  const claims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : [];
 
   if (loading) {
     return (
       <div className="p-6 animate-pulse space-y-4">
         {[1, 2].map(i => (
-          <div key={i} className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg h-24"></div>
+          <div key={i} className="bg-[var(--bg-surface)] border border-[var(--border-surface)] p-4 rounded-xl h-24 shadow-sm"></div>
         ))}
       </div>
     );
@@ -45,37 +18,47 @@ export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-semibold mb-6 text-zinc-100">Claims & Evidence</h2>
+      <h2 className="text-xl font-semibold mb-6 text-[var(--foreground)]">Claims & Evidence Review</h2>
       <div className="space-y-4">
-        {claims.map((claim) => (
-          <div key={claim.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-5 flex flex-col md:flex-row gap-6">
+        {claims.map((claim: any) => (
+          <div key={claim.id} className="bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl p-5 flex flex-col md:flex-row gap-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-zinc-400 mb-1">Claim</h3>
-              <p className="text-zinc-100">{claim.claim}</p>
-              <div className="mt-3">
-                <span className={`text-xs px-2 py-1 rounded border ${claim.confidence === 'high' ? 'bg-green-900/30 text-green-400 border-green-800/50' : claim.confidence === 'medium' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800/50' : 'bg-red-900/30 text-red-400 border-red-800/50'}`}>
-                  Confidence: {claim.confidence}
+              <h3 className="text-sm font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider mb-2">Extracted Claim</h3>
+              <p className="text-[var(--foreground)] leading-relaxed">{claim.description || claim.claim}</p>
+              <div className="mt-4 flex gap-2">
+                <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${claim.confidence === 'high' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : claim.confidence === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
+                  {claim.confidence || 'Medium'} Confidence
+                </span>
+                <span className="text-xs px-2.5 py-1 rounded-full border font-medium bg-[var(--color-anthracite-800)] text-[var(--color-anthracite-300)] border-[var(--color-anthracite-700)]">
+                  {claim.status || 'PENDING'}
                 </span>
               </div>
             </div>
             
-            <div className="w-px bg-zinc-800 hidden md:block"></div>
+            <div className="w-px bg-[var(--border-surface)] hidden md:block"></div>
             
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-zinc-400 mb-1">Evidence & Support</h3>
+              <h3 className="text-sm font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider mb-2">Supporting Evidence</h3>
               {claim.evidence ? (
-                <p className="text-zinc-300 text-sm">{claim.evidence}</p>
+                <div className="bg-[var(--color-anthracite-900)] p-3 rounded-lg border border-[var(--border-surface)]">
+                  <p className="text-[var(--color-anthracite-200)] text-sm italic">"{claim.evidence}"</p>
+                </div>
               ) : (
-                <p className="text-zinc-500 text-sm italic">No supporting evidence found in uploaded documents</p>
+                <div className="flex items-center gap-2 text-[var(--color-anthracite-400)] text-sm italic p-3 bg-[var(--bg-surface-hover)] rounded-lg border border-[var(--border-surface)] border-dashed">
+                  <AlertCircle className="w-4 h-4" />
+                  No explicit supporting evidence found in source documents
+                </div>
               )}
-              <div className="mt-3">
-                <span className={`text-xs px-2 py-1 rounded border ${claim.support === 'strong' ? 'bg-blue-900/30 text-blue-400 border-blue-800/50' : claim.support === 'partial' ? 'bg-orange-900/30 text-orange-400 border-orange-800/50' : 'bg-zinc-800 text-zinc-400 border-zinc-700'}`}>
-                  Support: {claim.support}
-                </span>
-              </div>
             </div>
           </div>
         ))}
+        {claims.length === 0 && (
+          <div className="text-center p-12 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl border-dashed">
+            <ShieldAlert className="w-12 h-12 text-[var(--color-anthracite-500)] mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-[var(--foreground)] mb-1">No Claims Extracted</h3>
+            <p className="text-[var(--color-anthracite-400)]">Upload documents to begin automated claim extraction.</p>
+          </div>
+        )}
       </div>
     </div>
   );

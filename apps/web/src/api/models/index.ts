@@ -5,10 +5,28 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './correctReviewRequest';
+export * from './correctReviewRequestCorrectedContent';
 export * from './documentResponse';
+export * from './exportDraftRequest';
+export * from './firmCreateRequest';
+export * from './firmResponse';
+export * from './generateDraftRequest';
 export * from './hTTPValidationError';
+export * from './listDraftReviewsApiV1ReviewsGetParams';
 export * from './matterCreate';
+export * from './matterQABody';
 export * from './matterResponse';
+export * from './parsedDocumentResponse';
+export * from './parsedPageResponse';
+export * from './parsedPageResponseLayoutData';
+export * from './qAQuery';
+export * from './researchRequest';
+export * from './reviewItemResponse';
+export * from './reviewItemResponseProposedContent';
+export * from './saveDraftRequest';
+export * from './setActiveFirmApiV1SessionActiveFirmPostParams';
+export * from './updateDraftRequest';
 export * from './uploadIntentRequest';
 export * from './uploadIntentResponse';
 export * from './validationError';

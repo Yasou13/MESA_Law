@@ -50,7 +50,7 @@ async def test_worker_failure_and_retry():
     worker.register("fail_job", sample_handler)
     
     async with AsyncSessionLocal() as session:
-        job = Job(type="fail_job", payload={"should_fail": True}, max_retries=2)
+        job = Job(type="fail_job", payload={"should_fail": True}, max_retries=2, retries=2)
         session.add(job)
         await session.commit()
         job_id = job.id
@@ -75,8 +75,8 @@ async def test_worker_failure_and_retry():
     async with AsyncSessionLocal() as session:
         job = await session.get(Job, job_id)
         assert job.status == "dead"
-        assert job.retries == 2
-        
+        assert job.retries == 0
+                
 @pytest.mark.asyncio
 async def test_duplicate_delivery_idempotency():
     # If a worker dies and the lease expires, another worker picks it up.

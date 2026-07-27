@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mesa-law-pilot
+  labels:
+    environment: pilot
+    app: mesa-law

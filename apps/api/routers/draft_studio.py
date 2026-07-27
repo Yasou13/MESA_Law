@@ -89,22 +89,47 @@ async def update_draft(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    from apps.api.models.draft import DraftRevision
+    
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
         
-    if payload.expected_version is not None and draft.version != payload.expected_version:
-        raise HTTPException(status_code=409, detail="Version conflict: draft has been modified by another process")
+    # Phase 11: If-Match ETag checking
+    if_match = request.headers.get("if-match")
+    if if_match and if_match.strip('"') != draft.etag:
+        raise HTTPException(status_code=412, detail="VERSION_CONFLICT: ETag mismatch")
         
+    # Also support body expected_version
+    if payload.expected_version is not None and draft.version != payload.expected_version:
+        raise HTTPException(status_code=409, detail="VERSION_CONFLICT: Draft has been modified by another process")
+        
+    # 1. Save old content as a DraftRevision
+    old_revision = DraftRevision(
+        tenant_id=context.tenant_id,
+        draft_id=draft.id,
+        version=draft.version,
+        content=draft.content,
+        change_summary="Auto-saved revision prior to update"
+    )
+    db.add(old_revision)
+        
+    # 2. Update Draft
     if payload.title is not None:
         draft.title = payload.title
     if payload.content is not None:
         draft.content = payload.content
         
     draft.version += 1
+    draft.etag = f"v{draft.version}"
+    
     await db.commit()
     await db.refresh(draft)
-    return {"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content}
+    
+    from fastapi.responses import JSONResponse
+    response = JSONResponse(content={"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "etag": draft.etag})
+    response.headers["ETag"] = f'"{draft.etag}"'
+    return response
 
 @router.post("/drafts/{draft_id}/export")
 async def export_draft(
@@ -114,9 +139,23 @@ async def export_draft(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    idem_key = request.headers.get("Idempotency-Key")
+    if idem_key:
+        from apps.api.core.idempotency import check_idempotency, complete_idempotency
+        cached = await check_idempotency(db, idem_key)
+        if cached:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=cached.status_code or 200, content=cached.response_body)
+            
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    if payload.format not in ["pdf", "docx"]:
+        raise HTTPException(status_code=400, detail="MIME Error: Only 'pdf' and 'docx' formats are supported")
+        
+    if draft.status != "APPROVED_FOR_EXTERNAL_USE":
+        raise HTTPException(status_code=403, detail="Draft must be APPROVED_FOR_EXTERNAL_USE to be exported")
         
     job = Job(
         type="EXPORT_DRAFT",
@@ -127,4 +166,32 @@ async def export_draft(
     )
     db.add(job)
     await db.commit()
-    return {"message": "Export job queued", "job_id": job.id, "format": payload.format, "version": draft.version}
+    
+    resp_body = {"message": "Export job queued", "job_id": job.id, "format": payload.format, "version": draft.version}
+    if idem_key:
+        await complete_idempotency(db, idem_key, 200, resp_body)
+        
+    return resp_body
+
+class GenerateDraftRequest(BaseModel):
+    matter_id: str
+    template_name: str | None = None
+
+@router.post("/drafts/generate")
+async def generate_draft(
+    request: Request,
+    payload: GenerateDraftRequest,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    job = Job(
+        type="GENERATE_DRAFT",
+        payload={
+            "tenant_id": context.tenant_id,
+            "matter_id": payload.matter_id,
+            "template_name": payload.template_name or "default"
+        }
+    )
+    db.add(job)
+    await db.commit()
+    return {"message": "Draft generation job queued", "job_id": job.id}

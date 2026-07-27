@@ -25,19 +25,34 @@ async def list_matters(
     matters = result.scalars().all()
     return [{"id": m.id, "title": m.title, "status": m.status} for m in matters]
 
+from fastapi import Header
+from apps.api.core.idempotency import check_idempotency, complete_idempotency
+
 @router.post("", response_model=MatterResponse, operation_id="createMatter")
 @limiter.limit("30/minute")
 async def create_matter(
     request: Request,
     matter_data: MatterCreate,
+    idem_key: str | None = Header(None, alias="Idempotency-Key"),
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    if idem_key:
+        cached = await check_idempotency(db, idem_key)
+        if cached and cached.response_body:
+            return cached.response_body
+            
     matter = Matter(title=matter_data.title, tenant_id=context.tenant_id)
     db.add(matter)
     await db.commit()
     await db.refresh(matter)
-    return {"id": matter.id, "title": matter.title, "status": matter.status}
+    
+    resp = {"id": matter.id, "title": matter.title, "status": matter.status}
+    
+    if idem_key:
+        await complete_idempotency(db, idem_key, 201, resp)
+        
+    return resp
 
 @router.post("/{matter_id}/rebuild-mesa", operation_id="rebuildMatterMesa")
 @limiter.limit("5/minute")
@@ -55,3 +70,21 @@ async def rebuild_matter_mesa(
     finally:
         if hasattr(adapter, 'close'):
             await adapter.close()
+
+from apps.api.core.qa import ask_matter_question
+
+@router.post("/{matter_id}/qa", operation_id="matterQA")
+@limiter.limit("20/minute")
+async def matter_qa_endpoint(
+    request: Request,
+    matter_id: str,
+    query: dict,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    question = query.get("question")
+    if not question:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Missing question in body")
+        
+    return await ask_matter_question(db, matter_id, question)

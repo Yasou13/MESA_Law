@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-web-and-worker
+  namespace: mesa-law-pilot
+spec:
+  podSelector:
+    matchLabels:
+      app: mesa-law
+  policyTypes:
+    - Ingress
+  ingress:
+    # API can receive traffic from web and ingress
+    - from:
+        - podSelector:
+            matchLabels:
+              component: web
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Web can receive traffic from ingress
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Worker does not receive ingress traffic, it only polls DB/Queue

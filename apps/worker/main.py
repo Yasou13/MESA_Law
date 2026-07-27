@@ -16,7 +16,11 @@ from apps.worker.handlers.sync import handle_sync_mesa_document, handle_publish_
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("worker")
 
+import os
+from apps.api.core.observability import setup_observability
+
 async def main():
+    setup_observability(service_name="mesa-law-worker")
     logger.info("Starting MESA Law Worker...")
     worker = Worker(batch_size=10, lease_minutes=5)
     
@@ -30,6 +34,15 @@ async def main():
     worker.register("SYNC_MESA_DOCUMENT", handle_sync_mesa_document)
     worker.register("PUBLISH_OUTBOX", handle_publish_outbox)
     worker.register("EXPORT_DRAFT", handle_export_draft)
+    
+    from apps.worker.handlers.sync import handle_sync_approved_reviews
+    worker.register("SYNC_APPROVED_REVIEWS", handle_sync_approved_reviews)
+    
+    from apps.worker.handlers.research import handle_perform_legal_research
+    worker.register("PERFORM_LEGAL_RESEARCH", handle_perform_legal_research)
+    
+    from apps.worker.handlers.draft import handle_generate_draft
+    worker.register("GENERATE_DRAFT", handle_generate_draft)
 
     loop = asyncio.get_running_loop()
     

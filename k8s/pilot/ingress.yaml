@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mesa-law-ingress
+  namespace: mesa-law-pilot
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.mesalaw.com
+        - api.mesalaw.com
+      secretName: mesa-law-tls
+  rules:
+    - host: app.mesalaw.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mesa-law-web
+                port:
+                  number: 3000
+    - host: api.mesalaw.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mesa-law-api
+                port:
+                  number: 8000

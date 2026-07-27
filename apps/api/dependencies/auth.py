@@ -99,7 +99,7 @@ async def setup_tenant_context(
     
     set_tenant_id(tenant_id)
     try:
-        await db.execute(text("SELECT set_config('app.current_tenant', :tenant, false)"), {"tenant": str(tenant_id)})
+        await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(tenant_id)})
     except Exception as e:
         import logging
         logging.error(f"Failed to execute set_config for app.current_tenant: {e}")

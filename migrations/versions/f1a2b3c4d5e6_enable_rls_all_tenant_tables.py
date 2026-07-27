@@ -35,6 +35,7 @@ def upgrade() -> None:
     for table in tenant_tables:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
         
+        op.execute(f"DROP POLICY IF EXISTS tenant_isolation_policy ON {table};")
         op.execute(f"""
             CREATE POLICY tenant_isolation_policy ON {table}
             AS PERMISSIVE

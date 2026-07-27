@@ -1,22 +1,91 @@
-name: CI
+name: MESA Law CI/CD Quality Gates
 
 on:
   push:
-    branches: [main, master]
+    branches: [ "main" ]
   pull_request:
-    branches: [main, master]
+    branches: [ "main" ]
 
 jobs:
-  backend-tests:
-    name: Backend Tests & Lint
+  backend-quality:
+    name: Backend Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+          
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint and Format (Ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          
+      - name: Typecheck (Mypy)
+        run: uv run mypy apps
+
+      - name: Compile check
+        run: python -m compileall apps tests
+
+      - name: Run Pytest
+        env:
+          MESA_ENV: test
+        run: uv run pytest apps/ -v
+
+  frontend-quality:
+    name: Frontend Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  database-migrations:
+    name: Database Migration Integrity
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:15
         env:
-          POSTGRES_USER: mesa
-          POSTGRES_PASSWORD: mesa
-          POSTGRES_DB: mesa_law
+          POSTGRES_USER: mesa_law
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: mesa_law_db
         ports:
           - 5432:5432
         options: >-
@@ -26,47 +95,78 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-      - name: Install Python dependencies
-        run: uv sync --frozen
-      - name: Run Ruff Linting
-        run: uv run ruff check apps/api apps/worker tests
-      - name: Run Alembic Upgrade
-        run: uv run alembic upgrade head
-        env:
-          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law"
-      - name: Run Pytest (Unit & Integration)
-        run: uv run pytest tests/ apps/api/test_*.py apps/worker/test_*.py -v
-        env:
-          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law"
-          MESA_LAW_ENVIRONMENT: test
-          MESA_LAW_SECRET_KEY: test_secret_key
-          NEXTAUTH_SECRET: test_nextauth_key
+        with:
+          version: "latest"
 
-  frontend-tests:
-    name: Frontend Lint & Build
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Test Upgrade to Head
+        env:
+          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_ENV: test
+        run: uv run alembic upgrade head
+
+      - name: Test Downgrade
+        env:
+          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_ENV: test
+        run: uv run alembic downgrade -1
+
+      - name: Test Upgrade to Head (Re-apply)
+        env:
+          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_ENV: test
+        run: uv run alembic upgrade head
+
+  integration-smoke-test:
+    name: Integration & Smoke Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      
+      - name: Build Docker Compose Stack
+        run: docker compose --profile core build
+        
+      - name: Start Docker Compose Stack
+        run: docker compose --profile core up -d
+        
+      - name: Wait for services
+        run: sleep 15
+        
+      - name: Check container statuses
+        run: docker compose --profile core ps
+
+  security-scan:
+    name: Security Scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API Image
+        run: docker build -t mesa-law-api:local -f docker/api.Dockerfile .
+        
+      - name: Run Trivy vulnerability scanner on Image
+        uses: aquasecurity/trivy-action@master
         with:
-          node-version: 22
-      - name: Install pnpm
-        run: corepack enable pnpm
-      - name: Install Node dependencies
-        run: cd apps/web && pnpm install --frozen-lockfile
-      - name: Run Frontend Lint
-        run: cd apps/web && pnpm lint
-      - name: Run Frontend Typecheck
-        run: cd apps/web && pnpm tsc --noEmit
-      - name: Build Frontend Bundle
-        run: cd apps/web && pnpm build
-        env:
-          NEXTAUTH_URL: "http://localhost:3000"
-          NEXTAUTH_SECRET: "ci_nextauth_secret_key"
-      - name: Install Playwright Browsers
-        run: cd apps/web && pnpm exec playwright install --with-deps
-      - name: Run Playwright Tests
-        run: cd apps/web && pnpm test
+          image-ref: 'mesa-law-api:local'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'spdx-json'
+          output: 'sbom.spdx.json'

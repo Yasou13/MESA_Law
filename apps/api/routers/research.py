@@ -5,44 +5,34 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.core.ratelimit import limiter
-from apps.api.models.research import LegalResource
+from apps.api.models.research import LegalSource
 
 router = APIRouter(tags=["research"])
 
-@router.get("/search", operation_id="searchLegalResources")
-@limiter.limit("60/minute")
-async def search_legal_resources(
+from pydantic import BaseModel
+
+class ResearchRequest(BaseModel):
+    matter_id: str
+    query: str
+
+@router.post("/start", operation_id="startLegalResearch")
+@limiter.limit("20/minute")
+async def start_legal_research(
     request: Request,
-    query: str = Query(..., min_length=2),
+    payload: ResearchRequest,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(LegalResource).where(
-        or_(
-            LegalResource.title.ilike(f"%{query}%"),
-            LegalResource.content.ilike(f"%{query}%"),
-            LegalResource.citation.ilike(f"%{query}%")
-        )
-    ).limit(10)
-    
-    result = await db.execute(stmt)
-    resources = result.scalars().all()
-    
-    if resources:
-        # Generate a semi-realistic score based on how close the query is
-        import random
-        return [
-            {
-                "id": str(r.id),
-                "type": "Legislation" if "Kanun" in r.title or "Madde" in r.title else "Case Law",
-                "title": r.title,
-                "snippet": r.content[:200] + "..." if len(r.content) > 200 else r.content,
-                "matchScore": random.randint(75, 99),
-                "is_current": True,
-                "source_snapshot": "v1.0"
-            }
-            for r in resources
-        ]
-        
-    return []
+    from apps.api.models.queue import Job
+    job = Job(
+        type="PERFORM_LEGAL_RESEARCH",
+        payload={
+            "matter_id": payload.matter_id,
+            "query": payload.query,
+            "tenant_id": context.tenant_id
+        }
+    )
+    db.add(job)
+    await db.commit()
+    return {"status": "accepted", "job_id": job.id}
 

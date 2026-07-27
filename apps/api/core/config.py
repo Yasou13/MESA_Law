@@ -25,8 +25,9 @@ class Settings(BaseSettings):
     
     keycloak_client_id: str = Field(default="mesa-client", validation_alias=AliasChoices("KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"))
     keycloak_client_secret: str = Field(default="mesa-client-secret", validation_alias=AliasChoices("KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"))
-    keycloak_issuer: str = Field(default="http://localhost:8080/realms/mesa_law", validation_alias=AliasChoices("KEYCLOAK_ISSUER", "MESA_LAW_KEYCLOAK_ISSUER"))
+    keycloak_issuer: str = Field(default="http://localhost:8080/realms/mesa_law", validation_alias=AliasChoices("KEYCLOAK_PUBLIC_ISSUER", "KEYCLOAK_ISSUER", "MESA_LAW_KEYCLOAK_ISSUER"))
     keycloak_jwks_url: str = Field(default="http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs", validation_alias=AliasChoices("KEYCLOAK_JWKS_URL", "MESA_LAW_KEYCLOAK_JWKS_URL"))
+    keycloak_internal_url: str | None = Field(default=None, validation_alias=AliasChoices("KEYCLOAK_INTERNAL_URL", "MESA_LAW_KEYCLOAK_INTERNAL_URL"))
     
     model_config = SettingsConfigDict(env_prefix="MESA_LAW_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

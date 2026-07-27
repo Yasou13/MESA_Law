@@ -64,9 +64,21 @@ class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
 class MatterEvent(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "matter_events"
     matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
-    title: Mapped[str] = mapped_column(String, nullable=False)
-    event_date: Mapped[str] = mapped_column(String, nullable=False) # ISO 8601 string or Date
-    source_type: Mapped[str] = mapped_column(String, nullable=False) # e.g. "document", "manual", "system"
+    
+    event_type: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=True)
+    
+    from sqlalchemy import DateTime
+    from datetime import datetime
+    
+    event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    date_precision: Mapped[str] = mapped_column(String, default="day", nullable=False) # day, month, year
+    
+    source_locator_id: Mapped[str] = mapped_column(String, nullable=True)
+    review_state: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+    
+    # Keeping old fields for backwards compatibility with worker scripts if needed
+    source_type: Mapped[str] = mapped_column(String, default="document", nullable=False)
     confidence: Mapped[str] = mapped_column(String, default="high")
 
 class ClaimEvidenceLink(Base, AuditMixin, TenantAwareMixin):
@@ -75,9 +87,4 @@ class ClaimEvidenceLink(Base, AuditMixin, TenantAwareMixin):
     evidence_id: Mapped[str] = mapped_column(ForeignKey("evidence_items.id", ondelete="CASCADE"), index=True, nullable=False)
     support_type: Mapped[str] = mapped_column(String, default="supports") # supports, refutes, partial
 
-class ReviewItem(Base, AuditMixin, TenantAwareMixin):
-    __tablename__ = "review_items"
-    matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=False)
-    item_type: Mapped[str] = mapped_column(String, nullable=False) # claim, party, event
-    payload: Mapped[str] = mapped_column(String, nullable=False) # JSON payload of suggested data
-    status: Mapped[str] = mapped_column(String, default="pending", nullable=False) # pending, approved, rejected
+

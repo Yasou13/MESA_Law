@@ -7,8 +7,10 @@ const handler = NextAuth({
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_CLIENT_ID || "mesa-client",
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "",
-      issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/mesa_law",
-      wellKnown: process.env.KEYCLOAK_INTERNAL_ISSUER ? `${process.env.KEYCLOAK_INTERNAL_ISSUER}/.well-known/openid-configuration` : undefined,
+      issuer: process.env.KEYCLOAK_PUBLIC_ISSUER || "http://localhost:8080/realms/mesa_law",
+      authorization: process.env.KEYCLOAK_PUBLIC_ISSUER ? `${process.env.KEYCLOAK_PUBLIC_ISSUER}/protocol/openid-connect/auth` : undefined,
+      token: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/token` : undefined,
+      userinfo: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/userinfo` : undefined,
     })
   ],
   callbacks: {

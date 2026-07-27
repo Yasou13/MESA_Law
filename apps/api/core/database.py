@@ -10,6 +10,16 @@ async_engine = create_async_engine(
     pool_pre_ping=True,
     echo=settings.env == "development",
 )
+
+import os
+if os.getenv("MESA_ENV", "development") != "test":
+    from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+    SQLAlchemyInstrumentor().instrument(
+        engine=async_engine.sync_engine,
+        enable_commenter=True,
+        commenter_options={}
+    )
+
 AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
 
 # Sync engine and session for Alembic / background jobs

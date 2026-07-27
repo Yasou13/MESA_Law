@@ -55,7 +55,6 @@ class Worker:
             lock_stmt = update(Job).where(Job.id.in_(job_ids)).values(
                 status="processing",
                 locked_until=locked_until,
-                retries=Job.retries + 1,
                 updated_at=now
             ).returning(Job)
             
@@ -87,19 +86,42 @@ class Worker:
             session.add(attempt)
             await session.commit()
             
+            from apps.api.core.observability import job_id_cv, tenant_id_cv, get_meter
+            from opentelemetry import trace
+            import time
+            
+            meter = get_meter("mesa.worker")
+            duration_histogram = meter.create_histogram("job_processing_duration", description="Time spent processing a job")
+            
+            job_id_cv.set(job.id)
+            tenant_id_cv.set(job.payload.get("tenant_id"))
+            
+            tracer = trace.get_tracer(__name__)
+            start_time = time.time()
+            
             try:
-                await handler(job.payload, session)
-                
-                # Refresh job since handler might have modified session state
-                job = await session.get(Job, job_id)
-                job.status = "completed"
-                job.locked_until = None
-                job.error_message = None
-                attempt.status = "success"
-                attempt.finished_at = utc_now()
-                await session.commit()
-                
+                with tracer.start_as_current_span(f"process_job_{job.type}") as span:
+                    span.set_attribute("job.id", job.id)
+                    span.set_attribute("job.type", job.type)
+                    if "tenant_id" in job.payload:
+                        span.set_attribute("tenant.id", job.payload["tenant_id"])
+                        
+                    await handler(job.payload, session)
+                    
+                    # Refresh job since handler might have modified session state
+                    job = await session.get(Job, job_id)
+                    job.status = "completed"
+                    job.locked_until = None
+                    job.error_message = None
+                    attempt.status = "success"
+                    attempt.finished_at = utc_now()
+                    await session.commit()
+                    
+                    duration_histogram.record(time.time() - start_time, {"job.type": job.type, "status": "success"})
+                    
             except Exception as e:  # noqa: BLE001 — handlers may raise any exception
+                duration_histogram.record(time.time() - start_time, {"job.type": job.type, "status": "failed"})
+                
                 await session.rollback()
                 # Use a fresh session for failure update if needed, but since we rolled back, we can just use the same one
                 # but we need to re-fetch the objects.
@@ -114,13 +136,18 @@ class Worker:
             attempt.error_details = error_msg
             attempt.finished_at = utc_now()
             
-        if job.retries >= job.max_retries:
+        # Phase 16: Decrement retries (remaining attempts)
+        job.retries = max(0, job.retries - 1)
+            
+        if job.retries == 0:
             job.status = "dead"
             job.locked_until = None
         else:
             job.status = "pending"
             job.locked_until = None
-            job.run_at = utc_now() + timedelta(seconds=(2 ** job.retries) * 5)
+            # Exponential backoff based on attempts made (max_retries - retries)
+            attempts_made = max(0, job.max_retries - job.retries)
+            job.run_at = utc_now() + timedelta(seconds=(2 ** attempts_made) * 5)
             
         session.add(job)
         if attempt:

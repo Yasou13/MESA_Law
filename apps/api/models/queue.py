@@ -15,7 +15,7 @@ class Job(Base, AuditMixin):
     
     # Retry and Leasing
     max_retries: Mapped[int] = mapped_column(Integer, default=3)
-    retries: Mapped[int] = mapped_column(Integer, default=0)
+    retries: Mapped[int] = mapped_column(Integer, default=3)
     run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, index=True)
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     

@@ -4,7 +4,7 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.utils import utc_now
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.review import AuditLog, ReviewQueue
+from apps.api.models.review import AuditLog, ReviewItem
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -24,17 +24,17 @@ class CorrectReviewRequest(BaseModel):
     corrected_content: dict
 
 @router.get("", response_model=list[ReviewItemResponse])
-async def list_pending_reviews(
+async def list_draft_reviews(
     matter_id: str | None = None,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    query = select(ReviewQueue).where(
-        ReviewQueue.tenant_id == context.tenant_id,
-        ReviewQueue.status == "pending"
+    query = select(ReviewItem).where(
+        ReviewItem.tenant_id == context.tenant_id,
+        ReviewItem.status == "draft"
     )
     if matter_id:
-        query = query.where(ReviewQueue.matter_id == matter_id)
+        query = query.where(ReviewItem.matter_id == matter_id)
         
     result = await db.execute(query)
     return result.scalars().all()
@@ -45,14 +45,14 @@ async def approve_review(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewItem).where(ReviewItem.id == review_id, ReviewItem.tenant_id == context.tenant_id))
     review = result.scalar_one_or_none()
     
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
     
-    if review.status != "pending":
-        raise HTTPException(status_code=400, detail="Item is not pending review")
+    if review.status != "draft":
+        raise HTTPException(status_code=400, detail="Item is not draft review")
         
     review.status = "approved"
     review.reviewed_by = context.principal_id
@@ -82,7 +82,7 @@ async def reject_review(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewItem).where(ReviewItem.id == review_id, ReviewItem.tenant_id == context.tenant_id))
     review = result.scalar_one_or_none()
     
     if not review:
@@ -113,7 +113,7 @@ async def correct_review(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    result = await db.execute(select(ReviewQueue).where(ReviewQueue.id == review_id, ReviewQueue.tenant_id == context.tenant_id))
+    result = await db.execute(select(ReviewItem).where(ReviewItem.id == review_id, ReviewItem.tenant_id == context.tenant_id))
     review = result.scalar_one_or_none()
     
     if not review:

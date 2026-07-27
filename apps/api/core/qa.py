@@ -13,31 +13,38 @@ class PostgresLexicalAdapter:
     async def search(self, matter_id: str, query: str, limit: int = 5) -> list[dict]:
         """
         Fallback RAG using PostgreSQL Full Text Search (tsvector).
-        We join ParsedPage with ParsedDocument and Document to filter by matter_id.
+        We join DocumentChunk with ParsedPage and Document to filter by matter_id.
+        Phase 8: STRICTLY ONLY FTS, no ILIKE '%user_query%'.
         """
-        # In a real app we would use the pg_trgm extension or to_tsvector,
-        # but here's a simplified naive text search to represent lexical fallback
-        # if fts_vector is not fully populated.
-        
+        # Note: In a real system, you'd normalize query tokens here to avoid TS query syntax errors.
+        # Simple normalization: replace spaces with & for to_tsquery, or use plainto_tsquery.
         stmt = text("""
-            SELECT pp.id, pp.page_number, pp.text_content, d.title as doc_title
-            FROM parsed_pages pp
-            JOIN parsed_documents pd ON pp.parsed_document_id = pd.id
-            JOIN documents d ON pd.document_id = d.id
+            SELECT c.id as chunk_id, p.page_number, c.text_content, d.id as doc_id, c.document_revision_id,
+                   ts_rank_cd(c.fts_vector, plainto_tsquery('turkish', :query)) AS rank
+            FROM document_chunks c
+            JOIN parsed_pages p ON c.page_id = p.id
+            JOIN documents d ON c.document_id = d.id
             WHERE d.matter_id = :matter_id
-              AND pp.text_content ILIKE :query
+              AND c.fts_vector @@ plainto_tsquery('turkish', :query)
+            ORDER BY rank DESC
             LIMIT :limit
         """)
         
-        result = await self.session.execute(stmt, {"matter_id": matter_id, "query": f"%{query}%", "limit": limit})
+        result = await self.session.execute(stmt, {
+            "matter_id": matter_id, 
+            "query": query, 
+            "limit": limit
+        })
         rows = result.all()
         
         return [
             {
-                "page_id": row.id,
+                "chunk_id": row.chunk_id,
                 "page_number": row.page_number,
                 "text": row.text_content,
-                "doc_title": row.doc_title
+                "document_id": row.doc_id,
+                "document_revision_id": row.document_revision_id,
+                "rank": row.rank
             }
             for row in rows
         ]
@@ -48,27 +55,38 @@ async def ask_matter_question(session: AsyncSession, matter_id: str, question: s
     
     if not results:
         return {
+            "state": "NO_EVIDENCE_RETRIEVED",
             "answer": "Dosya kapsamındaki belgelerde bu soruyu yanıtlamak için yeterli bilgi veya delil bulunamadı.",
-            "citations": []
+            "citations": [],
+            "source_coverage": "INCOMPLETE",
+            "processing_state": "READY",
+            "review_warning": False
         }
         
-    # In a real app we'd pass this to an LLM. Since we're in mock mode,
-    # we'll generate a realistic sounding answer combining the sources.
-    citations = [{"doc_title": r["doc_title"], "page_number": r["page_number"], "snippet": r["text"][:100]} for r in results]
+    citations = []
+    for i, r in enumerate(results):
+        citations.append({
+            "document_id": r["document_id"],
+            "document_revision_id": r["document_revision_id"],
+            "source_locator_id": r["chunk_id"],
+            "page_number": r["page_number"],
+            "paragraph_index": i,
+            "text_snippet": r["text"][:150]
+        })
     
     if not citations:
         raise ValueError("AI response generated without citations. Blocked by Source/Citation policy.")
 
-    doc_titles = [c["doc_title"] for c in citations]
     answer = f"Sorduğunuz '{question}' sorusuna istinaden dosyadaki deliller incelendi. "
-    answer += f"Bulunan belgeler: {', '.join(doc_titles)}. "
     answer += "Mevcut kaynaklara göre, belgede geçen ilgili bölümler: "
-    for i, c in enumerate(citations):
-        answer += f"\n- {c['doc_title']} (Sayfa {c['page_number']}): '{c['snippet']}...' "
+    for c in citations:
+        answer += f"\n- Belge ID: {c['document_id']} (Sayfa {c['page_number']}): '{c['text_snippet']}...' "
     
     return {
+        "state": "EVIDENCE_FOUND",
         "answer": answer,
         "citations": citations,
-        "source_coverage": "partial",
-        "completeness_score": 85
+        "source_coverage": "COMPLETE",
+        "processing_state": "READY",
+        "review_warning": True
     }

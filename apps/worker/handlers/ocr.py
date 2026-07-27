@@ -98,11 +98,25 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
                 pages = [{"page_number": 1, "text": "[Mock OCR Page Content]", "layout": {"ocr_used": True, "ocr_version": "mock-ocr"}}]
                 parsed_text = "[Mock OCR Page Content]"
                 
+            import hashlib
+            from apps.api.models.document import DocumentRevision
+            out_hash = hashlib.sha256(parsed_text.encode('utf-8')).hexdigest()
+            in_hash = ""
+            
+            # Fetch revision directly
+            rev = await session.get(DocumentRevision, revision_id)
+            if rev:
+                in_hash = rev.file_hash
+
             parsed_doc = ParsedDocument(
                 tenant_id=tenant_id,
                 document_id=document_id,
                 revision_id=revision_id,
                 parser_used=f"ocr-{ocr_version}-conf-{int(ocr_confidence*100)}",
+                ocr_version=ocr_version,
+                pipeline_version="1.0.0",
+                input_hash=in_hash,
+                output_hash=out_hash,
                 status="completed"
             )
             session.add(parsed_doc)

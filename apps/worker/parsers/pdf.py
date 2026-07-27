@@ -14,6 +14,12 @@ except ImportError:
 
 from .base import DocumentParser
 
+def _run_ocr_isolated(img_bytes: bytes) -> str:
+    import pytesseract
+    from PIL import Image
+    import io
+    return pytesseract.image_to_string(Image.open(io.BytesIO(img_bytes)), lang='tur+eng')
+
 
 class PyMuPDFParser(DocumentParser):
     async def parse(self, file_path_or_bytes: bytes) -> AsyncGenerator[dict]:
@@ -25,24 +31,43 @@ class PyMuPDFParser(DocumentParser):
             for i, page in enumerate(doc):
                 text = page.get_text("text")
                 blocks = page.get_text("dict").get("blocks", [])
-                layout = []
-                for b in blocks:
-                    if "bbox" in b:
-                        layout.append({"bbox": b["bbox"], "type": b.get("type", 0)})
+                
+                # Filter text blocks
+                text_blocks = [b for b in blocks if b.get("type") == 0]
+                
+                layout_blocks = []
+                for b_idx, b in enumerate(text_blocks):
+                    if "bbox" not in b:
+                        continue
+                    
+                    block_text = ""
+                    for line in b.get("lines", []):
+                        for span in line.get("spans", []):
+                            block_text += span.get("text", "") + " "
+                        block_text += "\n"
+                        
+                    layout_blocks.append({
+                        "id": f"b{b_idx}",
+                        "bbox": b["bbox"],
+                        "text": block_text.strip(),
+                        "type": "block"
+                    })
                 
                 ocr_used = False
                 ocr_confidence = None
                 if not text.strip() and HAS_TESSERACT:
                     try:
+                        # Extract OCR logic to a standalone function for ProcessPoolExecutor isolation
                         pix = page.get_pixmap()
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tf:
-                            img_path = tf.name
-                        pix.save(img_path)
-                        text = pytesseract.image_to_string(Image.open(img_path), lang='tur+eng')
+                        img_bytes = pix.tobytes("png")
+                        
+                        import concurrent.futures
+                        with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+                            future = executor.submit(_run_ocr_isolated, img_bytes)
+                            text = future.result(timeout=60)
+                            
                         ocr_used = True
                         ocr_confidence = 0.85
-                        if os.path.exists(img_path):
-                            os.remove(img_path)
                     except Exception:
                         pass
                 
@@ -54,7 +79,7 @@ class PyMuPDFParser(DocumentParser):
                 pages_data.append({
                     "page_number": i + 1,
                     "text_content": text,
-                    "layout_data": {"blocks": layout, "ocr_used": ocr_used, "ocr_confidence": ocr_confidence, "ocr_version": "tesseract-5" if ocr_used else None}
+                    "layout_data": {"blocks": layout_blocks, "ocr_used": ocr_used, "ocr_confidence": ocr_confidence, "ocr_version": "tesseract-5" if ocr_used else None}
                 })
             doc.close()
             return pages_data

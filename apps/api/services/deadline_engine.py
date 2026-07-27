@@ -3,7 +3,7 @@ import datetime
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from apps.api.models.deadline import DeadlineRule, PotentialDeadline, ApprovedDeadline
+from apps.api.models.deadline import DeadlineRule, DeadlineCandidate, ApprovedDeadline
 
 logger = logging.getLogger("api.services.deadline_engine")
 
@@ -109,12 +109,12 @@ class DeadlineEngine:
         trigger_event: str,
         trigger_date: datetime.date,
         jurisdiction: str = "TR_HMK"
-    ) -> list[PotentialDeadline]:
+    ) -> list[DeadlineCandidate]:
         logger.info(f"Evaluating deadline rules for event '{trigger_event}' on matter '{matter_id}' (Jurisdiction: {jurisdiction})")
         result = await session.execute(
             select(DeadlineRule).where(
                 DeadlineRule.tenant_id == tenant_id,
-                DeadlineRule.trigger_event == trigger_event
+                DeadlineRule.trigger_type == trigger_event
             )
         )
         rules = result.scalars().all()
@@ -123,18 +123,18 @@ class DeadlineEngine:
         for rule in rules:
             calc_date = cls.calculate_date(
                 trigger_date,
-                rule.offset_days,
+                rule.duration,
                 business_days_only=False,
                 subject_to_adli_tatil=(jurisdiction == "TR_HMK"),
                 jurisdiction=jurisdiction
             )
-            pd = PotentialDeadline(
+            pd = DeadlineCandidate(
                 tenant_id=tenant_id,
                 matter_id=matter_id,
                 rule_id=rule.id,
                 calculated_date=calc_date,
-                description=f"Auto-calculated from {rule.rule_name} (v1.0 - {jurisdiction}): {rule.offset_days} days after {trigger_event}. Rule Version: 2025.1",
-                status="pending_approval"
+                description=f"Auto-calculated from {rule.rule_name} (v1.0 - {jurisdiction}): {rule.duration} days after {trigger_event}. Rule Version: 2025.1",
+                status="POTENTIAL_DEADLINE"
             )
             session.add(pd)
             potential_deadlines.append(pd)
@@ -146,9 +146,9 @@ class DeadlineEngine:
         return potential_deadlines
 
     @classmethod
-    async def submit_for_review(cls, session: AsyncSession, potential_deadline_id: str, tenant_id: str, reviewer_notes: str = "") -> PotentialDeadline | None:
+    async def submit_for_review(cls, session: AsyncSession, deadline_candidate_id: str, tenant_id: str, reviewer_notes: str = "") -> DeadlineCandidate | None:
         """Stage 1: Submit a potential deadline for lawyer review."""
-        pd = await session.get(PotentialDeadline, potential_deadline_id)
+        pd = await session.get(DeadlineCandidate, deadline_candidate_id)
         if not pd or pd.tenant_id != tenant_id:
             return None
         pd.status = "under_review"
@@ -159,9 +159,9 @@ class DeadlineEngine:
         return pd
 
     @classmethod
-    async def approve_deadline(cls, session: AsyncSession, potential_deadline_id: str, tenant_id: str, lawyer_id: str) -> ApprovedDeadline | None:
+    async def approve_deadline(cls, session: AsyncSession, deadline_candidate_id: str, tenant_id: str, lawyer_id: str) -> ApprovedDeadline | None:
         """Stage 2: Approve potential deadline and convert to ApprovedDeadline."""
-        pd = await session.get(PotentialDeadline, potential_deadline_id)
+        pd = await session.get(DeadlineCandidate, deadline_candidate_id)
         if not pd or pd.tenant_id != tenant_id or pd.status == "rejected":
             return None
         pd.status = "approved"
@@ -169,7 +169,7 @@ class DeadlineEngine:
         approved = ApprovedDeadline(
             tenant_id=tenant_id,
             matter_id=pd.matter_id,
-            potential_deadline_id=pd.id,
+            deadline_candidate_id=pd.id,
             due_date=pd.calculated_date,
             description=f"{pd.description} [Approved by Lawyer {lawyer_id}]",
             is_completed=False
@@ -180,9 +180,9 @@ class DeadlineEngine:
         return approved
 
     @classmethod
-    async def reject_deadline(cls, session: AsyncSession, potential_deadline_id: str, tenant_id: str, reason: str) -> PotentialDeadline | None:
+    async def reject_deadline(cls, session: AsyncSession, deadline_candidate_id: str, tenant_id: str, reason: str) -> DeadlineCandidate | None:
         """Stage 2 Alt: Reject potential deadline."""
-        pd = await session.get(PotentialDeadline, potential_deadline_id)
+        pd = await session.get(DeadlineCandidate, deadline_candidate_id)
         if not pd or pd.tenant_id != tenant_id:
             return None
         pd.status = "rejected"
@@ -191,6 +191,5 @@ class DeadlineEngine:
         await session.refresh(pd)
         return pd
 
+
 deadline_engine = DeadlineEngine()
-
-

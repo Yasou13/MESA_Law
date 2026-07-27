@@ -3,11 +3,11 @@ from .document import Document, DocumentRevision
 from .domain import Firm, Matter, Membership, User
 from .parser import ParsedDocument, ParsedPage
 from .queue import Job, JobAttempt, Outbox
-from .review import AuditLog, ReviewQueue
+from .review import AuditLog, ReviewItem, ExtractionSuggestion
 from apps.api.models.domain import Claim, EvidenceItem, LegalAssertion, MatterParty
-from apps.api.models.research import SourcePackage, LegalResource
-from apps.api.models.deadline import DeadlineRule, PotentialDeadline, ApprovedDeadline
-from apps.api.models.draft import Draft
+from apps.api.models.research import SourcePackage, LegalSource
+from apps.api.models.deadline import DeadlineRule, DeadlineCandidate, ApprovedDeadline
+from apps.api.models.draft import Draft, DraftRevision, DraftCitation
 from apps.api.models.audit import AuditEvent, Notification
 
 __all__ = [
@@ -26,15 +26,18 @@ __all__ = [
     "ReviewTask",
     "ReviewComment",
     "AuditLog",
-    "ReviewQueue",
+    "ReviewItem",
+    "ExtractionSuggestion",
     "Job",
     "Outbox",
     "SourcePackage",
-    "LegalResource",
+    "LegalSource",
     "DeadlineRule",
-    "PotentialDeadline",
+    "DeadlineCandidate",
     "ApprovedDeadline",
     "Draft",
+    "DraftRevision",
+    "DraftCitation",
     "AuditEvent",
     "Notification",
 ]

@@ -2,7 +2,7 @@ import contextvars
 from sqlalchemy import event
 from sqlalchemy.orm import ORMExecuteState, Session, with_loader_criteria
 from sqlalchemy.pool import Pool
-from sqlalchemy import bindparam
+from sqlalchemy import bindparam, text
 from .models import TenantAwareMixin
 
 current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_tenant_id", default=None)
@@ -30,27 +30,12 @@ def _add_tenant_criteria(execute_state: ORMExecuteState):
             with_loader_criteria(TenantAwareMixin, filter_tenant, include_aliases=True)
         )
 
-# Database-level RLS (PostgreSQL Row Level Security)
-@event.listens_for(Pool, "checkout")
-def reset_tenant_on_checkout(dbapi_connection, connection_record, connection_proxy):
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("SELECT set_config('app.current_tenant', '', false);")
-    except Exception as e:
-        import logging
-        logging.error(f"CRITICAL: Failed to reset RLS tenant on pool checkout: {e}")
-        raise
-    finally:
-        cursor.close()
+@event.listens_for(Session, "after_begin")
+def set_tenant_on_begin(session, transaction, connection):
+    tenant_id = get_tenant_id()
+    if tenant_id:
+        # Use sync execute on the connection wrapper provided by SQLAlchemy
+        connection.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(tenant_id)})
 
-@event.listens_for(Pool, "checkin")
-def reset_tenant_on_checkin(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("SELECT set_config('app.current_tenant', '', false);")
-    except Exception as e:
-        import logging
-        logging.error(f"Failed to reset RLS tenant on pool checkin: {e}")
-    finally:
-        cursor.close()
+
 

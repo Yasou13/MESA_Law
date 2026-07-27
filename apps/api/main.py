@@ -18,8 +18,9 @@ from apps.api.routers import (
     research,
     reviews,
     system,
+    session,
 )
-from apps.api.core.security import verify_csrf
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,6 +28,9 @@ app = FastAPI(
     title="MESA Law API",
     version="0.1.0"
 )
+
+from apps.api.core.observability import setup_observability
+setup_observability(app)
 
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -39,6 +43,8 @@ app.add_middleware(
 )
 
 app.add_middleware(TraceMiddleware)
+from apps.api.core.middleware import IdempotencyMiddleware
+app.add_middleware(IdempotencyMiddleware)
 app.state.limiter = limiter
 app.add_exception_handler(ProblemException, problem_exception_handler)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -46,6 +52,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 # Include all routers under /api/v1
 app.include_router(firms.router, prefix="/api/v1")
+app.include_router(session.router, prefix="/api/v1")
 app.include_router(matters.router, prefix="/api/v1/matters")
 app.include_router(documents.router, prefix="/api/v1/documents")
 app.include_router(domain_data.router, prefix="/api/v1")
@@ -54,5 +61,6 @@ app.include_router(reviews.router, prefix="/api/v1/reviews")
 app.include_router(draft_studio.router, prefix="/api/v1")
 app.include_router(qa.router, prefix="/api/v1")
 app.include_router(research.router, prefix="/api/v1/research")
+from apps.api.routers import notifications
+app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(system.router)
-

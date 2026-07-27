@@ -8,10 +8,29 @@ class SourcePackage(Base, AuditMixin):
     description: Mapped[str] = mapped_column(Text, nullable=True)
     version: Mapped[str] = mapped_column(String, default="1.0.0", nullable=False)
 
-class LegalResource(Base, AuditMixin):
+class LegalSource(Base, AuditMixin):
     """A specific case, statute, or regulation from a source package."""
-    __tablename__ = "legal_resources"
+    __tablename__ = "legal_sources"
     source_package_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
     title: Mapped[str] = mapped_column(String, nullable=False)
     citation: Mapped[str] = mapped_column(String, nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    source_type: Mapped[str] = mapped_column(String, nullable=False) # e.g. case_law, legislation
+    jurisdiction: Mapped[str] = mapped_column(String, nullable=True)
+    court: Mapped[str] = mapped_column(String, nullable=True)
+    chamber: Mapped[str] = mapped_column(String, nullable=True)
+    decision_number: Mapped[str] = mapped_column(String, nullable=True)
+    
+    from sqlalchemy import DateTime
+    from datetime import datetime
+    
+    decision_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    
+    # CURRENT, STALE, SYNC_FAILED, LICENSE_RESTRICTED, SOURCE_UNAVAILABLE
+    status: Mapped[str] = mapped_column(String, default="CURRENT", nullable=False)
+    license_type: Mapped[str] = mapped_column(String, nullable=True)
+    snapshot_id: Mapped[str] = mapped_column(String, nullable=True)
+    content_hash: Mapped[str] = mapped_column(String, nullable=True)

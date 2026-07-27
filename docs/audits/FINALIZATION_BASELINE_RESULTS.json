@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-07-27T06:35:00Z",
+  "branch": "master",
+  "modules": {
+    "runtime": "IMPLEMENTED",
+    "authentication": "IMPLEMENTED",
+    "rls": "FAILED",
+    "ingestion": "SCAFFOLDED",
+    "frontend": "FAILED",
+    "legal_domain": "SCAFFOLDED",
+    "deadline_engine": "SCAFFOLDED",
+    "observability": "NOT_STARTED",
+    "ci_cd": "NOT_STARTED"
+  },
+  "tests": {
+    "backend_passed": 33,
+    "backend_failed": 9,
+    "frontend_lint_passed": false
+  }
+}

@@ -90,29 +90,23 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                 logger.info("Using PyMuPDF (fitz) for PDF extraction")
                 parser_used_name = "pymupdf-fitz"
                 
-                def extract_fitz():
-                    local_pages = []
-                    local_text = ""
-                    doc_fitz = fitz.open(temp_path)
-                    for page_num in range(len(doc_fitz)):
-                        page = doc_fitz[page_num]
-                        text = page.get_text("text")
-                        blocks = page.get_text("dict")["blocks"]
-                        
-                        layout_data = {"blocks": []}
-                        for b in blocks:
-                            if "bbox" in b:
-                                layout_data["blocks"].append({"bbox": b["bbox"]})
-                                
-                        local_pages.append({
-                            "page_number": page_num + 1,
-                            "text": text,
-                            "layout": layout_data
-                        })
-                        local_text += f"\n\n--- Page {page_num+1} ---\n\n" + text
-                    return local_pages, local_text
+                from apps.worker.parsers.pdf import PyMuPDFParser
+                with open(temp_path, "rb") as f:
+                    pdf_bytes = f.read()
                     
-                pages, parsed_text = await asyncio.to_thread(extract_fitz)
+                pdf_parser = PyMuPDFParser()
+                pages_data = []
+                async for p_data in pdf_parser.parse(pdf_bytes):
+                    pages_data.append(p_data)
+                
+                pages = []
+                for pd in pages_data:
+                    pages.append({
+                        "page_number": pd["page_number"],
+                        "text": pd["text_content"],
+                        "layout": pd["layout_data"]
+                    })
+                    parsed_text += f"\n\n--- Page {pd['page_number']} ---\n\n" + pd["text_content"]
             else:
                 if settings.is_secure_environment:
                     raise RuntimeError("No parser available. Mock extraction is strictly prohibited in production.")
@@ -134,7 +128,9 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             session.add(parsed_doc)
             await session.flush()
             
-            # Save pages
+            # Save pages and chunks
+            from apps.api.models.parser import DocumentChunk
+            
             for page in pages:
                 p = ParsedPage(
                     parsed_document_id=parsed_doc.id,
@@ -143,6 +139,32 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                     layout_data=page.get("layout")
                 )
                 session.add(p)
+                await session.flush()
+                
+                layout_data = page.get("layout") or {}
+                blocks = layout_data.get("blocks", [])
+                
+                for chunk_idx, block in enumerate(blocks):
+                    bbox = block.get("bbox")
+                    block_text = block.get("text", "")
+                    if not block_text.strip():
+                        continue
+                        
+                    bbox_id = block.get("id", f"b{chunk_idx}")
+                    watermark = f"[MESA_WATERMARK: {document_id}:{p.id}:{bbox_id}]"
+                    watermarked_text = f"{block_text}\n{watermark}"
+                    
+                    chunk = DocumentChunk(
+                        tenant_id=tenant_id,
+                        document_id=document_id,
+                        page_id=p.id,
+                        chunk_index=chunk_idx,
+                        chunk_type="block",
+                        text_content=block_text,
+                        watermarked_text=watermarked_text,
+                        bbox=bbox
+                    )
+                    session.add(chunk)
                 
             from apps.api.models.queue import Job
             

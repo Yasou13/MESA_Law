@@ -36,3 +36,24 @@ class ExportAccessPolicy:
         allowed = {"FIRM_ADMIN", "ATTORNEY"}
         if not context.roles.intersection(allowed):
             raise ProblemException(status=403, title="Forbidden", detail="You do not have permission to export drafts.")
+
+class DraftAccessPolicy:
+    @staticmethod
+    def can_manage(context: RequestContext):
+        allowed = {"FIRM_ADMIN", "ATTORNEY", "PARALEGAL"}
+        if not context.roles.intersection(allowed):
+            raise ProblemException(status=403, title="Forbidden", detail="You do not have permission to manage drafts.")
+
+class DeadlineAccessPolicy:
+    @staticmethod
+    def can_manage(context: RequestContext):
+        allowed = {"FIRM_ADMIN", "ATTORNEY"}
+        if not context.roles.intersection(allowed):
+            raise ProblemException(status=403, title="Forbidden", detail="You do not have permission to manage deadlines.")
+
+class SupportAccessPolicy:
+    @staticmethod
+    def can_access(context: RequestContext):
+        allowed = {"SUPPORT_TEMPORARY"}
+        if not context.roles.intersection(allowed):
+            raise ProblemException(status=403, title="Forbidden", detail="You do not have support access permission.")

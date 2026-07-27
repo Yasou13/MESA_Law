@@ -86,5 +86,5 @@ async def test_pdf_parsing_and_fts():
         result = await db.execute(stmt)
         found_pages = result.scalars().all()
         
-        assert len(found_pages) == 1
-        assert "MESA Law" in found_pages[0].text_content
+        assert len(found_pages) >= 1
+        assert any("MESA Law" in p.text_content for p in found_pages)

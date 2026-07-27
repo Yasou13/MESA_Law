@@ -5,7 +5,7 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.storage import storage_service
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.document import Document, DocumentRevision
+from apps.api.models.document import Document, DocumentRevision, DocumentState
 from apps.api.schemas.api import (
     DocumentResponse,
     UploadIntentRequest,
@@ -43,18 +43,6 @@ async def create_upload_intent(
     if payload.mime_type not in ALLOWED_MIMES:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {payload.mime_type}.")
 
-    # Generate immutable storage key
-    file_uuid = uuid6.uuid7()
-    ext = ".pdf"
-    if payload.mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        ext = ".docx"
-    elif payload.mime_type == "image/jpeg":
-        ext = ".jpg"
-    elif payload.mime_type == "image/png":
-        ext = ".png"
-        
-    s3_key = f"{context.tenant_id}/{payload.matter_id}/{file_uuid}{ext}"
-    
     # 1. Create Parent Document
     doc = Document(
         tenant_id=context.tenant_id,
@@ -68,12 +56,25 @@ async def create_upload_intent(
     rev = DocumentRevision(
         document_id=doc.id,
         version=1,
-        s3_key=s3_key,
+        # temporary key to allow insert, we will update it after getting rev.id
+        s3_key=f"temp/{uuid6.uuid7()}",
         size_bytes=payload.size_bytes,
         mime_type=payload.mime_type,
-        scan_status="uploading"
+        scan_status=DocumentState.UPLOADING.value
     )
     db.add(rev)
+    await db.flush() # get rev.id
+
+    ext = ".pdf"
+    if payload.mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        ext = ".docx"
+    elif payload.mime_type == "image/jpeg":
+        ext = ".jpg"
+    elif payload.mime_type == "image/png":
+        ext = ".png"
+
+    s3_key = f"{context.tenant_id}/{payload.matter_id}/{doc.id}/{rev.id}/original{ext}"
+    rev.s3_key = s3_key
     
     # 3. Generate presigned URL
     url = await storage_service.generate_presigned_upload_url(s3_key, payload.mime_type)
@@ -126,7 +127,7 @@ async def complete_upload(
     if not rev:
         raise HTTPException(status_code=404, detail="Revision not found")
         
-    if rev.scan_status == "uploading":
+    if rev.scan_status == DocumentState.UPLOADING.value:
         meta = await storage_service.get_object_metadata(rev.s3_key)
         if not meta or meta["size"] == 0:
             raise HTTPException(status_code=400, detail="Uploaded file not found in storage or is empty")
@@ -138,9 +139,67 @@ async def complete_upload(
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Could not read file data from storage")
             
-        if file_bytes.startswith(b"MZ") or file_bytes.startswith(b"\x7fELF") or file_bytes.startswith(b"#!"):
-            raise HTTPException(status_code=400, detail="Executable or script files are strictly prohibited")
+        import zipfile
+        import io
+        import fitz
+
+        # MIME Sniffing & Extension mismatch
+        actual_mime = "application/octet-stream"
+        if file_bytes.startswith(b"%PDF-"):
+            actual_mime = "application/pdf"
+        elif file_bytes.startswith(b"PK\x03\x04"):
+            actual_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        elif file_bytes.startswith(b"\xFF\xD8\xFF"):
+            actual_mime = "image/jpeg"
+        elif file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            actual_mime = "image/png"
             
+        if actual_mime != rev.mime_type:
+            rev.scan_status = DocumentState.QUARANTINED.value
+            await db.commit()
+            raise HTTPException(status_code=400, detail=f"MIME type mismatch: declared {rev.mime_type}, detected {actual_mime}")
+
+        # ZIP bomb and nested archive check for DOCX (which is a ZIP)
+        if actual_mime == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            try:
+                with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+                    total_uncompressed = 0
+                    for info in z.infolist():
+                        if info.filename.lower().endswith(('.zip', '.rar', '.7z', '.exe', '.bat', '.cmd', '.js', '.vbs')):
+                            rev.scan_status = DocumentState.QUARANTINED.value
+                            await db.commit()
+                            raise HTTPException(status_code=400, detail="Nested archives or executable scripts found in DOCX")
+                        total_uncompressed += info.file_size
+                    
+                    compression_ratio = total_uncompressed / max(len(file_bytes), 1)
+                    if compression_ratio > 100:  # arbitrary threshold for zip bomb
+                        rev.scan_status = DocumentState.QUARANTINED.value
+                        await db.commit()
+                        raise HTTPException(status_code=400, detail="Potential ZIP bomb detected")
+            except zipfile.BadZipFile:
+                rev.scan_status = DocumentState.QUARANTINED.value
+                await db.commit()
+                raise HTTPException(status_code=400, detail="Invalid ZIP/DOCX format")
+
+        # PDF active content risk check
+        if actual_mime == "application/pdf":
+            try:
+                pdf_doc = fitz.open(stream=file_bytes, filetype="pdf")
+                # Look for JS or OpenAction
+                # Simplified check for /JS or /JavaScript using fitz xrefs
+                for i in range(1, pdf_doc.xref_length()):
+                    xref_str = pdf_doc.xref_object(i)
+                    if "/JS " in xref_str or "/JavaScript" in xref_str or "/OpenAction" in xref_str:
+                        rev.scan_status = DocumentState.QUARANTINED.value
+                        await db.commit()
+                        raise HTTPException(status_code=400, detail="Active content (JavaScript/OpenAction) detected in PDF")
+            except Exception as e:
+                if isinstance(e, HTTPException):
+                    raise
+                rev.scan_status = DocumentState.QUARANTINED.value
+                await db.commit()
+                raise HTTPException(status_code=400, detail="Failed to parse PDF for security check")
+
         sha256_hash = hashlib.sha256(file_bytes).hexdigest()
         
         dup_res = await db.execute(
@@ -159,16 +218,41 @@ async def complete_upload(
             
         rev.file_hash = sha256_hash
         rev.size_bytes = meta["size"]
-        rev.scan_status = "scanning"
-        # Queue the scanning job
+        rev.scan_status = DocumentState.SCANNING.value
+        
+        # 11. ClamAV scan job
         job = Job(
             type="SCAN_DOCUMENT",
             payload={"document_id": doc.id, "revision_id": rev.id, "s3_key": rev.s3_key}
         )
         db.add(job)
+        
+        # 12. Operation record
+        from apps.api.models.review import AuditLog
+        op_log = AuditLog(
+            tenant_id=context.tenant_id,
+            principal_id=context.principal_id,
+            action="UPLOAD_DOCUMENT",
+            entity_type="document_revision",
+            entity_id=rev.id,
+            details={"status": "scanning", "file_hash": sha256_hash}
+        )
+        db.add(op_log)
+        
+        # 13. Outbox event
+        from apps.api.models.domain import MatterEvent
+        outbox = MatterEvent(
+            tenant_id=context.tenant_id,
+            matter_id=doc.matter_id,
+            event_type="DOCUMENT_UPLOADED",
+            description=f"Document {doc.title} uploaded for scanning.",
+            event_date=rev.created_at
+        )
+        db.add(outbox)
+        
         await db.commit()
     
-    return {"status": "scanning", "revision_id": rev.id}
+    return {"status": DocumentState.SCANNING.value, "revision_id": rev.id}
 
 @router.get("/{document_id}/download", operation_id="downloadDocument")
 @limiter.limit("60/minute")
@@ -187,9 +271,9 @@ async def download_document(
     if not rev:
         raise HTTPException(status_code=404, detail="Revision not found")
         
-    if rev.scan_status == "infected":
+    if rev.scan_status == DocumentState.INFECTED.value:
         raise HTTPException(status_code=403, detail="Document is infected and cannot be downloaded")
-    elif rev.scan_status != "clean":
+    elif rev.scan_status != DocumentState.CLEAN.value:
         # For development flexibility, we might allow downloading un-scanned docs, 
         # but strict policy: wait for scan
         raise HTTPException(status_code=425, detail="Document is still being scanned")

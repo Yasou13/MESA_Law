@@ -53,14 +53,26 @@ async def test_pg_lexical_adapter():
         parsed_page = ParsedPage(
             parsed_document_id=parsed_doc.id,
             page_number=1,
-            text_content="This document contains crucial evidence about the contract dispute."
+            text_content="Page content"
         )
         db.add(parsed_page)
         await db.flush()
         
+        from apps.api.models.parser import DocumentChunk
+        chunk = DocumentChunk(
+            tenant_id=tenant_id,
+            document_id=doc.id,
+            page_id=parsed_page.id,
+            chunk_index=0,
+            text_content="This document contains crucial evidence about the contract dispute.",
+            watermarked_text="This document contains crucial evidence about the contract dispute.\n[MESA_WATERMARK]"
+        )
+        db.add(chunk)
+        await db.flush()
+        
         await db.execute(
-            text("UPDATE parsed_pages SET fts_vector = to_tsvector('english', :text) WHERE id = :pid")
-            .bindparams(text=parsed_page.text_content, pid=parsed_page.id)
+            text("UPDATE document_chunks SET fts_vector = to_tsvector('turkish', :text) WHERE id = :cid")
+            .bindparams(text=chunk.text_content, cid=chunk.id)
         )
         await db.commit()
     

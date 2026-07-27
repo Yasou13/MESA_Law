@@ -25,3 +25,12 @@ uvicorn_debug.log
 # OS
 .DS_Store
 Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

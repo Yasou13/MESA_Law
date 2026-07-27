@@ -63,7 +63,8 @@ async def list_timeline_events(
         events.append({
             "id": f"event_{e.id}",
             "date": e.event_date,
-            "title": e.title,
+            "title": e.event_type,
+            "description": e.description,
             "source": e.source_type,
             "confidence": e.confidence
         })

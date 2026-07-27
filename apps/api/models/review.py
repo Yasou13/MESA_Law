@@ -5,8 +5,29 @@ from sqlalchemy import JSON, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 
-class ReviewQueue(Base, AuditMixin):
-    __tablename__ = "legal_review_queue"
+class ExtractionSuggestion(Base, AuditMixin):
+    __tablename__ = "extraction_suggestions"
+    
+    tenant_id: Mapped[str] = mapped_column(String, ForeignKey("firms.id"), index=True, nullable=False)
+    matter_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    document_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    document_revision_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    source_locator_id: Mapped[str] = mapped_column(String, nullable=True)
+    
+    suggestion_type: Mapped[str] = mapped_column(String, index=True, nullable=False) # e.g. CLAIM_SUGGESTION
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    
+    extractor_name: Mapped[str] = mapped_column(String, nullable=False)
+    extractor_version: Mapped[str] = mapped_column(String, nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String, nullable=False)
+    parser_version: Mapped[str] = mapped_column(String, nullable=False)
+    confidence_category: Mapped[str] = mapped_column(String, default="high")
+    
+    review_state: Mapped[str] = mapped_column(String, default="pending") # pending -> approved / rejected
+    idempotency_key: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
+
+class ReviewItem(Base, AuditMixin):
+    __tablename__ = "review_items"
     
     tenant_id: Mapped[str] = mapped_column(String, ForeignKey("firms.id"), index=True, nullable=False)
     matter_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
@@ -15,6 +36,9 @@ class ReviewQueue(Base, AuditMixin):
     entity_type: Mapped[str] = mapped_column(String, index=True, nullable=False)
     entity_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     
+    # Optional link back to the raw suggestion
+    suggestion_id: Mapped[str | None] = mapped_column(ForeignKey("extraction_suggestions.id"), nullable=True)
+    
     # Original AI proposed content
     proposed_content: Mapped[dict] = mapped_column(JSON, nullable=False)
     
@@ -22,7 +46,6 @@ class ReviewQueue(Base, AuditMixin):
     status: Mapped[str] = mapped_column(String, index=True, default="pending")
     
     # Solo mode / Policy Engine fields
-    # If the user is solo, external_use might be delayed (cooling-off)
     external_use_ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Who took action and when

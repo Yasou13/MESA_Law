@@ -12,6 +12,12 @@ class ParsedDocument(Base, AuditMixin, TenantAwareMixin):
     parsing_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     
     parser_used: Mapped[str] = mapped_column(String, nullable=False)
+    ocr_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    pipeline_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    
+    input_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    output_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    
     status: Mapped[str] = mapped_column(String, default="completed", nullable=False)
     
     pages = relationship("ParsedPage", back_populates="parsed_document", cascade="all, delete-orphan")
@@ -37,4 +43,27 @@ class ParsedPage(Base, AuditMixin):
     
     __table_args__ = (
         Index('ix_parsed_pages_fts', 'fts_vector', postgresql_using="gin"),
+    )
+
+class DocumentChunk(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "document_chunks"
+    
+    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), index=True, nullable=False)
+    page_id: Mapped[str] = mapped_column(ForeignKey("parsed_pages.id"), index=True, nullable=False)
+    
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    
+    # "page", "block", "paragraph", "line", "word"
+    chunk_type: Mapped[str] = mapped_column(String, nullable=False, default="block")
+    
+    text_content: Mapped[str] = mapped_column(String, nullable=False)
+    watermarked_text: Mapped[str] = mapped_column(String, nullable=False)
+    
+    fts_vector = mapped_column(TSVECTOR, nullable=True)
+    
+    # [x0, y0, x1, y1]
+    bbox: Mapped[dict] = mapped_column(JSON, nullable=True)
+    
+    __table_args__ = (
+        Index('ix_document_chunks_fts', 'fts_vector', postgresql_using="gin"),
     )

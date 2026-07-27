@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     mesa_backend_url: str = "http://localhost:8000"
     mesa_api_key: str = ""
+    redis_url: str = Field(default="redis://localhost:6379/0", validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"))
     
     keycloak_client_id: str = Field(default="mesa-client", validation_alias=AliasChoices("KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"))
     keycloak_client_secret: str = Field(default="mesa-client-secret", validation_alias=AliasChoices("KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"))

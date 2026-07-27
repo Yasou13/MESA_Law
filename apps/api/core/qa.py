@@ -19,10 +19,11 @@ class PostgresLexicalAdapter:
         # Note: In a real system, you'd normalize query tokens here to avoid TS query syntax errors.
         # Simple normalization: replace spaces with & for to_tsquery, or use plainto_tsquery.
         stmt = text("""
-            SELECT c.id as chunk_id, p.page_number, c.text_content, d.id as doc_id, c.document_revision_id,
+            SELECT c.id as chunk_id, p.page_number, c.text_content, d.id as doc_id, pd.revision_id as document_revision_id,
                    ts_rank_cd(c.fts_vector, plainto_tsquery('turkish', :query)) AS rank
             FROM document_chunks c
             JOIN parsed_pages p ON c.page_id = p.id
+            JOIN parsed_documents pd ON p.parsed_document_id = pd.id
             JOIN documents d ON c.document_id = d.id
             WHERE d.matter_id = :matter_id
               AND c.fts_vector @@ plainto_tsquery('turkish', :query)

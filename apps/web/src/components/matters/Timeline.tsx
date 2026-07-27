@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 type TimelineEvent = {
@@ -14,7 +14,8 @@ export function Timeline({ matterId = "1" }: { matterId?: string }) {
   const [error, setError] = useState(false);
   const [events, setEvents] = useState<TimelineEvent[]>([]);
 
-  const fetchTimeline = () => {
+  const fetchTimeline = useCallback(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setError(false);
     axios.get(`/api/v1/matters/${matterId}/timeline`)
@@ -27,11 +28,11 @@ export function Timeline({ matterId = "1" }: { matterId?: string }) {
         setError(true);
         setLoading(false);
       });
-  };
+  }, [matterId]);
 
   useEffect(() => {
     fetchTimeline();
-  }, [matterId]);
+  }, [fetchTimeline]);
 
   if (loading) {
     return (

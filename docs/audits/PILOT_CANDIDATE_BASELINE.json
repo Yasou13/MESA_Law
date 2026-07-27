@@ -1,0 +1,10 @@
+{
+  "baseline_date": "2026-07-27",
+  "status": "FAIL",
+  "failing_gates": [
+    "pytest (collection errors)",
+    "eslint (react-hooks violations)",
+    "typecheck (missing script)"
+  ],
+  "commit": "bd4f2927"
+}

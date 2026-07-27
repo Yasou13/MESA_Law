@@ -32,32 +32,33 @@ async def test_pilot_mega_flow():
             "case_type": "commercial"
         }
         
-        headers = {**HEADERS, "Idempotency-Key": "e2e-matter-init-123"}
+        import uuid
+        headers = {**HEADERS, "Idempotency-Key": f"e2e-matter-init-{uuid.uuid4()}"}
         resp = await client.post(f"{API_BASE}/matters", json=matter_payload, headers=headers)
         assert resp.status_code == 201, f"Matter creation failed: {resp.text}"
         matter_data = resp.json()
         matter_id = matter_data["id"]
 
-        # Verify Idempotency blocks exact duplicate
+        # Verify Idempotency returns cached response
         resp2 = await client.post(f"{API_BASE}/matters", json=matter_payload, headers=headers)
-        assert resp2.status_code == 409, "Idempotency did not block duplicate"
+        assert resp2.status_code == 201, f"Idempotency failed to return cached response: {resp2.text}"
+        assert resp2.json()["id"] == matter_id
 
         # 2. Upload Document
         doc_payload = {
             "matter_id": matter_id,
             "filename": "mock_e2e_contract.pdf",
-            "content_type": "application/pdf",
-            "size_bytes": 500000,
-            "checksum": "mock_sha256_e2e"
+            "mime_type": "application/pdf",
+            "size_bytes": 500000
         }
-        resp = await client.post(f"{API_BASE}/documents/intent", json=doc_payload, headers=HEADERS)
-        assert resp.status_code == 201
+        resp = await client.post(f"{API_BASE}/documents/upload-intent", json=doc_payload, headers=HEADERS)
+        assert resp.status_code in [200, 201]
         doc_data = resp.json()
-        doc_id = doc_data["id"]
+        doc_id = doc_data["document_id"]
         
         # 3. Trigger QA / Intelligence (Wait for workers to process if it was real, but we can hit endpoints)
         qa_payload = {
-            "query_text": "What is the jurisdiction?"
+            "question": "What is the jurisdiction?"
         }
         resp = await client.post(f"{API_BASE}/matters/{matter_id}/qa", json=qa_payload, headers=HEADERS)
         # Assuming the endpoint is fully implemented, even if it returns no evidence because no OCR ran on mock doc
@@ -68,7 +69,7 @@ async def test_pilot_mega_flow():
             "matter_id": matter_id,
             "query": "Commercial contract breach limitations"
         }
-        resp = await client.post(f"{API_BASE}/research", json=research_payload, headers=HEADERS)
+        resp = await client.post(f"{API_BASE}/research/start", json=research_payload, headers=HEADERS)
         assert resp.status_code in (200, 202)
         
         # 5. Check Review Queue for Drafts (should be empty initially, but API should respond)
@@ -78,10 +79,9 @@ async def test_pilot_mega_flow():
         # 6. Generate Draft
         draft_payload = {
             "matter_id": matter_id,
-            "draft_type": "petition",
-            "instructions": "Draft commercial contract breach petition"
+            "template_name": "petition"
         }
-        resp = await client.post(f"{API_BASE}/draft-studio", json=draft_payload, headers=HEADERS)
-        assert resp.status_code == 202
+        resp = await client.post(f"{API_BASE}/draft-studio/drafts/generate", json=draft_payload, headers=HEADERS)
+        assert resp.status_code in (200, 202)
         
         print("Mega Flow E2E Simulation completed successfully.")

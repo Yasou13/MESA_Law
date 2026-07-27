@@ -3,7 +3,9 @@ import sys
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-redis_url = os.getenv("REDIS_URL", "redis://redis:6379/0")
+from apps.api.core.config import settings
+
+redis_url = settings.redis_url
 
 is_testing = (
     "pytest" in sys.modules

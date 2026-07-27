@@ -34,3 +34,5 @@ Thumbs.db
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+docker_compose_config.txt
+.python-version

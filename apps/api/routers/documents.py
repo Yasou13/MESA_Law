@@ -54,6 +54,7 @@ async def create_upload_intent(
     
     # 2. Create Initial Revision (Quarantine State: uploading)
     rev = DocumentRevision(
+        tenant_id=context.tenant_id,
         document_id=doc.id,
         version=1,
         # temporary key to allow insert, we will update it after getting rev.id
@@ -84,7 +85,7 @@ async def create_upload_intent(
     return UploadIntentResponse(
         document_id=doc.id,
         revision_id=rev.id,
-        upload_url=url,
+        presigned_url=url,
         storage_key=s3_key
     )
 

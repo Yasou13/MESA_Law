@@ -24,6 +24,7 @@ class UploadIntentRequest(BaseModel):
     matter_id: str
     filename: str = Field(..., max_length=255)
     mime_type: str = Field(..., max_length=100)
+    size_bytes: int = Field(..., description="File size in bytes")
     
     @field_validator('filename')
     @classmethod
@@ -34,6 +35,7 @@ class UploadIntentResponse(BaseModel):
     document_id: str
     revision_id: str
     presigned_url: str
+    storage_key: str
 
 class DocumentResponse(BaseModel):
     id: str

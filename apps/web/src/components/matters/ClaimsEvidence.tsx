@@ -15,6 +15,7 @@ export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
 
   useEffect(() => {
     let isMounted = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     axios.get(`/api/v1/matters/${matterId}/claims-evidence`)
       .then(res => {

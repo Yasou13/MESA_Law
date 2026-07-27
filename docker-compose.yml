@@ -189,7 +189,7 @@ services:
     profiles: ["core"]
     environment:
       <<: *common-env
-      MESA_LAW_KEYCLOAK_ISSUER: "http://keycloak:8080/realms/mesa_law"
+      MESA_LAW_KEYCLOAK_ISSUER: "http://localhost:8080/realms/mesa_law"
       MESA_LAW_KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/mesa_law/protocol/openid-connect/certs"
       KEYCLOAK_CLIENT_ID: "mesa-client"
       KEYCLOAK_CLIENT_SECRET: "mesa-client-secret"
@@ -237,7 +237,9 @@ services:
     environment:
       NEXTAUTH_URL: "http://localhost:3000"
       NEXTAUTH_SECRET: "supersecret_nextauth_key_for_dev_only"
-      KEYCLOAK_ISSUER: "http://keycloak:8080/realms/mesa_law"
+      KEYCLOAK_PUBLIC_ISSUER: "http://localhost:8080/realms/mesa_law"
+      KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
+      KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/mesa_law/protocol/openid-connect/certs"
       KEYCLOAK_CLIENT_ID: "mesa-client"
       KEYCLOAK_CLIENT_SECRET: "mesa-client-secret"
     ports:

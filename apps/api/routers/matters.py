@@ -28,7 +28,7 @@ async def list_matters(
 from fastapi import Header
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
 
-@router.post("", response_model=MatterResponse, operation_id="createMatter")
+@router.post("", response_model=MatterResponse, operation_id="createMatter", status_code=201)
 @limiter.limit("30/minute")
 async def create_matter(
     request: Request,

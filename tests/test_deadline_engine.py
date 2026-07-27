@@ -2,7 +2,7 @@ import datetime
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from apps.api.services.deadline_engine import DeadlineEngine
-from apps.api.models.deadline import PotentialDeadline, ApprovedDeadline
+from apps.api.models.deadline import DeadlineCandidate, ApprovedDeadline
 
 def test_is_adli_tatil():
     assert DeadlineEngine.is_adli_tatil(datetime.date(2026, 7, 19)) is False
@@ -44,7 +44,7 @@ def test_calculate_date_holiday_rollover():
 async def test_lawyer_review_stages():
     mock_session = AsyncMock()
     mock_session.add = MagicMock()
-    pd = PotentialDeadline(
+    pd = DeadlineCandidate(
         tenant_id="firm_1",
         matter_id="mat_1",
         rule_id="rule_1",

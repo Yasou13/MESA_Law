@@ -65,9 +65,44 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def setup_tenant_context(
     request: Request,
     x_tenant_id: Optional[str] = Header(default=None, alias="x-tenant-id"),
-    user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ) -> RequestContext:
+    # --- DEV-MODE BYPASS ---
+    # In non-secure environments (development), allow unauthenticated access
+    # with a synthetic context for UI testing without Keycloak.
+    auth_header = request.headers.get("authorization")
+    is_mock_token = auth_header == "Bearer mock-e2e-token"
+    if not settings.is_secure_environment and (not auth_header or is_mock_token):
+        dev_tenant = x_tenant_id or "dev-tenant-default"
+        set_tenant_id(dev_tenant)
+        try:
+            # Create dev firm if not exists
+            res = await db.execute(text("SELECT id FROM firms WHERE id = :id"), {"id": dev_tenant})
+            if not res.scalar():
+                await db.execute(
+                    text("INSERT INTO firms (id, name, created_at, updated_at, version_id) VALUES (:id, :name, NOW(), NOW(), 1) ON CONFLICT (id) DO NOTHING"),
+                    {"id": dev_tenant, "name": "Dev Default Firm"}
+                )
+                await db.commit()
+                
+            await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(dev_tenant)})
+        except Exception as e:
+            await db.rollback()
+            # Try setting config again after rollback
+            try:
+                await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(dev_tenant)})
+            except Exception:
+                pass
+        return RequestContext(
+            tenant_id=dev_tenant,
+            principal_id="dev-user-id",
+            roles={"FIRM_ADMIN"}
+        )
+    # --- END DEV-MODE BYPASS ---
+
+    user = await get_current_user(
+        await security(request)
+    )
     keycloak_id = user["id"]
     
     # Check User

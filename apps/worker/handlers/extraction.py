@@ -29,43 +29,48 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         logger.warning(f"ParsedDocument {parsed_document_id} has no text content")
         return
         
+    import json
+    from apps.api.models.domain import ReviewItem
+
     adapter = get_extraction_adapter()
+    matter_id = parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id")
     
     # 1. Extract Parties
     parties_data = await adapter.extract_parties(full_text)
-    party_map = {}
     
     for pd in parties_data:
-        party = MatterParty(
+        review_item = ReviewItem(
             tenant_id=parsed_doc.tenant_id,
-            matter_id=parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id"), # fallback
-            name=pd["name"],
-            role=pd["role"],
-            type=pd["type"]
+            matter_id=matter_id,
+            item_type="party",
+            payload=json.dumps({
+                "name": pd["name"],
+                "role": pd["role"],
+                "type": pd["type"],
+                "source_document_id": parsed_doc.document_id
+            }),
+            status="pending"
         )
-        session.add(party)
-        party_map[pd["role"]] = party
+        session.add(review_item)
         
     await session.flush()
     
     # 2. Extract Claims
     claims_data = await adapter.extract_claims(full_text)
     
-    claimant = party_map.get("PLAINTIFF") or party_map.get("CLAIMANT")
-    defendant = party_map.get("DEFENDANT")
-    
-    if claimant and defendant:
-        for cd in claims_data:
-            claim = Claim(
-                tenant_id=parsed_doc.tenant_id,
-                matter_id=parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id"),
-                claimant_party_id=claimant.id,
-                defendant_party_id=defendant.id,
-                description=cd["description"],
-                status="suggested",
-                review_status="pending_review"
-            )
-            session.add(claim)
+    for cd in claims_data:
+        review_item = ReviewItem(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            item_type="claim",
+            payload=json.dumps({
+                "description": cd["description"],
+                "confidence": cd.get("confidence", 1.0),
+                "source_document_id": parsed_doc.document_id
+            }),
+            status="pending"
+        )
+        session.add(review_item)
             
     await session.commit()
-    logger.info(f"Extraction completed for ParsedDocument {parsed_document_id}")
+    logger.info(f"Extraction completed for ParsedDocument {parsed_document_id}. Added suggestions to ReviewItems.")

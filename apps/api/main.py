@@ -25,8 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="MESA Law API",
-    version="0.1.0",
-    dependencies=[Depends(verify_csrf)]
+    version="0.1.0"
 )
 
 app.add_middleware(SecurityHeadersMiddleware)

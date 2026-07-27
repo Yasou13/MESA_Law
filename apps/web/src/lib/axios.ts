@@ -1,6 +1,7 @@
 import Axios, { AxiosRequestConfig } from 'axios';
 
-export const AXIOS_INSTANCE = Axios.create({ baseURL: 'http://localhost:8001' });
+const baseURL = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL || '/api';
+export const AXIOS_INSTANCE = Axios.create({ baseURL });
 
 import { getSession } from 'next-auth/react';
 

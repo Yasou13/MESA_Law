@@ -9,7 +9,7 @@ function AxiosInterceptor({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
 
   useEffect(() => {
-    axios.defaults.baseURL = 'http://localhost:8001';
+    axios.defaults.baseURL = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL || '/api';
     
     const requestInterceptor = axios.interceptors.request.use((config) => {
       if (session?.accessToken) {

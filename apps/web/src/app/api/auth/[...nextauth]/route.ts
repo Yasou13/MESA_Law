@@ -8,6 +8,7 @@ const handler = NextAuth({
       clientId: process.env.KEYCLOAK_CLIENT_ID || "mesa-client",
       clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "",
       issuer: process.env.KEYCLOAK_ISSUER || "http://localhost:8080/realms/mesa_law",
+      wellKnown: process.env.KEYCLOAK_INTERNAL_ISSUER ? `${process.env.KEYCLOAK_INTERNAL_ISSUER}/.well-known/openid-configuration` : undefined,
     })
   ],
   callbacks: {

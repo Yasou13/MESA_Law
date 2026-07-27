@@ -114,7 +114,7 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                     
                 pages, parsed_text = await asyncio.to_thread(extract_fitz)
             else:
-                if settings.env == "production":
+                if settings.is_secure_environment:
                     raise RuntimeError("No parser available. Mock extraction is strictly prohibited in production.")
                 logger.warning("No parser available. Using mock extraction.")
                 parser_used_name = "mock"

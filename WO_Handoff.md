@@ -8,6 +8,11 @@
 5. **Routers (Intelligence)**: Updated QA and Research routers for auth, proper logic structure and AI citation coverage.
 6. **Tests & CI**: Implemented real postgres-based RLS tests, and created comprehensive GitHub Actions ci.yml pipeline.
 
+1. **CSRF & Networking**: Removed global CSRF for API, updated `axios` and `providers` to use dynamic env URLs, and added `wellKnown` to KeycloakProvider for NextAuth internal discovery.
+2. **Mock Kısıtlamaları & OCR**: `settings.env == "production"` yerine `settings.is_secure_environment` kullanıldı. OCR başarısızlığında dummy text üretmesi engellendi.
+3. **Extraction Review Flow**: Heuristic/AI extraction sonuçları doğrudan `MatterParty` veya `Claim` olmak yerine, `ReviewItem` tablosuna JSON formatında kaydedilecek şekilde düzeltildi.
+4. **CI & Test Enforcements**: CI pipeline'ında Playwright başarısızlığını saklayan `|| echo` kapatıldı ve typecheck eklendi. RLS testleri `mesa_law_app` application role'u kullanılarak non-superuser modunda test edilmeye başlandı.
+
 ## Pending Items
-- Run `alembic upgrade head` in a connected environment (Docker up).
-- Verify Playwright UI tests once frontend endpoints fully integrate with the newly structured Claim and Event paths.
+- E2E Playwright testlerinin baştan sona eksiksiz yazılması.
+- Q&A modülünde Türkçe Full Text Search ve doküman snapshot skorlamasının entegrasyonu.

@@ -20,7 +20,7 @@ class Worker:
     def register(self, job_type: str, handler: HandlerFunc):
         if getattr(handler, "__name__", "") == "dummy_handler" or "dummy" in getattr(handler, "__name__", ""):
             from apps.api.core.config import settings
-            if settings.env == "production":
+            if settings.is_secure_environment:
                 raise RuntimeError(f"CRITICAL: No handler implemented for job type '{job_type}'. Dummy handlers are strictly prohibited in production.")
         self.handlers[job_type] = handler
         

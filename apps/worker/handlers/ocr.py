@@ -81,7 +81,7 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
                                 logger.warning(f"Tesseract OCR failed on page {page_num+1}: {e}")
                                 
                         if not text.strip():
-                            text = f"[OCR Tara: Belge Sayfa {page_num+1} - Görsel İçerik Alındı]"
+                            text = f"[OCR_FAILED] Belge Sayfa {page_num+1} okunamadı."
                             
                         local_pages.append({
                             "page_number": page_num + 1,
@@ -93,7 +93,7 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
                     
                 pages, parsed_text = await asyncio.to_thread(run_ocr_extraction)
             else:
-                if settings.env == "production":
+                if settings.is_secure_environment:
                     raise RuntimeError("No OCR/PDF engine available. Mock OCR is strictly prohibited in production.")
                 pages = [{"page_number": 1, "text": "[Mock OCR Page Content]", "layout": {"ocr_used": True, "ocr_version": "mock-ocr"}}]
                 parsed_text = "[Mock OCR Page Content]"

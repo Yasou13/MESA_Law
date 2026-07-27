@@ -20,12 +20,11 @@ def get_intelligence_adapter() -> MesaIntelligencePort:
             "use PostgresLexicalAdapter(session=db) directly in endpoints. "
             "Falling back to MockMesaAdapter."
         )
-        if settings.env == "production":
-            raise RuntimeError("Cannot fallback to MockMesaAdapter in production.")
+        if settings.is_secure_environment:
+            raise RuntimeError("CRITICAL: Mock adapter is strictly prohibited in pilot/production.")
         return MockMesaAdapter()
     else:
-        if settings.env == "production" and adapter_type == "mock":
-            raise RuntimeError("MockMesaAdapter is strictly prohibited in production. Set MESA_LAW_INTELLIGENCE_ADAPTER properly.")
+        if settings.is_secure_environment and adapter_type == "mock":
+            raise RuntimeError("CRITICAL: Mock adapter is strictly prohibited in pilot/production.")
         logger.info("Initializing MockMesaAdapter")
         return MockMesaAdapter()
-

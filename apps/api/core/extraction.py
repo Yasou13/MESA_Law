@@ -51,7 +51,7 @@ def get_extraction_adapter() -> LegalExtractionAdapter:
     import os
     adapter_type = os.getenv("MESA_LAW_EXTRACTION_ADAPTER", "heuristic").lower()
     if adapter_type == "mock":
-        if settings.env == "production":
+        if settings.is_secure_environment:
             raise RuntimeError("CRITICAL: MockLegalExtractionAdapter is strictly prohibited in production.")
         return MockLegalExtractionAdapter()
     

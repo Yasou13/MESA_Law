@@ -4,7 +4,7 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.utils import utc_now
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.review import AuditLog, ReviewItem
+from apps.api.models.review import AuditLog, ReviewItem, ReviewState
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -13,6 +13,7 @@ from datetime import datetime
 
 from apps.api.models.domain import MatterParty, Claim
 from apps.api.models.deadline import DeadlineCandidate
+from apps.api.core.policies import ReviewAccessPolicy, MatterAccessPolicy
 
 router = APIRouter(tags=["reviews"])
 
@@ -33,9 +34,10 @@ async def list_draft_reviews(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    MatterAccessPolicy.can_read(context, matter_id)
     query = select(ReviewItem).where(
         ReviewItem.tenant_id == context.tenant_id,
-        ReviewItem.status == "draft"
+        ReviewItem.status == ReviewState.PENDING
     )
     if matter_id:
         query = query.where(ReviewItem.matter_id == matter_id)
@@ -54,61 +56,28 @@ async def approve_review(
     
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
-    
-    if review.status != "draft":
-        raise HTTPException(status_code=400, detail="Item is not draft review")
         
-    review.status = "approved"
+    ReviewAccessPolicy.can_approve(context, review.matter_id)
+    
+    if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
+        raise HTTPException(status_code=400, detail="Item is not in a valid state for approval")
+        
+    review.status = ReviewState.APPROVED_PENDING_PUBLICATION
     review.reviewed_by = context.principal_id
     review.reviewed_at = utc_now()
     
     # Solo mode policy: cooling-off period of 2 hours for external use
     review.external_use_ready_at = utc_now() + timedelta(hours=2)
     
-    # Write to canonical tables based on entity_type
-    try:
-        content = review.proposed_content or {}
-        if review.entity_type == "party":
-            party = MatterParty(
-                tenant_id=context.tenant_id,
-                matter_id=review.matter_id,
-                name=content.get("name", "Unknown Party"),
-                role=content.get("role", "UNKNOWN"),
-                type=content.get("type", "ORGANIZATION")
-            )
-            db.add(party)
-        elif review.entity_type == "claim":
-            # Just to satisfy NOT NULL constraints if IDs aren't provided by AI
-            claimant_id = content.get("claimant_party_id", "default_claimant")
-            defendant_id = content.get("defendant_party_id", "default_defendant")
-            claim = Claim(
-                tenant_id=context.tenant_id,
-                matter_id=review.matter_id,
-                claimant_party_id=claimant_id,
-                defendant_party_id=defendant_id,
-                description=content.get("description", "Unknown Claim")
-            )
-            db.add(claim)
-        elif review.entity_type == "deadline":
-            date_str = content.get("due_date", content.get("calculated_date"))
-            calc_date = datetime.now().date()
-            if date_str:
-                try:
-                    calc_date = datetime.fromisoformat(date_str).date()
-                except ValueError:
-                    pass
-                    
-            deadline = DeadlineCandidate(
-                tenant_id=context.tenant_id,
-                matter_id=review.matter_id,
-                calculated_date=calc_date,
-                description=content.get("description", "Extracted Deadline")
-            )
-            db.add(deadline)
-    except Exception as e:
-        import logging
-        logging.error(f"Failed to write to canonical tables for review {review_id}: {e}")
-        # Allow approval to succeed even if canonical write fails (or we could raise 500)
+    from apps.api.models.queue import Job
+    job = Job(
+        type="PUBLISH_REVIEW",
+        payload={
+            "review_id": review_id,
+            "tenant_id": context.tenant_id
+        }
+    )
+    db.add(job)
         
     # Create immutable audit log
     audit = AuditLog(
@@ -137,7 +106,12 @@ async def reject_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
         
-    review.status = "rejected"
+    ReviewAccessPolicy.can_approve(context, review.matter_id)
+        
+    if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
+        raise HTTPException(status_code=400, detail="Item is not in a valid state for rejection")
+        
+    review.status = ReviewState.REJECTED
     review.reviewed_by = context.principal_id
     review.reviewed_at = utc_now()
     
@@ -168,11 +142,26 @@ async def correct_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
         
-    review.status = "corrected"
+    ReviewAccessPolicy.can_approve(context, review.matter_id)
+        
+    if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
+        raise HTTPException(status_code=400, detail="Item is not in a valid state for correction")
+        
+    review.status = ReviewState.APPROVED_PENDING_PUBLICATION
     review.corrected_content = request.corrected_content
     review.reviewed_by = context.principal_id
     review.reviewed_at = utc_now()
     review.external_use_ready_at = utc_now() + timedelta(hours=2)
+    
+    from apps.api.models.queue import Job
+    job = Job(
+        type="PUBLISH_REVIEW",
+        payload={
+            "review_id": review_id,
+            "tenant_id": context.tenant_id
+        }
+    )
+    db.add(job)
     
     audit = AuditLog(
         tenant_id=context.tenant_id,

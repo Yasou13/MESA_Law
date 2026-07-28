@@ -151,7 +151,38 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
             await session.commit()
             
     except Exception as e:
-        logger.error(f"Failed to OCR document: {e}", exc_info=True)
+        logger.error(f"Failed to OCR document {document_id}: {e}", exc_info=True)
+        doc = await session.get(Document, document_id)
+        if doc:
+            doc.status = "OCR_FAILED"
+            from apps.api.models.audit import AuditEvent, Notification
+            from sqlalchemy import select
+            from apps.api.models.domain import User
+            
+            # Create Audit
+            audit = AuditEvent(
+                tenant_id=doc.tenant_id,
+                action="OCR_FAILED",
+                entity_type="document",
+                entity_id=document_id,
+                changes={"error": str(e)}
+            )
+            session.add(audit)
+            
+            # Request manual review from admins
+            from apps.api.models.domain import Membership, Role
+            user_res = await session.execute(select(Membership.user_id).where(Membership.firm_id == doc.tenant_id, Membership.role == Role.FIRM_ADMIN))
+            admin_ids = user_res.scalars().all()
+            for admin_id in admin_ids:
+                notif = Notification(
+                    tenant_id=doc.tenant_id,
+                    user_id=admin_id,
+                    title="OCR Failure",
+                    message=f"Document {document_id} failed OCR. Manual review required."
+                )
+                session.add(notif)
+                
+            await session.commit()
         raise
     finally:
         if os.path.exists(temp_path):

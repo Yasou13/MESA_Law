@@ -68,7 +68,7 @@ async def get_firm_details(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    if context.tenant_id != firm_id and "admin" not in context.roles:
+    if context.tenant_id != firm_id and "FIRM_ADMIN" not in context.roles:
         raise HTTPException(status_code=403, detail="Access denied to requested firm details")
     firm = await db.get(Firm, firm_id)
     if not firm:
@@ -93,7 +93,7 @@ async def create_firm(
     db.add(firm)
     await db.flush()
     
-    membership = Membership(user_id=db_user.id, firm_id=firm.id, role="admin", is_active=True)
+    membership = Membership(user_id=db_user.id, firm_id=firm.id, role="FIRM_ADMIN", is_active=True)
     db.add(membership)
     await db.commit()
     return {"id": firm.id, "name": firm.name}

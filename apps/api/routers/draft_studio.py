@@ -7,6 +7,7 @@ from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.draft import Draft
 from apps.api.models.queue import Job
+from apps.api.core.policies import DraftAccessPolicy, ExportAccessPolicy, MatterAccessPolicy
 
 router = APIRouter(prefix="/draft-studio", tags=["draft-studio"])
 
@@ -30,6 +31,7 @@ async def save_draft(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DraftAccessPolicy.can_manage(context)
     draft = Draft(
         tenant_id=context.tenant_id,
         matter_id=payload.matter_id,
@@ -49,6 +51,7 @@ async def list_matter_drafts(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    MatterAccessPolicy.can_read(context, matter_id)
     stmt = select(Draft).where(Draft.matter_id == matter_id, Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
     result = await db.execute(stmt)
     drafts = result.scalars().all()
@@ -69,6 +72,7 @@ async def list_all_drafts(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    MatterAccessPolicy.can_read(context)
     stmt = select(Draft).where(Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
     result = await db.execute(stmt)
     drafts = result.scalars().all()
@@ -93,6 +97,9 @@ async def get_draft(
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    MatterAccessPolicy.can_read(context, draft.matter_id)
+        
     return {
         "id": draft.id,
         "matter_id": draft.matter_id,
@@ -116,6 +123,8 @@ async def update_draft(
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    DraftAccessPolicy.can_manage(context)
         
     # Phase 11: If-Match ETag checking
     if_match = request.headers.get("if-match")
@@ -142,6 +151,9 @@ async def update_draft(
     if payload.content is not None:
         draft.content = payload.content
         
+    if draft.status == "APPROVED_FOR_EXTERNAL_USE":
+        draft.status = "DRAFT"
+        
     draft.version += 1
     draft.etag = f"v{draft.version}"
     
@@ -163,6 +175,8 @@ async def approve_draft(
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    DraftAccessPolicy.can_approve_external(context)
         
     draft.status = "APPROVED_FOR_EXTERNAL_USE"
     await db.commit()
@@ -187,6 +201,8 @@ async def export_draft(
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
+        
+    ExportAccessPolicy.can_export(context)
         
     if payload.format not in ["pdf", "docx"]:
         raise HTTPException(status_code=400, detail="MIME Error: Only 'pdf' and 'docx' formats are supported")
@@ -221,6 +237,7 @@ async def generate_draft(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DraftAccessPolicy.can_manage(context)
     job = Job(
         type="GENERATE_DRAFT",
         payload={

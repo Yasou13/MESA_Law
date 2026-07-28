@@ -112,6 +112,8 @@ async def setup_tenant_context(
     if not db_user:
         raise HTTPException(status_code=403, detail="User not registered in the system")
         
+    x_tenant_id = tenant_id or request.cookies.get("mesa_tenant_id")
+    
     # Check Membership with active status and deterministic ordering
     query = select(Membership).where(
         Membership.user_id == db_user.id,

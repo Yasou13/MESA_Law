@@ -21,7 +21,7 @@ class MockResult:
 
 @pytest.fixture
 def override_draft_deps():
-    mock_context = RequestContext(tenant_id="firm_123", principal_id="user-1", roles={"admin"})
+    mock_context = RequestContext(tenant_id="firm_123", principal_id="user-1", roles={"FIRM_ADMIN"})
     mock_session = AsyncMock()
     
     drafts_db = {}
@@ -87,6 +87,10 @@ async def test_draft_studio_crud_and_export(override_draft_deps):
         assert put_data["version"] == 2
         assert put_data["title"] == "Updated Title"
         assert put_data["content"] == "Updated content"
+
+        # Approve draft
+        approve_res = await ac.post(f"/api/v1/draft-studio/drafts/{draft_id}/approve")
+        assert approve_res.status_code == 200
 
         # Export draft
         exp_res = await ac.post(

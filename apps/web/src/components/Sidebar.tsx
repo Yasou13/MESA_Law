@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FolderOpen, Search, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, Clock, FileEdit, ChevronDown, Check, Menu, X } from 'lucide-react'
+import { FolderOpen, Search, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, Clock, FileEdit, ChevronDown, Check, Menu, X, FileCheck } from 'lucide-react'
 import { clsx } from 'clsx'
 import { signOut } from 'next-auth/react'
 import { OperationsMenu } from './OperationsMenu'
@@ -16,6 +16,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Matters', href: '/matters', icon: FolderOpen },
   { name: 'Deadlines', href: '/deadlines', icon: Clock },
+  { name: 'Review Center', href: '/reviews', icon: FileCheck },
   { name: 'Documents', href: '/documents', icon: FileText },
   { name: 'Drafts', href: '/drafts', icon: FileEdit },
   { name: 'QA Review', href: '/qa', icon: CheckSquare },

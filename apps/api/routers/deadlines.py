@@ -8,6 +8,7 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.deadline import ApprovedDeadline
+from apps.api.core.policies import DeadlineAccessPolicy, MatterAccessPolicy
 
 router = APIRouter(tags=["Deadlines"])
 
@@ -24,6 +25,7 @@ async def list_deadlines(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    MatterAccessPolicy.can_read(context, matter_id)
     query = select(ApprovedDeadline).where(
         ApprovedDeadline.tenant_id == context.tenant_id,
         ApprovedDeadline.is_completed == False
@@ -54,6 +56,8 @@ async def complete_deadline(
     deadline = await db.get(ApprovedDeadline, deadline_id)
     if not deadline or deadline.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Deadline not found")
+        
+    DeadlineAccessPolicy.can_manage(context)
         
     deadline.is_completed = True
     await db.commit()

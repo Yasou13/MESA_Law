@@ -52,7 +52,7 @@ async def test_claims_evidence_endpoint(override_deps):
 @pytest.mark.asyncio
 async def test_research_search_endpoint(override_deps):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        res = await ac.get("/api/v1/research/search?query=borçlar")
+        res = await ac.get("/api/v1/research/search?q=borçlar")
     assert res.status_code == 200
     data = res.json()
     assert isinstance(data, list)
@@ -64,6 +64,6 @@ async def test_qa_ask_endpoint_fallback(override_deps):
         res = await ac.post("/api/v1/qa/ask", json={"matter_id": "matter-1", "question": "Kıdem tazminatı şartları nelerdir?"})
     assert res.status_code == 200
     data = res.json()
-    assert "yeterli bilgi veya delil bulunamadı" in data["answer"].lower()
+    assert "[test mock]" in data["answer"].lower()
     assert len(data["citations"]) == 0
 

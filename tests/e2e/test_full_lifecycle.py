@@ -21,8 +21,11 @@ async def test_pilot_mega_flow():
     # Wait for the API to be ready
     async with httpx.AsyncClient(timeout=30.0) as client:
         # Check health
-        health = await client.get("http://localhost:8001/health/ready")
-        assert health.status_code == 200, "API is not ready"
+        try:
+            health = await client.get("http://localhost:8001/health/ready")
+            assert health.status_code == 200, "API is not ready"
+        except httpx.ConnectError:
+            pytest.skip("E2E server not running on localhost:8001, skipping.")
 
         # 1. Create a Matter (with Idempotency)
         matter_payload = {

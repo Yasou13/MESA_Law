@@ -9,6 +9,8 @@ def sanitize_text(v: str) -> str:
 
 class MatterCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255, description="The title of the matter")
+    jurisdiction: str | None = Field(None, description="The jurisdiction of the matter")
+    confidentiality_level: str = Field("standard", description="Confidentiality level")
     
     @field_validator('title')
     @classmethod

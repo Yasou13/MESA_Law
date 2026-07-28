@@ -188,13 +188,15 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
     )
     session.add(audit)
     
-    # Notification (send to first user of tenant for demo)
-    user_res = await session.execute(select(User).limit(1))
-    first_user = user_res.scalars().first()
-    if first_user:
+    from apps.api.models.domain import Membership, Role
+    
+    # Notification (send to firm admins)
+    user_res = await session.execute(select(Membership.user_id).where(Membership.firm_id == parsed_doc.tenant_id, Membership.role == Role.FIRM_ADMIN))
+    admin_ids = user_res.scalars().all()
+    for admin_id in admin_ids:
         notification = Notification(
             tenant_id=parsed_doc.tenant_id,
-            user_id=first_user.id,
+            user_id=admin_id,
             title="Extraction Complete",
             message=f"Review queue updated for document {parsed_document_id}"
         )

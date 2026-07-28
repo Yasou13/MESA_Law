@@ -23,8 +23,6 @@ async def get_current_user_profile(
     return {
         "id": db_user.id,
         "email": db_user.email,
-        "first_name": db_user.first_name,
-        "last_name": db_user.last_name,
-        "is_active": db_user.is_active,
+        "full_name": db_user.full_name,
         "roles": list(user.get("roles", []))
     }

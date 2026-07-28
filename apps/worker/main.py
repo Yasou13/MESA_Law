@@ -11,7 +11,7 @@ from apps.worker.handlers.parser import handle_parse_document
 from apps.worker.handlers.extraction import handle_extract_legal_data
 from apps.worker.handlers.ocr import handle_ocr_document
 from apps.worker.handlers.export import handle_export_draft
-from apps.worker.handlers.sync import handle_sync_mesa_document, handle_publish_outbox, handle_build_lexical_index
+from apps.worker.handlers.sync import handle_sync_mesa_document, handle_publish_outbox, handle_build_lexical_index, handle_publish_review
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("worker")
@@ -34,6 +34,7 @@ async def main():
     worker.register("SYNC_MESA_DOCUMENT", handle_sync_mesa_document)
     worker.register("PUBLISH_OUTBOX", handle_publish_outbox)
     worker.register("EXPORT_DRAFT", handle_export_draft)
+    worker.register("PUBLISH_REVIEW", handle_publish_review)
     
     from apps.worker.handlers.sync import handle_sync_approved_reviews
     worker.register("SYNC_APPROVED_REVIEWS", handle_sync_approved_reviews)

@@ -3,6 +3,18 @@ from datetime import datetime
 from apps.api.core.models import AuditMixin, Base
 from sqlalchemy import JSON, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
+import enum
+from sqlalchemy import Enum as SQLEnum
+
+class ReviewState(str, enum.Enum):
+    PENDING = "PENDING"
+    IN_REVIEW = "IN_REVIEW"
+    APPROVED_PENDING_PUBLICATION = "APPROVED_PENDING_PUBLICATION"
+    PUBLISHED = "PUBLISHED"
+    REJECTED = "REJECTED"
+    DUPLICATE = "DUPLICATE"
+    PUBLICATION_FAILED = "PUBLICATION_FAILED"
+    CANCELLED = "CANCELLED"
 
 
 class ExtractionSuggestion(Base, AuditMixin):
@@ -12,7 +24,7 @@ class ExtractionSuggestion(Base, AuditMixin):
     matter_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     document_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
     document_revision_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
-    source_locator_id: Mapped[str] = mapped_column(String, nullable=True)
+    source_locator_id: Mapped[str | None] = mapped_column(ForeignKey("source_locators.id", ondelete="SET NULL"), index=True, nullable=True)
     
     suggestion_type: Mapped[str] = mapped_column(String, index=True, nullable=False) # e.g. CLAIM_SUGGESTION
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
@@ -42,8 +54,8 @@ class ReviewItem(Base, AuditMixin):
     # Original AI proposed content
     proposed_content: Mapped[dict] = mapped_column(JSON, nullable=False)
     
-    # pending, approved, rejected, corrected
-    status: Mapped[str] = mapped_column(String, index=True, default="pending")
+    # Status uses ReviewState Enum
+    status: Mapped[ReviewState] = mapped_column(SQLEnum(ReviewState, name="review_state", create_type=False), index=True, default=ReviewState.PENDING)
     
     # Solo mode / Policy Engine fields
     external_use_ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

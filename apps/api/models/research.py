@@ -1,6 +1,15 @@
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
+import enum
+from sqlalchemy import Enum as SQLEnum
+
+class LegalSourceStatus(str, enum.Enum):
+    CURRENT = "CURRENT"
+    STALE = "STALE"
+    SYNC_FAILED = "SYNC_FAILED"
+    LICENSE_RESTRICTED = "LICENSE_RESTRICTED"
+    SOURCE_UNAVAILABLE = "SOURCE_UNAVAILABLE"
 
 class SourcePackage(Base, AuditMixin):
     __tablename__ = "source_packages"
@@ -30,7 +39,7 @@ class LegalSource(Base, AuditMixin):
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # CURRENT, STALE, SYNC_FAILED, LICENSE_RESTRICTED, SOURCE_UNAVAILABLE
-    status: Mapped[str] = mapped_column(String, default="CURRENT", nullable=False)
+    status: Mapped[LegalSourceStatus] = mapped_column(SQLEnum(LegalSourceStatus, name="legal_source_status", create_type=False), default=LegalSourceStatus.CURRENT, nullable=False)
     license_type: Mapped[str] = mapped_column(String, nullable=True)
     snapshot_id: Mapped[str] = mapped_column(String, nullable=True)
     content_hash: Mapped[str] = mapped_column(String, nullable=True)

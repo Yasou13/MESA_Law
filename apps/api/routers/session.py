@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Optional
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/session", tags=["Session"])
 @router.post("/active-firm")
 async def set_active_firm(
     firm_id: str,
+    response: Response,
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -40,6 +41,14 @@ async def set_active_firm(
     if not membership:
         raise HTTPException(status_code=403, detail="User is not an active member of the requested firm")
         
+    response.set_cookie(
+        key="mesa_tenant_id",
+        value=str(firm_id),
+        httponly=True,
+        secure=True,
+        samesite="lax"
+    )
+    
     return {
         "status": "success",
         "active_firm_id": str(firm_id),

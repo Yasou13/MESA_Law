@@ -11,6 +11,7 @@ from apps.api.schemas.api import (
     UploadIntentRequest,
     UploadIntentResponse,
 )
+from apps.api.core.policies import DocumentAccessPolicy
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,6 +29,7 @@ async def create_upload_intent(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DocumentAccessPolicy.can_upload(context, payload.matter_id)
     # Enforce file size limit (max 100MB per file as per Phase 10 rules)
     MAX_FILE_SIZE = 100 * 1024 * 1024
     if payload.size_bytes > MAX_FILE_SIZE:
@@ -97,6 +99,7 @@ async def list_matter_documents(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DocumentAccessPolicy.can_read(context, matter_id)
     # Enforce RLS by tenant_id
     stmt = select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id)
     result = await db.execute(stmt)
@@ -117,6 +120,7 @@ async def list_all_documents(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DocumentAccessPolicy.can_read(context)
     stmt = select(Document).where(Document.tenant_id == context.tenant_id).order_by(Document.created_at.desc())
     result = await db.execute(stmt)
     docs = result.scalars().all()
@@ -137,6 +141,7 @@ async def get_document(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
+    DocumentAccessPolicy.can_read(context)
     doc = await db.get(Document, document_id)
     if not doc or doc.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -159,6 +164,8 @@ async def complete_upload(
     doc = await db.get(Document, document_id)
     if not doc or doc.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Document not found")
+        
+    DocumentAccessPolicy.can_upload(context, doc.matter_id)
         
     result = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == document_id).order_by(DocumentRevision.version.desc()))
     rev = result.scalars().first()

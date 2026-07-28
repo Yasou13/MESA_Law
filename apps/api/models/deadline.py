@@ -1,6 +1,16 @@
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import ForeignKey, String, Date, Boolean, JSON
+from sqlalchemy import ForeignKey, String, Date, Boolean, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column
+import enum
+from sqlalchemy import Enum as SQLEnum
+
+class DeadlineState(str, enum.Enum):
+    POTENTIAL_DEADLINE = "POTENTIAL_DEADLINE"
+    RULE_MATCHED = "RULE_MATCHED"
+    CALCULATED = "CALCULATED"
+    ATTORNEY_VERIFIED = "ATTORNEY_VERIFIED"
+    SCHEDULED = "SCHEDULED"
+    REJECTED = "REJECTED"
 
 class DeadlineRulePack(Base, AuditMixin):
     __tablename__ = "deadline_rule_packs"
@@ -52,7 +62,9 @@ class DeadlineCandidate(Base, AuditMixin, TenantAwareMixin):
     description: Mapped[str] = mapped_column(String, nullable=False)
     
     # POTENTIAL_DEADLINE, RULE_MATCHED, CALCULATED, ATTORNEY_VERIFIED, SCHEDULED, REJECTED
-    status: Mapped[str] = mapped_column(String, default="POTENTIAL_DEADLINE", nullable=False)
+    status: Mapped[DeadlineState] = mapped_column(SQLEnum(DeadlineState, name="deadline_state", create_type=False), default=DeadlineState.POTENTIAL_DEADLINE, nullable=False)
+    confidence_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    timezone: Mapped[str] = mapped_column(String, default="Europe/Istanbul", nullable=False)
     
 class ApprovedDeadline(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "approved_deadlines"
@@ -62,5 +74,6 @@ class ApprovedDeadline(Base, AuditMixin, TenantAwareMixin):
     deadline_candidate_id: Mapped[str] = mapped_column(ForeignKey("deadline_candidates.id"), nullable=False)
     
     due_date: Mapped[Date] = mapped_column(Date, nullable=False)
+    timezone: Mapped[str] = mapped_column(String, default="Europe/Istanbul", nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

@@ -76,9 +76,7 @@ export function Sidebar() {
       {/* Mobile Menu Button */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[var(--bg-surface)] border-b border-[var(--border-surface)] flex items-center px-4 z-40 justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[var(--color-lila-600)] flex items-center justify-center font-bold text-white text-xl shadow-lg">
-            M
-          </div>
+          <img src="/icon-192.png" alt="MESA Logo" className="w-8 h-8 rounded-lg shadow-sm" />
           <span className="text-xl font-bold text-[var(--foreground)]">MESA</span>
         </Link>
         <button 
@@ -106,9 +104,7 @@ export function Sidebar() {
         <div className="p-6 pb-2">
           <div className="flex items-center justify-between mb-6">
             <Link href="/" className="flex items-center gap-2" onClick={() => setIsMobileOpen(false)}>
-              <div className="w-8 h-8 rounded-lg bg-[var(--color-lila-600)] flex items-center justify-center font-bold text-white text-xl shadow-lg">
-                M
-              </div>
+              <img src="/icon-192.png" alt="MESA Logo" className="w-8 h-8 rounded-lg shadow-sm" />
               <span className="text-xl font-bold text-[var(--foreground)]">
                 MESA
               </span>

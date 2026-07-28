@@ -36,9 +36,9 @@ export default function LoginPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="w-16 h-16 rounded-2xl bg-[var(--color-lila-600)] flex items-center justify-center shadow-lg shadow-[var(--color-lila-500)]/20"
+              className="flex items-center justify-center"
             >
-              <Shield className="w-8 h-8 text-white" />
+              <img src="/icon-192.png" alt="MESA Logo" className="w-16 h-16 rounded-2xl shadow-lg shadow-[var(--color-lila-500)]/20" />
             </motion.div>
           </div>
 

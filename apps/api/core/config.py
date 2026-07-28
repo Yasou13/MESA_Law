@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     mesa_backend_url: str = "http://localhost:8000"
     mesa_api_key: str = ""
     redis_url: str = Field(default="redis://localhost:6379/0", validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"))
+    test_auth_enabled: bool = Field(default=False, validation_alias=AliasChoices("MESA_LAW_TEST_AUTH_ENABLED", "TEST_AUTH_ENABLED"))
     
     keycloak_client_id: str = Field(default="mesa-client", validation_alias=AliasChoices("KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"))
     keycloak_client_secret: str = Field(default="mesa-client-secret", validation_alias=AliasChoices("KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"))
@@ -59,6 +60,9 @@ def validate_production_settings():
         ]
         if settings.secret_key in insecure_defaults or settings.keycloak_client_secret in insecure_defaults:
             raise RuntimeError(f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with insecure default secrets. Startup aborted.")
+    
+    if settings.test_auth_enabled and settings.env != "test":
+        raise RuntimeError(f"CRITICAL SECURITY ERROR: MESA_LAW_TEST_AUTH_ENABLED is set to true but environment is '{settings.env}'. Test auth can only be enabled in 'test' environment. Startup aborted.")
 
 validate_production_settings()
 

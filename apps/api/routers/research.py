@@ -36,3 +36,39 @@ async def start_legal_research(
     await db.commit()
     return {"status": "accepted", "job_id": job.id}
 
+class LegalSourceResponse(BaseModel):
+    id: str
+    title: str
+    citation: str
+    source_type: str
+    content: str
+    
+@router.get("/search", response_model=list[LegalSourceResponse], operation_id="searchLegalResearch")
+@limiter.limit("60/minute")
+async def search_legal_research(
+    request: Request,
+    q: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(LegalSource).where(
+        or_(
+            LegalSource.title.ilike(f"%{q}%"),
+            LegalSource.content.ilike(f"%{q}%"),
+            LegalSource.citation.ilike(f"%{q}%")
+        )
+    ).limit(20)
+    
+    result = await db.execute(stmt)
+    sources = result.scalars().all()
+    
+    return [
+        {
+            "id": s.id,
+            "title": s.title,
+            "citation": s.citation,
+            "source_type": s.source_type,
+            "content": s.content[:500] + "..." if len(s.content) > 500 else s.content
+        } for s in sources
+    ]
+

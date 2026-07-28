@@ -42,12 +42,13 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "ruff>=0.16.0",
     "respx>=0.22.0",
+    "mypy>=1.14.1",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 env = [
-    "MESA_ENV=test"
+    "MESA_LAW_ENVIRONMENT=test"
 ]
 
 [tool.ruff]
@@ -64,4 +65,12 @@ exclude = [
 [tool.ruff.lint]
 ignore = [
     "B008",   # Depends() in function defaults is the FastAPI pattern
+]
+
+[tool.mypy]
+explicit_package_bases = true
+namespace_packages = true
+ignore_missing_imports = true
+plugins = [
+  "pydantic.mypy"
 ]

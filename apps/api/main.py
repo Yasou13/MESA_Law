@@ -61,6 +61,10 @@ app.include_router(reviews.router, prefix="/api/v1/reviews")
 app.include_router(draft_studio.router, prefix="/api/v1")
 app.include_router(qa.router, prefix="/api/v1")
 app.include_router(research.router, prefix="/api/v1/research")
-from apps.api.routers import notifications
+from apps.api.routers import notifications, dashboard, users
+app.include_router(users.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
+from apps.api.routers import deadlines
+app.include_router(deadlines.router, prefix="/api/v1/deadlines")
+app.include_router(dashboard.router)
 app.include_router(system.router)

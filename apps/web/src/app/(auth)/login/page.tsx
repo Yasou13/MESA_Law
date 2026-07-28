@@ -57,14 +57,6 @@ export default function LoginPage() {
               Sign in with Keycloak
             </button>
 
-            {process.env.NODE_ENV === 'development' && (
-              <button
-                onClick={() => signIn('credentials', { username: 'admin', password: 'admin', callbackUrl: '/matters' })}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-[var(--color-lila-600)] hover:bg-[var(--color-lila-500)] text-white rounded-xl font-medium transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
-              >
-                Developer Auto-Login (admin/admin)
-              </button>
-            )}
           </div>
         </div>
       </motion.div>

@@ -8,7 +8,7 @@ module.exports = {
       client: 'react-query',
       override: {
         mutator: {
-          path: './src/lib/axios.ts',
+          path: './src/lib/api/client.ts',
           name: 'customInstance',
         }
       }

@@ -69,7 +69,7 @@ def setup_opentelemetry(service_name: str = "mesa-law-api"):
     otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
     
     # Check if we are in testing to avoid OTLP overhead
-    env = os.getenv("MESA_ENV", "development")
+    env = os.getenv("MESA_LAW_ENVIRONMENT", "development")
     if env == "test":
         return
 

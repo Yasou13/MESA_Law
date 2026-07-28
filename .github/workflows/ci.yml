@@ -39,8 +39,8 @@ jobs:
 
       - name: Run Pytest
         env:
-          MESA_ENV: test
-        run: uv run pytest apps/ -v
+          MESA_LAW_ENVIRONMENT: test
+        run: uv run pytest apps tests -v
 
   frontend-quality:
     name: Frontend Checks
@@ -112,19 +112,19 @@ jobs:
       - name: Test Upgrade to Head
         env:
           DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
-          MESA_ENV: test
+          MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
       - name: Test Downgrade
         env:
           DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
-          MESA_ENV: test
+          MESA_LAW_ENVIRONMENT: test
         run: uv run alembic downgrade -1
 
       - name: Test Upgrade to Head (Re-apply)
         env:
           DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
-          MESA_ENV: test
+          MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
   integration-smoke-test:

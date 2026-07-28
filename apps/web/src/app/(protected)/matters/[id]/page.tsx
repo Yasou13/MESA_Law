@@ -5,6 +5,7 @@ import { useState, useRef, use } from 'react'
 import { FileText, UploadCloud, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { DocumentViewer } from '@/components/DocumentViewer'
 import { Timeline } from '@/components/matters/Timeline'
 import { ClaimsEvidence } from '@/components/matters/ClaimsEvidence'
@@ -17,8 +18,10 @@ import {
   useListMatterParties,
   useCreateUploadIntent,
   useCompleteUpload,
-  downloadDocument
+  downloadDocument,
+  useRebuildMatterMesa
 } from '@/api/endpoints/default/default'
+import { useSaveDraftApiV1DraftStudioDraftsPost } from '@/api/endpoints/draft-studio/draft-studio'
 
 type Document = {
   id: string
@@ -29,9 +32,13 @@ type Document = {
 export default function MatterDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const matterId = resolvedParams.id
+  const router = useRouter()
   
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const { mutateAsync: saveDraft, isPending: isCreatingDraft } = useSaveDraftApiV1DraftStudioDraftsPost()
+  const { mutateAsync: rebuildMesa, isPending: isRebuilding } = useRebuildMatterMesa()
   
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -97,13 +104,39 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
       setUploadProgress(100)
       toast.success('Document uploaded successfully')
       queryClient.invalidateQueries({ queryKey: [`/api/v1/documents/matter/${matterId}`] })
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      toast.error('Upload failed')
+      const errorMsg = err.response?.data?.detail || err.message || 'Upload failed'
+      toast.error(`Upload Failed: ${errorMsg}`)
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
       if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  const handleCreateDraft = async () => {
+    try {
+      const res = await saveDraft({
+        data: {
+          matter_id: matterId,
+          title: 'New Draft',
+          content: ''
+        }
+      })
+      toast.success('Draft created')
+      router.push(`/drafts/${(res.data as any).id}`)
+    } catch (err) {
+      toast.error('Failed to create draft')
+    }
+  }
+
+  const handleRebuildMesa = async () => {
+    try {
+      const res = await rebuildMesa({ matterId })
+      toast.success(`Successfully synced ${(res.data as any).synced_pages} pages to MESA Core`)
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || 'Failed to sync with MESA Core')
     }
   }
 
@@ -158,6 +191,30 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
         <div className="space-y-12">
           <div className="mb-12 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl p-6 shadow-sm">
             <QAShell matterId={matterId} />
+          </div>
+
+          <div className="flex gap-4">
+            <Link 
+              href={`/matters/${matterId}/qa`}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-lila-500)]/10 text-[var(--color-lila-400)] rounded-lg hover:bg-[var(--color-lila-500)]/20 transition-colors font-medium text-sm"
+            >
+              Ask AI About Matter
+            </Link>
+            <button 
+              onClick={handleCreateDraft}
+              disabled={isCreatingDraft}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-lg hover:bg-[var(--bg-surface)] transition-colors font-medium text-sm disabled:opacity-50"
+            >
+              Create Draft
+            </button>
+            <button 
+              onClick={handleRebuildMesa}
+              disabled={isRebuilding}
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-semantic-info)]/10 text-[var(--color-semantic-info)] border border-[var(--color-semantic-info)]/20 rounded-lg hover:bg-[var(--color-semantic-info)]/20 transition-colors font-medium text-sm disabled:opacity-50 ml-auto"
+            >
+              {isRebuilding && <Loader2 className="w-4 h-4 animate-spin" />}
+              Sync with MESA Core
+            </button>
           </div>
 
           <h2 className="text-xl font-semibold mb-6 text-[var(--foreground)]">Matter Documents</h2>

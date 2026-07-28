@@ -68,11 +68,11 @@ async def setup_tenant_context(
     db: AsyncSession = Depends(get_db)
 ) -> RequestContext:
     # --- DEV-MODE BYPASS ---
-    # In non-secure environments (development), allow unauthenticated access
-    # with a synthetic context for UI testing without Keycloak.
+    # In test environments, allow unauthenticated access
+    # with a synthetic context for E2E testing without Keycloak.
     auth_header = request.headers.get("authorization")
     is_mock_token = auth_header == "Bearer mock-e2e-token"
-    if not settings.is_secure_environment and (not auth_header or is_mock_token):
+    if settings.test_auth_enabled and settings.env == "test" and (not auth_header or is_mock_token):
         dev_tenant = x_tenant_id or "dev-tenant-default"
         set_tenant_id(dev_tenant)
         try:

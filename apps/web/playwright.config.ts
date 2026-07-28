@@ -25,7 +25,7 @@ export default defineConfig({
       timeout: 120000,
     },
     {
-      command: 'cd ../../ && export PATH="$HOME/.local/bin:$PATH" && export PYTHONPATH=. && export MESA_ENV=test && export REDIS_URL=memory:// && uv run uvicorn apps.api.main:app --port 8001',
+      command: 'cd ../../ && export PATH="$HOME/.local/bin:$PATH" && export PYTHONPATH=. && export MESA_LAW_ENVIRONMENT=test && export REDIS_URL=memory:// && uv run uvicorn apps.api.main:app --port 8001',
       url: 'http://localhost:8001/openapi.json',
       reuseExistingServer: !process.env.CI,
       timeout: 120000,

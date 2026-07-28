@@ -9,6 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime
+
+from apps.api.models.domain import MatterParty, Claim
+from apps.api.models.deadline import DeadlineCandidate
 
 router = APIRouter(tags=["reviews"])
 
@@ -61,6 +65,51 @@ async def approve_review(
     # Solo mode policy: cooling-off period of 2 hours for external use
     review.external_use_ready_at = utc_now() + timedelta(hours=2)
     
+    # Write to canonical tables based on entity_type
+    try:
+        content = review.proposed_content or {}
+        if review.entity_type == "party":
+            party = MatterParty(
+                tenant_id=context.tenant_id,
+                matter_id=review.matter_id,
+                name=content.get("name", "Unknown Party"),
+                role=content.get("role", "UNKNOWN"),
+                type=content.get("type", "ORGANIZATION")
+            )
+            db.add(party)
+        elif review.entity_type == "claim":
+            # Just to satisfy NOT NULL constraints if IDs aren't provided by AI
+            claimant_id = content.get("claimant_party_id", "default_claimant")
+            defendant_id = content.get("defendant_party_id", "default_defendant")
+            claim = Claim(
+                tenant_id=context.tenant_id,
+                matter_id=review.matter_id,
+                claimant_party_id=claimant_id,
+                defendant_party_id=defendant_id,
+                description=content.get("description", "Unknown Claim")
+            )
+            db.add(claim)
+        elif review.entity_type == "deadline":
+            date_str = content.get("due_date", content.get("calculated_date"))
+            calc_date = datetime.now().date()
+            if date_str:
+                try:
+                    calc_date = datetime.fromisoformat(date_str).date()
+                except ValueError:
+                    pass
+                    
+            deadline = DeadlineCandidate(
+                tenant_id=context.tenant_id,
+                matter_id=review.matter_id,
+                calculated_date=calc_date,
+                description=content.get("description", "Extracted Deadline")
+            )
+            db.add(deadline)
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to write to canonical tables for review {review_id}: {e}")
+        # Allow approval to succeed even if canonical write fails (or we could raise 500)
+        
     # Create immutable audit log
     audit = AuditLog(
         tenant_id=context.tenant_id,

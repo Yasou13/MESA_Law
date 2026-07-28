@@ -31,7 +31,7 @@ import type {
   UpdateDraftRequest
 } from '../../models';
 
-import { customInstance } from '../../../lib/axios';
+import { customInstance } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -142,7 +142,126 @@ export const useSaveDraftApiV1DraftStudioDraftsPost = <TError = HTTPValidationEr
       > => {
       return useMutation(getSaveDraftApiV1DraftStudioDraftsPostMutationOptions(options), queryClient);
     }
-    export type listMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGetResponse200 = {
+    export type listAllDraftsApiV1DraftStudioDraftsGetResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type listAllDraftsApiV1DraftStudioDraftsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listAllDraftsApiV1DraftStudioDraftsGetResponseSuccess = (listAllDraftsApiV1DraftStudioDraftsGetResponse200) & {
+  headers: Headers;
+};
+export type listAllDraftsApiV1DraftStudioDraftsGetResponseError = (listAllDraftsApiV1DraftStudioDraftsGetResponse422) & {
+  headers: Headers;
+};
+
+export type listAllDraftsApiV1DraftStudioDraftsGetResponse = (listAllDraftsApiV1DraftStudioDraftsGetResponseSuccess | listAllDraftsApiV1DraftStudioDraftsGetResponseError)
+
+export const getListAllDraftsApiV1DraftStudioDraftsGetUrl = () => {
+
+
+
+
+  return `/api/v1/draft-studio/drafts`
+}
+
+/**
+ * @summary List All Drafts
+ */
+export const listAllDraftsApiV1DraftStudioDraftsGet = async ( options?: RequestInit): Promise<listAllDraftsApiV1DraftStudioDraftsGetResponse> => {
+
+  return customInstance<listAllDraftsApiV1DraftStudioDraftsGetResponse>(getListAllDraftsApiV1DraftStudioDraftsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAllDraftsApiV1DraftStudioDraftsGetQueryKey = () => {
+    return [
+    `/api/v1/draft-studio/drafts`
+    ] as const;
+    }
+
+
+export const getListAllDraftsApiV1DraftStudioDraftsGetQueryOptions = <TData = Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAllDraftsApiV1DraftStudioDraftsGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>> = ({ signal }) => listAllDraftsApiV1DraftStudioDraftsGet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAllDraftsApiV1DraftStudioDraftsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>>
+export type ListAllDraftsApiV1DraftStudioDraftsGetQueryError = HTTPValidationError
+
+
+export function useListAllDraftsApiV1DraftStudioDraftsGet<TData = Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAllDraftsApiV1DraftStudioDraftsGet<TData = Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>,
+          TError,
+          Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAllDraftsApiV1DraftStudioDraftsGet<TData = Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List All Drafts
+ */
+
+export function useListAllDraftsApiV1DraftStudioDraftsGet<TData = Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDraftsApiV1DraftStudioDraftsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAllDraftsApiV1DraftStudioDraftsGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type listMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGetResponse200 = {
   data: unknown
   status: 200
 }
@@ -469,6 +588,95 @@ export const useUpdateDraftApiV1DraftStudioDraftsDraftIdPut = <TError = HTTPVali
         TContext
       > => {
       return useMutation(getUpdateDraftApiV1DraftStudioDraftsDraftIdPutMutationOptions(options), queryClient);
+    }
+    export type approveDraftResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type approveDraftResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type approveDraftResponseSuccess = (approveDraftResponse200) & {
+  headers: Headers;
+};
+export type approveDraftResponseError = (approveDraftResponse422) & {
+  headers: Headers;
+};
+
+export type approveDraftResponse = (approveDraftResponseSuccess | approveDraftResponseError)
+
+export const getApproveDraftUrl = (draftId: string,) => {
+
+
+
+
+  return `/api/v1/draft-studio/drafts/${draftId}/approve`
+}
+
+/**
+ * @summary Approve Draft
+ */
+export const approveDraft = async (draftId: string, options?: RequestInit): Promise<approveDraftResponse> => {
+
+  return customInstance<approveDraftResponse>(getApproveDraftUrl(draftId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getApproveDraftMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveDraft>>, TError,{draftId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveDraft>>, TError,{draftId: string}, TContext> => {
+
+const mutationKey = ['approveDraft'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveDraft>>, {draftId: string}> = (props) => {
+          const {draftId} = props ?? {};
+
+          return  approveDraft(draftId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApproveDraftMutationResult = NonNullable<Awaited<ReturnType<typeof approveDraft>>>
+
+    export type ApproveDraftMutationError = HTTPValidationError
+
+    /**
+ * @summary Approve Draft
+ */
+export const useApproveDraft = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveDraft>>, TError,{draftId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof approveDraft>>,
+        TError,
+        {draftId: string},
+        TContext
+      > => {
+      return useMutation(getApproveDraftMutationOptions(options), queryClient);
     }
     export type exportDraftApiV1DraftStudioDraftsDraftIdExportPostResponse200 = {
   data: unknown

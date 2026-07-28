@@ -37,7 +37,7 @@ import type {
   UploadIntentResponse
 } from '../../models';
 
-import { customInstance } from '../../../lib/axios';
+import { customInstance } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -260,7 +260,126 @@ export const useCreateFirm = <TError = HTTPValidationError,
       > => {
       return useMutation(getCreateFirmMutationOptions(options), queryClient);
     }
-    export type getFirmDetailsResponse200 = {
+    export type listFirmMembersResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type listFirmMembersResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listFirmMembersResponseSuccess = (listFirmMembersResponse200) & {
+  headers: Headers;
+};
+export type listFirmMembersResponseError = (listFirmMembersResponse422) & {
+  headers: Headers;
+};
+
+export type listFirmMembersResponse = (listFirmMembersResponseSuccess | listFirmMembersResponseError)
+
+export const getListFirmMembersUrl = () => {
+
+
+
+
+  return `/api/v1/firms/members`
+}
+
+/**
+ * @summary List Firm Members
+ */
+export const listFirmMembers = async ( options?: RequestInit): Promise<listFirmMembersResponse> => {
+
+  return customInstance<listFirmMembersResponse>(getListFirmMembersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFirmMembersQueryKey = () => {
+    return [
+    `/api/v1/firms/members`
+    ] as const;
+    }
+
+
+export const getListFirmMembersQueryOptions = <TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFirmMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFirmMembers>>> = ({ signal }) => listFirmMembers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFirmMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listFirmMembers>>>
+export type ListFirmMembersQueryError = HTTPValidationError
+
+
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFirmMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listFirmMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFirmMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listFirmMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Firm Members
+ */
+
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFirmMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type getFirmDetailsResponse200 = {
   data: FirmResponse
   status: 200
 }
@@ -963,6 +1082,244 @@ export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMat
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListMatterDocumentsQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type listAllDocumentsResponse200 = {
+  data: DocumentResponse[]
+  status: 200
+}
+
+export type listAllDocumentsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listAllDocumentsResponseSuccess = (listAllDocumentsResponse200) & {
+  headers: Headers;
+};
+export type listAllDocumentsResponseError = (listAllDocumentsResponse422) & {
+  headers: Headers;
+};
+
+export type listAllDocumentsResponse = (listAllDocumentsResponseSuccess | listAllDocumentsResponseError)
+
+export const getListAllDocumentsUrl = () => {
+
+
+
+
+  return `/api/v1/documents`
+}
+
+/**
+ * @summary List All Documents
+ */
+export const listAllDocuments = async ( options?: RequestInit): Promise<listAllDocumentsResponse> => {
+
+  return customInstance<listAllDocumentsResponse>(getListAllDocumentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAllDocumentsQueryKey = () => {
+    return [
+    `/api/v1/documents`
+    ] as const;
+    }
+
+
+export const getListAllDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAllDocumentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllDocuments>>> = ({ signal }) => listAllDocuments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListAllDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAllDocuments>>>
+export type ListAllDocumentsQueryError = HTTPValidationError
+
+
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAllDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listAllDocuments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAllDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listAllDocuments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List All Documents
+ */
+
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListAllDocumentsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type getDocumentResponse200 = {
+  data: DocumentResponse
+  status: 200
+}
+
+export type getDocumentResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getDocumentResponseSuccess = (getDocumentResponse200) & {
+  headers: Headers;
+};
+export type getDocumentResponseError = (getDocumentResponse422) & {
+  headers: Headers;
+};
+
+export type getDocumentResponse = (getDocumentResponseSuccess | getDocumentResponseError)
+
+export const getGetDocumentUrl = (documentId: string,) => {
+
+
+
+
+  return `/api/v1/documents/${documentId}`
+}
+
+/**
+ * @summary Get Document
+ */
+export const getDocument = async (documentId: string, options?: RequestInit): Promise<getDocumentResponse> => {
+
+  return customInstance<getDocumentResponse>(getGetDocumentUrl(documentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentQueryKey = (documentId: string,) => {
+    return [
+    `/api/v1/documents/${documentId}`
+    ] as const;
+    }
+
+
+export const getGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentQueryKey(documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({ signal }) => getDocument(documentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getDocument>>>
+export type GetDocumentQueryError = HTTPValidationError
+
+
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+ documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getDocument>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getDocument>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Document
+ */
+
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDocumentQueryOptions(documentId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

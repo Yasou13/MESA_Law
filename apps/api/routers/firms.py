@@ -40,6 +40,26 @@ async def list_user_firms(
     firms = mem_res.scalars().all()
     return [{"id": f.id, "name": f.name} for f in firms]
 
+@router.get("/firms/members", operation_id="listFirmMembers")
+@limiter.limit("60/minute")
+async def list_firm_members(
+    request: Request,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    mem_res = await db.execute(
+        select(Membership, User).join(User, Membership.user_id == User.id)
+        .where(Membership.firm_id == context.tenant_id)
+    )
+    results = mem_res.all()
+    return [{
+        "id": user.id,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": mem.role,
+        "is_active": mem.is_active
+    } for mem, user in results]
+
 @router.get("/firms/{firm_id}", response_model=FirmResponse, operation_id="getFirmDetails")
 @limiter.limit("60/minute")
 async def get_firm_details(

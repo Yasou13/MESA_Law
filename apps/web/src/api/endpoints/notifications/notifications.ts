@@ -23,7 +23,7 @@ import type {
   HTTPValidationError
 } from '../../models';
 
-import { customInstance } from '../../../lib/axios';
+import { customInstance } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -154,6 +154,126 @@ export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnTyp
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getSseEndpointApiV1NotificationsSseGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type getNotificationsApiV1NotificationsGetResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type getNotificationsApiV1NotificationsGetResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getNotificationsApiV1NotificationsGetResponseSuccess = (getNotificationsApiV1NotificationsGetResponse200) & {
+  headers: Headers;
+};
+export type getNotificationsApiV1NotificationsGetResponseError = (getNotificationsApiV1NotificationsGetResponse422) & {
+  headers: Headers;
+};
+
+export type getNotificationsApiV1NotificationsGetResponse = (getNotificationsApiV1NotificationsGetResponseSuccess | getNotificationsApiV1NotificationsGetResponseError)
+
+export const getGetNotificationsApiV1NotificationsGetUrl = () => {
+
+
+
+
+  return `/api/v1/notifications`
+}
+
+/**
+ * Get all notifications for the current tenant.
+ * @summary Get Notifications
+ */
+export const getNotificationsApiV1NotificationsGet = async ( options?: RequestInit): Promise<getNotificationsApiV1NotificationsGetResponse> => {
+
+  return customInstance<getNotificationsApiV1NotificationsGetResponse>(getGetNotificationsApiV1NotificationsGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNotificationsApiV1NotificationsGetQueryKey = () => {
+    return [
+    `/api/v1/notifications`
+    ] as const;
+    }
+
+
+export const getGetNotificationsApiV1NotificationsGetQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNotificationsApiV1NotificationsGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>> = ({ signal }) => getNotificationsApiV1NotificationsGet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetNotificationsApiV1NotificationsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>>
+export type GetNotificationsApiV1NotificationsGetQueryError = HTTPValidationError
+
+
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
+          TError,
+          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Notifications
+ */
+
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetNotificationsApiV1NotificationsGetQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

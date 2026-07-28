@@ -7,12 +7,15 @@
 
 export * from './correctReviewRequest';
 export * from './correctReviewRequestCorrectedContent';
+export * from './deadlineResponse';
 export * from './documentResponse';
 export * from './exportDraftRequest';
 export * from './firmCreateRequest';
 export * from './firmResponse';
 export * from './generateDraftRequest';
 export * from './hTTPValidationError';
+export * from './legalSourceResponse';
+export * from './listDeadlinesParams';
 export * from './listDraftReviewsApiV1ReviewsGetParams';
 export * from './matterCreate';
 export * from './matterQABody';
@@ -25,6 +28,7 @@ export * from './researchRequest';
 export * from './reviewItemResponse';
 export * from './reviewItemResponseProposedContent';
 export * from './saveDraftRequest';
+export * from './searchLegalResearchParams';
 export * from './setActiveFirmApiV1SessionActiveFirmPostParams';
 export * from './updateDraftRequest';
 export * from './uploadIntentRequest';

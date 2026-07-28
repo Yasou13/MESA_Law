@@ -19,7 +19,7 @@ import type {
   QAQuery
 } from '../../models';
 
-import { customInstance } from '../../../lib/axios';
+import { customInstance } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];

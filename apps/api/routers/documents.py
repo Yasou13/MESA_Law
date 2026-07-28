@@ -110,6 +110,43 @@ async def list_matter_documents(
         res.append({"id": d.id, "title": d.title, "status": status})
     return res
 
+@router.get("", response_model=list[DocumentResponse], operation_id="listAllDocuments")
+@limiter.limit("60/minute")
+async def list_all_documents(
+    request: Request,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Document).where(Document.tenant_id == context.tenant_id).order_by(Document.created_at.desc())
+    result = await db.execute(stmt)
+    docs = result.scalars().all()
+    
+    res = []
+    for d in docs:
+        rev_res = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == d.id).order_by(DocumentRevision.version.desc()))
+        latest_rev = rev_res.scalars().first()
+        status = latest_rev.scan_status if latest_rev else "clean"
+        res.append({"id": d.id, "title": d.title, "status": status})
+    return res
+
+@router.get("/{document_id}", response_model=DocumentResponse, operation_id="getDocument")
+@limiter.limit("60/minute")
+async def get_document(
+    request: Request,
+    document_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    doc = await db.get(Document, document_id)
+    if not doc or doc.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    rev_res = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == doc.id).order_by(DocumentRevision.version.desc()))
+    latest_rev = rev_res.scalars().first()
+    status = latest_rev.scan_status if latest_rev else "clean"
+    
+    return {"id": doc.id, "title": doc.title, "status": status}
+
 @router.post("/{document_id}/complete", operation_id="completeUpload")
 @limiter.limit("30/minute")
 async def complete_upload(

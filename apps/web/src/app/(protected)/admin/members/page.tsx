@@ -1,94 +1,92 @@
 'use client'
 
-import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
-import { Users, Mail, Shield, MoreVertical } from 'lucide-react'
+import { useListFirmMembers } from '@/api/endpoints/default/default'
+import { Users, Shield, User as UserIcon } from 'lucide-react'
 
 export default function MembersPage() {
-  const { data: members, isLoading } = useQuery({
-    queryKey: ['members'],
-    queryFn: async () => {
-      // Mocking for now since there's no backend endpoint yet
-      return [
-        { id: 1, name: 'Alice Lawyer', email: 'alice@firm.com', role: 'admin', status: 'active' },
-        { id: 2, name: 'Bob Partner', email: 'bob@firm.com', role: 'member', status: 'active' },
-        { id: 3, name: 'Charlie Associate', email: 'charlie@firm.com', role: 'member', status: 'invited' },
-      ]
-    }
-  })
+  const { data: membersRes, isLoading, isError } = useListFirmMembers()
+  const members = (membersRes?.data as any[]) || []
 
   return (
-    <div className="max-w-6xl mx-auto p-8">
-      <div className="flex justify-between items-center mb-8">
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)] flex items-center gap-2">
-            <Users className="w-6 h-6 text-[var(--color-lila-500)]" />
-            Organization Members
-          </h1>
-          <p className="text-[var(--color-anthracite-400)] mt-1">Manage firm attorneys, paralegals, and their access levels.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Organization Members</h1>
+          <p className="text-zinc-400">Manage access and roles for your firm.</p>
         </div>
-        <button className="bg-[var(--color-lila-600)] hover:bg-[var(--color-lila-500)] text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
+        <button className="px-4 py-2 bg-[var(--color-lila-500)] text-white rounded-lg hover:bg-[var(--color-lila-600)] transition-colors text-sm font-medium">
           Invite Member
         </button>
       </div>
 
-      <div className="bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-[var(--bg-surface-hover)] text-[var(--color-anthracite-400)] text-xs uppercase font-semibold border-b border-[var(--border-surface)]">
-            <tr>
-              <th className="px-6 py-4">User</th>
-              <th className="px-6 py-4">Role</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border-surface)]">
-            {isLoading ? (
-              <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-[var(--color-anthracite-400)]">
-                  Loading members...
-                </td>
+      <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+        {isLoading && (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-lila-500)]"></div>
+          </div>
+        )}
+
+        {!isLoading && !isError && (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--border-surface)] text-sm font-medium text-zinc-400 uppercase tracking-wider">
+                <th className="px-6 py-4">Name</th>
+                <th className="px-6 py-4">Role</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4 text-right">Actions</th>
               </tr>
-            ) : members?.map((member) => (
-              <tr key={member.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[var(--color-lila-500)]/10 text-[var(--color-lila-500)] flex items-center justify-center font-bold">
-                      {member.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="font-medium text-[var(--foreground)]">{member.name}</div>
-                      <div className="text-[var(--color-anthracite-400)] flex items-center gap-1 mt-0.5">
-                        <Mail className="w-3 h-3" />
-                        {member.email}
+            </thead>
+            <tbody className="divide-y divide-[var(--border-surface)]">
+              {members.map((member: any) => (
+                <tr key={member.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[var(--bg-surface)] flex items-center justify-center shrink-0 text-[var(--color-lila-400)] font-medium">
+                        {member.full_name?.charAt(0) || <UserIcon className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <div className="font-medium text-[var(--foreground)]">{member.full_name}</div>
+                        <div className="text-sm text-zinc-400">{member.email}</div>
                       </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-1.5 text-[var(--foreground)]">
-                    {member.role === 'admin' ? <Shield className="w-4 h-4 text-[var(--color-semantic-warning)]" /> : <Users className="w-4 h-4 text-[var(--color-anthracite-400)]" />}
-                    <span className="capitalize">{member.role}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                    member.status === 'active' 
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  }`}>
-                    {member.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="p-1.5 text-[var(--color-anthracite-400)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)] rounded transition-colors">
-                    <MoreVertical className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      {member.role === 'admin' ? (
+                        <Shield className="w-4 h-4 text-[var(--color-lila-400)]" />
+                      ) : (
+                        <UserIcon className="w-4 h-4 text-zinc-400" />
+                      )}
+                      <span className="capitalize">{member.role}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                      member.is_active 
+                        ? 'bg-emerald-500/10 text-emerald-500' 
+                        : 'bg-red-500/10 text-red-500'
+                    }`}>
+                      {member.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <button className="text-sm text-[var(--color-lila-400)] hover:text-[var(--color-lila-300)] font-medium">
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {members.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-zinc-400">
+                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    No members found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )

@@ -70,7 +70,7 @@ async def get_dependencies(db: AsyncSession) -> dict:
     # Intelligence Adapter
     adapter = os.getenv("MESA_LAW_INTELLIGENCE_ADAPTER", "mock").lower()
     if adapter == "mock":
-        deps["intelligence_adapter"] = "ok"
+        deps["intelligence_adapter"] = "mock"
     else:
         deps["intelligence_adapter"] = "degraded"
 

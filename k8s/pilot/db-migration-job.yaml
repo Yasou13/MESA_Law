@@ -14,7 +14,7 @@ spec:
           image: mesa-law-api:latest
           command: ["uv", "run", "alembic", "upgrade", "head"]
           env:
-            - name: MESA_ENV
+            - name: MESA_LAW_ENVIRONMENT
               value: "pilot"
             - name: DATABASE_URL
               valueFrom:

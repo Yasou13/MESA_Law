@@ -28,6 +28,7 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
 
   useEffect(() => {
     if (activeDraft) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(activeDraft.title || '');
       setContent(activeDraft.content || '');
       setCurrentVersion(activeDraft.version || 1);

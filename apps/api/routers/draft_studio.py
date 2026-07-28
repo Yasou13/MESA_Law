@@ -40,7 +40,7 @@ async def save_draft(
     db.add(draft)
     await db.commit()
     await db.refresh(draft)
-    return {"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content}
+    return {"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "status": draft.status}
 
 @router.get("/drafts/matter/{matter_id}")
 async def list_matter_drafts(
@@ -55,6 +55,27 @@ async def list_matter_drafts(
     return [
         {
             "id": d.id,
+            "title": d.title,
+            "version": d.version,
+            "status": d.status,
+            "updated_at": d.updated_at.isoformat() if d.updated_at else None
+        }
+        for d in drafts
+    ]
+
+@router.get("/drafts")
+async def list_all_drafts(
+    request: Request,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Draft).where(Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
+    result = await db.execute(stmt)
+    drafts = result.scalars().all()
+    return [
+        {
+            "id": d.id,
+            "matter_id": d.matter_id,
             "title": d.title,
             "version": d.version,
             "updated_at": d.updated_at.isoformat() if d.updated_at else None
@@ -78,6 +99,7 @@ async def get_draft(
         "title": draft.title,
         "content": draft.content,
         "version": draft.version,
+        "status": draft.status,
         "updated_at": draft.updated_at.isoformat() if draft.updated_at else None
     }
 
@@ -127,9 +149,24 @@ async def update_draft(
     await db.refresh(draft)
     
     from fastapi.responses import JSONResponse
-    response = JSONResponse(content={"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "etag": draft.etag})
+    response = JSONResponse(content={"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "status": draft.status, "etag": draft.etag})
     response.headers["ETag"] = f'"{draft.etag}"'
     return response
+
+@router.post("/drafts/{draft_id}/approve", operation_id="approveDraft")
+async def approve_draft(
+    request: Request,
+    draft_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    draft = await db.get(Draft, draft_id)
+    if not draft or draft.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Draft not found")
+        
+    draft.status = "APPROVED_FOR_EXTERNAL_USE"
+    await db.commit()
+    return {"status": draft.status}
 
 @router.post("/drafts/{draft_id}/export")
 async def export_draft(

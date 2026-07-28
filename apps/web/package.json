@@ -6,16 +6,18 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "api:generate": "orval"
+    "test:unit": "vitest run",
+    "api:generate": "orval --config orval.config.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
     "@tanstack/react-query": "^5.101.4",
     "axios": "^1.18.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.26.0",
     "next": "16.2.11",
@@ -37,6 +39,7 @@
     "eslint-config-next": "16.2.11",
     "orval": "^8.22.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

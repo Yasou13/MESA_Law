@@ -3,7 +3,7 @@ import asyncio
 import httpx
 from datetime import datetime, timezone
 
-# We assume MESA_ENV=test so the app uses memory cache, standard fast setup
+# We assume MESA_LAW_ENVIRONMENT=test so the app uses memory cache, standard fast setup
 # The DB will be a fresh postgresql from Docker.
 # We will use the internal docker network port 8000 for API since we are testing locally via httpx AsyncClient
 # Wait, actually since we are running this pytest on the host, we should hit http://localhost:8000 (API) 

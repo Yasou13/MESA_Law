@@ -68,3 +68,30 @@ async def sse_endpoint(
             await asyncio.sleep(5)  # Poll every 5 seconds
             
     return EventSourceResponse(event_generator())
+
+@router.get("")
+async def get_notifications(
+    request: Request,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get all notifications for the current tenant.
+    """
+    stmt = select(Notification).where(
+        Notification.tenant_id == context.tenant_id
+    ).order_by(Notification.timestamp.desc())
+    
+    result = await db.execute(stmt)
+    notifications = result.scalars().all()
+    
+    return [
+        {
+            "id": n.id,
+            "category": n.category,
+            "title": n.title,
+            "message": n.message,
+            "status": n.status,
+            "timestamp": n.timestamp.isoformat()
+        } for n in notifications
+    ]

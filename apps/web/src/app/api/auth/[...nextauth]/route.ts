@@ -16,27 +16,7 @@ const handler = NextAuth({
       authorization: process.env.KEYCLOAK_PUBLIC_ISSUER ? `${process.env.KEYCLOAK_PUBLIC_ISSUER}/protocol/openid-connect/auth` : undefined,
       token: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/token` : undefined,
       userinfo: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/userinfo` : undefined,
-    }),
-    ...(process.env.NODE_ENV === 'development' ? [
-      require("next-auth/providers/credentials").default({
-        name: "Developer Login",
-        credentials: {
-          username: { label: "Username", type: "text", placeholder: "admin" },
-          password: { label: "Password", type: "password", placeholder: "admin" }
-        },
-        async authorize(credentials: any) {
-          if (credentials?.username === "admin" && credentials?.password === "admin") {
-            return {
-              id: "dev-user-1",
-              name: "Dev Admin",
-              email: "admin@mesa.law",
-              access_token: "mock_dev_token",
-            }
-          }
-          return null
-        }
-      })
-    ] : [])
+    })
   ],
   callbacks: {
     async jwt({ token, account }) {

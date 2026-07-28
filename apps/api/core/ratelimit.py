@@ -11,7 +11,7 @@ is_testing = (
     "pytest" in sys.modules
     or "_pytest" in sys.modules
     or any("pytest" in arg for arg in sys.argv)
-    or os.getenv("MESA_ENV") == "test"
+    or os.getenv("MESA_LAW_ENVIRONMENT") == "test"
     or redis_url == "memory://"
 )
 

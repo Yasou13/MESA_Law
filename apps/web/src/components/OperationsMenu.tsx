@@ -2,9 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { Command, Server, Shield, Users, Database, Zap, Activity } from 'lucide-react'
+import { useSystemDependenciesApiV1SystemDependenciesGet } from '@/api/endpoints/system/system'
 
 export function OperationsMenu() {
   const [isOpen, setIsOpen] = useState(false)
+  const { data: depsRes } = useSystemDependenciesApiV1SystemDependenciesGet(
+    { query: { enabled: isOpen } }
+  )
+  const deps = depsRes?.data || {}
+  const allOk = Object.values(deps).every(v => v === 'ok' || v === 'degraded')
 
   // CMD+K shortcut
   useEffect(() => {
@@ -47,7 +53,9 @@ export function OperationsMenu() {
           <button className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--color-lila-500)] hover:text-white group transition-colors">
             <Activity className="w-4 h-4 text-[var(--color-anthracite-400)] group-hover:text-white mr-3" />
             <div className="flex-1 text-left">Check Background Workers Status</div>
-            <span className="bg-emerald-500/20 text-emerald-500 group-hover:text-white group-hover:bg-white/20 text-xs px-2 py-0.5 rounded-full">Healthy</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${allOk ? 'bg-emerald-500/20 text-emerald-500 group-hover:text-white group-hover:bg-white/20' : 'bg-red-500/20 text-red-500 group-hover:text-white group-hover:bg-white/20'}`}>
+              {allOk ? 'Healthy' : 'Issues Detected'}
+            </span>
           </button>
 
           <div className="px-2 py-1.5 mt-4 text-xs font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider">Administration</div>

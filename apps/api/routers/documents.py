@@ -28,7 +28,7 @@ async def create_upload_intent(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    DocumentAccessPolicy.can_upload(context, payload.matter_id)
+    await DocumentAccessPolicy.can_upload(context, db, payload.matter_id)
     # Enforce file size limit (max 100MB per file as per Phase 10 rules)
     MAX_FILE_SIZE = 100 * 1024 * 1024
     if payload.size_bytes > MAX_FILE_SIZE:
@@ -38,8 +38,7 @@ async def create_upload_intent(
     ALLOWED_MIMES = {
         "application/pdf", 
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document", 
-        "image/jpeg", 
-        "image/png"
+        "text/plain"
     }
     if payload.mime_type not in ALLOWED_MIMES:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {payload.mime_type}.")
@@ -70,10 +69,8 @@ async def create_upload_intent(
     ext = ".pdf"
     if payload.mime_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         ext = ".docx"
-    elif payload.mime_type == "image/jpeg":
-        ext = ".jpg"
-    elif payload.mime_type == "image/png":
-        ext = ".png"
+    elif payload.mime_type == "text/plain":
+        ext = ".txt"
 
     s3_key = f"{context.tenant_id}/{payload.matter_id}/{doc.id}/{rev.id}/original{ext}"
     rev.s3_key = s3_key
@@ -98,7 +95,7 @@ async def list_matter_documents(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    DocumentAccessPolicy.can_read(context, matter_id)
+    await DocumentAccessPolicy.can_read(context, db, matter_id)
     # Enforce RLS by tenant_id
     stmt = select(Document).where(Document.matter_id == matter_id, Document.tenant_id == context.tenant_id)
     result = await db.execute(stmt)
@@ -119,7 +116,7 @@ async def list_all_documents(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    DocumentAccessPolicy.can_read(context)
+    await DocumentAccessPolicy.can_read(context, db)
     stmt = select(Document).where(Document.tenant_id == context.tenant_id).order_by(Document.created_at.desc())
     result = await db.execute(stmt)
     docs = result.scalars().all()
@@ -140,7 +137,7 @@ async def get_document(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    DocumentAccessPolicy.can_read(context)
+    await DocumentAccessPolicy.can_read(context, db)
     doc = await db.get(Document, document_id)
     if not doc or doc.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -164,7 +161,7 @@ async def complete_upload(
     if not doc or doc.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    DocumentAccessPolicy.can_upload(context, doc.matter_id)
+    await DocumentAccessPolicy.can_upload(context, db, doc.matter_id)
         
     result = await db.execute(select(DocumentRevision).where(DocumentRevision.document_id == document_id).order_by(DocumentRevision.version.desc()))
     rev = result.scalars().first()
@@ -194,10 +191,13 @@ async def complete_upload(
             actual_mime = "application/pdf"
         elif file_bytes.startswith(b"PK\x03\x04"):
             actual_mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        elif file_bytes.startswith(b"\xFF\xD8\xFF"):
-            actual_mime = "image/jpeg"
-        elif file_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
-            actual_mime = "image/png"
+        else:
+            try:
+                # If it's valid UTF-8 and we expect text/plain, accept it
+                file_bytes.decode('utf-8')
+                actual_mime = "text/plain"
+            except UnicodeDecodeError:
+                pass
             
         if actual_mime != rev.mime_type:
             rev.scan_status = DocumentState.QUARANTINED.value

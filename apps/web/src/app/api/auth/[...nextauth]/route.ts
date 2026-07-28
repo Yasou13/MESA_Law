@@ -14,24 +14,6 @@ const providers: Provider[] = [
   })
 ]
 
-// Only add CredentialsProvider in development mode
-if (process.env.NODE_ENV === 'development') {
-  providers.unshift(
-    CredentialsProvider({
-      name: 'Developer Mode',
-      credentials: {},
-      async authorize() {
-        return {
-          id: "dev-user-id",
-          name: "Developer",
-          email: "dev@mesa.local",
-          activeFirmId: "firm-1"
-        }
-      }
-    })
-  )
-}
-
 const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET || "development_secret_only_do_not_use_in_prod",
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
@@ -42,11 +24,11 @@ const handler = NextAuth({
   providers,
   callbacks: {
     async jwt({ token, account, trigger, session, user }) {
-      if (account) {
-        token.accessToken = account.access_token || "mock-access-token"
+      if (account?.access_token) {
+        token.accessToken = account.access_token;
       }
       if (user && 'activeFirmId' in user) {
-        token.activeFirmId = (user as { activeFirmId?: string }).activeFirmId || "firm-1"
+        token.activeFirmId = (user as { activeFirmId?: string }).activeFirmId;
       }
       if (trigger === "update" && session?.activeFirmId) {
         token.activeFirmId = session.activeFirmId;

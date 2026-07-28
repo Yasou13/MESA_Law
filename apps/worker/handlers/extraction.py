@@ -40,7 +40,10 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         
     import hashlib
 
-    from apps.api.models.review import ExtractionSuggestion, ReviewItem
+    import hashlib
+
+    from apps.api.models.review import ExtractionSuggestion, ReviewItem, ReviewState
+    from apps.api.models.domain import SourceLocator
 
     adapter = get_extraction_adapter()
     matter_id = parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id")
@@ -63,12 +66,27 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
             logger.info(f"Skipping duplicate PARTY_SUGGESTION {ik}")
             continue
 
+        # Phase 7: Create genuine SourceLocator
+        locator = SourceLocator(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            parsed_document_id=parsed_document_id,
+            page_number=1, # Default/Fallback
+            text_snippet=pd.get("provenance", "Snippet not available"),
+            text_hash=hashlib.sha256(str(pd.get("provenance", "")).encode()).hexdigest(),
+            parser_version=parsed_doc.parser_used
+        )
+        session.add(locator)
+        await session.flush()
+
         suggestion = ExtractionSuggestion(
             tenant_id=parsed_doc.tenant_id,
             matter_id=matter_id,
             document_id=parsed_doc.document_id,
             document_revision_id=parsed_doc.revision_id,
-            source_locator_id=pd.get("provenance", "unknown"),
+            source_locator_id=locator.id,
             suggestion_type="PARTY_SUGGESTION",
             payload={
                 "name": pd["name"],
@@ -91,7 +109,7 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
             entity_id=f"draft_party_{parsed_doc.id}_{pd['name'].replace(' ', '_')}",
             suggestion_id=suggestion.id,
             proposed_content=suggestion.payload,
-            status="draft"
+            status=ReviewState.PENDING
         )
         session.add(review_item)
         
@@ -105,12 +123,27 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
             logger.info(f"Skipping duplicate CLAIM_SUGGESTION {ik}")
             continue
 
+        # Phase 7: Create genuine SourceLocator
+        locator = SourceLocator(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            parsed_document_id=parsed_document_id,
+            page_number=1, # Default/Fallback
+            text_snippet=cd.get("provenance", "Snippet not available"),
+            text_hash=hashlib.sha256(str(cd.get("provenance", "")).encode()).hexdigest(),
+            parser_version=parsed_doc.parser_used
+        )
+        session.add(locator)
+        await session.flush()
+
         suggestion = ExtractionSuggestion(
             tenant_id=parsed_doc.tenant_id,
             matter_id=matter_id,
             document_id=parsed_doc.document_id,
             document_revision_id=parsed_doc.revision_id,
-            source_locator_id=cd.get("provenance", "unknown"),
+            source_locator_id=locator.id,
             suggestion_type="CLAIM_SUGGESTION",
             payload={
                 "description": cd["description"],
@@ -133,7 +166,7 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
             entity_id=f"draft_claim_{uuid6.uuid7()}",
             suggestion_id=suggestion.id,
             proposed_content=suggestion.payload,
-            status="draft"
+            status=ReviewState.PENDING
         )
         session.add(review_item)
             
@@ -143,12 +176,26 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         ik = generate_idempotency_key(parsed_doc.revision_id, "1.0.0", "DEADLINE_TRIGGER_SUGGESTION", "teblig_regex")
         existing_sugg = await session.execute(select(ExtractionSuggestion).where(ExtractionSuggestion.idempotency_key == ik))
         if not existing_sugg.scalars().first():
+            locator = SourceLocator(
+                tenant_id=parsed_doc.tenant_id,
+                matter_id=matter_id,
+                document_id=parsed_doc.document_id,
+                document_revision_id=parsed_doc.revision_id,
+                parsed_document_id=parsed_document_id,
+                page_number=1, # Default/Fallback
+                text_snippet="tebliğ",
+                text_hash=hashlib.sha256(b"teblig").hexdigest(),
+                parser_version=parsed_doc.parser_used
+            )
+            session.add(locator)
+            await session.flush()
+            
             suggestion = ExtractionSuggestion(
                 tenant_id=parsed_doc.tenant_id,
                 matter_id=matter_id,
                 document_id=parsed_doc.document_id,
                 document_revision_id=parsed_doc.revision_id,
-                source_locator_id="teblig_regex",
+                source_locator_id=locator.id,
                 suggestion_type="DEADLINE_TRIGGER_SUGGESTION",
                 payload={
                     "trigger_event": "tebliğ",
@@ -172,7 +219,7 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
                 entity_id=f"draft_deadline_{uuid6.uuid7()}",
                 suggestion_id=suggestion.id,
                 proposed_content=suggestion.payload,
-                status="draft"
+                status=ReviewState.PENDING
             )
             session.add(review_item)
 

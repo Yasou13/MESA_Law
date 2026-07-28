@@ -6,6 +6,7 @@ import { Check, X, Edit, Loader2, AlertCircle, FileText, Briefcase } from 'lucid
 import { toast } from 'react-hot-toast'
 import { 
   useListDraftReviewsApiV1ReviewsGet,
+  getListDraftReviewsApiV1ReviewsGetQueryKey,
   useApproveReviewApiV1ReviewsReviewIdApprovePost,
   useRejectReviewApiV1ReviewsReviewIdRejectPost,
   useCorrectReviewApiV1ReviewsReviewIdCorrectPost
@@ -20,7 +21,7 @@ import Link from 'next/link'
 export default function GlobalReviewsPage() {
   const queryClient = useQueryClient()
   const [editingReview, setEditingReview] = useState<any | null>(null)
-  const [editContent, setEditContent] = useState<string>("")
+  const [editData, setEditData] = useState<any>({})
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
 
   const { data: reviewsResponse, isLoading, refetch } = useListDraftReviewsApiV1ReviewsGet()
@@ -32,7 +33,7 @@ export default function GlobalReviewsPage() {
     mutation: {
       onSuccess: () => {
         toast.success("Review approved successfully")
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/reviews'] })
+        queryClient.invalidateQueries({ queryKey: getListDraftReviewsApiV1ReviewsGetQueryKey() })
       },
       onError: () => toast.error("Failed to approve review")
     }
@@ -42,7 +43,7 @@ export default function GlobalReviewsPage() {
     mutation: {
       onSuccess: () => {
         toast.success("Review rejected")
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/reviews'] })
+        queryClient.invalidateQueries({ queryKey: getListDraftReviewsApiV1ReviewsGetQueryKey() })
       },
       onError: () => toast.error("Failed to reject review")
     }
@@ -53,7 +54,7 @@ export default function GlobalReviewsPage() {
       onSuccess: () => {
         toast.success("Review corrected and approved")
         setEditingReview(null)
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/reviews'] })
+        queryClient.invalidateQueries({ queryKey: getListDraftReviewsApiV1ReviewsGetQueryKey() })
       },
       onError: () => toast.error("Failed to correct review")
     }
@@ -64,17 +65,12 @@ export default function GlobalReviewsPage() {
   
   const handleEdit = (review: any) => {
     setEditingReview(review)
-    setEditContent(JSON.stringify(review.proposed_content, null, 2))
+    setEditData(review.proposed_content || {})
   }
 
   const handleSaveCorrection = () => {
     if (!editingReview) return
-    try {
-      const parsed = JSON.parse(editContent)
-      correctMutation.mutate({ reviewId: editingReview.id, data: { corrected_content: parsed } })
-    } catch (e) {
-      toast.error("Invalid JSON format for correction")
-    }
+    correctMutation.mutate({ reviewId: editingReview.id, data: { corrected_content: editData } })
   }
 
   return (
@@ -200,13 +196,113 @@ export default function GlobalReviewsPage() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-4">
-            <textarea 
-              className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl p-4 text-[var(--foreground)] font-mono text-sm min-h-[300px] focus:outline-none focus:border-[var(--color-lila-500)]"
-              value={editContent}
-              onChange={e => setEditContent(e.target.value)}
-              disabled={editingReview?.status !== 'pending'}
-            />
+          <div className="py-4 space-y-4">
+            {editingReview?.entity_type === 'party' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Party Name</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                    value={editData.name || ''}
+                    onChange={(e) => setEditData({...editData, name: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Role</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                    value={editData.role || ''}
+                    onChange={(e) => setEditData({...editData, role: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Type (Organization/Individual)</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                    value={editData.type || ''}
+                    onChange={(e) => setEditData({...editData, type: e.target.value})}
+                  />
+                </div>
+              </>
+            )}
+
+            {editingReview?.entity_type === 'claim' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <textarea
+                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)] min-h-[100px]"
+                    value={editData.description || ''}
+                    onChange={(e) => setEditData({...editData, description: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Claimant Party ID</label>
+                    <input
+                      type="text"
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                      value={editData.claimant_party_id || ''}
+                      onChange={(e) => setEditData({...editData, claimant_party_id: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Defendant Party ID</label>
+                    <input
+                      type="text"
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                      value={editData.defendant_party_id || ''}
+                      onChange={(e) => setEditData({...editData, defendant_party_id: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {editingReview?.entity_type === 'deadline' && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Description</label>
+                  <input
+                    type="text"
+                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                    value={editData.description || ''}
+                    onChange={(e) => setEditData({...editData, description: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Due Date / Calculated Date</label>
+                    <input
+                      type="text"
+                      placeholder="YYYY-MM-DD"
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                      value={editData.due_date || editData.calculated_date || ''}
+                      onChange={(e) => setEditData({...editData, due_date: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Trigger Event</label>
+                    <input
+                      type="text"
+                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+                      value={editData.trigger_event || ''}
+                      onChange={(e) => setEditData({...editData, trigger_event: e.target.value})}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {/* Fallback for unknown entity types */}
+            {!['party', 'claim', 'deadline'].includes(editingReview?.entity_type) && (
+              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-md text-orange-400">
+                Custom entity type. Dynamic form not available.
+              </div>
+            )}
           </div>
           
           <DialogFooter>

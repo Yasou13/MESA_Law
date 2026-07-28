@@ -13,14 +13,13 @@ import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { useQueryClient } from '@tanstack/react-query'
 
 const navigation = [
   { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
   { nameKey: 'matters', href: '/matters', icon: FolderOpen },
   { nameKey: 'documents', href: '/documents', icon: FileText },
   { nameKey: 'review_center', href: '/reviews', icon: FileCheck },
-  { nameKey: 'legal_research', href: '/research', icon: Search },
-  { nameKey: 'deadlines', href: '/deadlines', icon: Clock },
   { nameKey: 'drafts', href: '/drafts', icon: FileEdit },
   { nameKey: 'notifications', href: '/notifications', icon: Bell },
   { nameKey: 'operations', href: '/operations', icon: CheckSquare },
@@ -28,9 +27,7 @@ const navigation = [
 
 const adminNavigation = [
   { nameKey: 'members', href: '/admin/members', icon: Users },
-  { nameKey: 'support_access', href: '/admin/support', icon: Users },
   { nameKey: 'audit', href: '/admin/audit', icon: FileText },
-  { nameKey: 'retention', href: '/admin/retention', icon: Settings },
   { nameKey: 'settings', href: '/admin/settings', icon: Settings },
 ] as const
 
@@ -41,9 +38,10 @@ export function Sidebar() {
   
   const pathname = usePathname()
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: notifRes } = useGetNotificationsApiV1NotificationsGet()
   const unreadCount = Array.isArray(notifRes?.data)
-    ? notifRes.data.filter((n: { read_at?: string | null }) => !n.read_at).length
+    ? notifRes.data.filter((n: { status?: string }) => n.status !== 'READ').length
     : 0
 
   const { data: firmsRes } = useListUserFirms()
@@ -72,8 +70,10 @@ export function Sidebar() {
       onSuccess: async () => {
         await updateSession({ activeFirmId: firmId })
         setActiveFirmId(firmId)
+        queryClient.clear() // Phase 2: Clear TanStack Query cache
         toast.success('Switched active firm')
-        window.location.reload()
+        router.push('/dashboard') // Phase 2: Navigate to dashboard without reload
+        router.refresh()
       },
       onError: () => {
         toast.error('Failed to switch firm')
@@ -235,6 +235,14 @@ export function Sidebar() {
           <div className="mb-4">
             <LanguageSwitcher />
           </div>
+          <Link 
+            href="/settings/profile"
+            className="w-full flex items-center gap-3 px-3 py-2 mb-2 rounded-lg text-sm font-medium text-[var(--color-anthracite-400)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)] transition-colors"
+            onClick={() => setIsMobileOpen(false)}
+          >
+            <Users className="w-5 h-5" />
+            Profile Settings
+          </Link>
           <button 
             onClick={() => signOut({ callbackUrl: '/login' })}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[var(--color-semantic-error)] hover:bg-[var(--color-semantic-error)]/10 cursor-pointer transition-colors"

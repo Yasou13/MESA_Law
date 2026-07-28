@@ -5,19 +5,29 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
+
+import type {
+  HTTPValidationError,
+  SupportAccessRequest,
+  UpdateUserProfileRequest
+} from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
 
@@ -153,3 +163,181 @@ export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnTy
 
 
 
+export type updateCurrentUserProfileResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type updateCurrentUserProfileResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateCurrentUserProfileResponseSuccess = (updateCurrentUserProfileResponse200) & {
+  headers: Headers;
+};
+export type updateCurrentUserProfileResponseError = (updateCurrentUserProfileResponse422) & {
+  headers: Headers;
+};
+
+export type updateCurrentUserProfileResponse = (updateCurrentUserProfileResponseSuccess | updateCurrentUserProfileResponseError)
+
+export const getUpdateCurrentUserProfileUrl = () => {
+
+
+
+
+  return `/api/v1/users/me`
+}
+
+/**
+ * @summary Update Current User Profile
+ */
+export const updateCurrentUserProfile = async (updateUserProfileRequest: UpdateUserProfileRequest, options?: RequestInit): Promise<updateCurrentUserProfileResponse> => {
+
+  return customInstance<updateCurrentUserProfileResponse>(getUpdateCurrentUserProfileUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateUserProfileRequest)
+  }
+);}
+
+
+
+
+
+export const getUpdateCurrentUserProfileMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext> => {
+
+const mutationKey = ['updateCurrentUserProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCurrentUserProfile>>, {data: UpdateUserProfileRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateCurrentUserProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateCurrentUserProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateCurrentUserProfile>>>
+    export type UpdateCurrentUserProfileMutationBody = UpdateUserProfileRequest
+    export type UpdateCurrentUserProfileMutationError = HTTPValidationError
+
+    /**
+ * @summary Update Current User Profile
+ */
+export const useUpdateCurrentUserProfile = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateCurrentUserProfile>>,
+        TError,
+        {data: UpdateUserProfileRequest},
+        TContext
+      > => {
+      return useMutation(getUpdateCurrentUserProfileMutationOptions(options), queryClient);
+    }
+    export type grantSupportAccessResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type grantSupportAccessResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type grantSupportAccessResponseSuccess = (grantSupportAccessResponse200) & {
+  headers: Headers;
+};
+export type grantSupportAccessResponseError = (grantSupportAccessResponse422) & {
+  headers: Headers;
+};
+
+export type grantSupportAccessResponse = (grantSupportAccessResponseSuccess | grantSupportAccessResponseError)
+
+export const getGrantSupportAccessUrl = () => {
+
+
+
+
+  return `/api/v1/users/me/support-access`
+}
+
+/**
+ * @summary Grant Support Access
+ */
+export const grantSupportAccess = async (supportAccessRequest: SupportAccessRequest, options?: RequestInit): Promise<grantSupportAccessResponse> => {
+
+  return customInstance<grantSupportAccessResponse>(getGrantSupportAccessUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supportAccessRequest)
+  }
+);}
+
+
+
+
+
+export const getGrantSupportAccessMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext> => {
+
+const mutationKey = ['grantSupportAccess'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantSupportAccess>>, {data: SupportAccessRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  grantSupportAccess(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GrantSupportAccessMutationResult = NonNullable<Awaited<ReturnType<typeof grantSupportAccess>>>
+    export type GrantSupportAccessMutationBody = SupportAccessRequest
+    export type GrantSupportAccessMutationError = HTTPValidationError
+
+    /**
+ * @summary Grant Support Access
+ */
+export const useGrantSupportAccess = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof grantSupportAccess>>,
+        TError,
+        {data: SupportAccessRequest},
+        TContext
+      > => {
+      return useMutation(getGrantSupportAccessMutationOptions(options), queryClient);
+    }

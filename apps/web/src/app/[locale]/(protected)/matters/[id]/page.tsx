@@ -22,8 +22,10 @@ import {
   useCreateUploadIntent,
   useCompleteUpload,
   downloadDocument,
-  useRebuildMatterMesa
+  useRebuildMatterMesa,
+  useListMatterParties
 } from '@/api/endpoints/default/default'
+import { useListDeadlines } from '@/api/endpoints/deadlines/deadlines'
 import { useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet, useSaveDraftApiV1DraftStudioDraftsPost } from '@/api/endpoints/draft-studio/draft-studio'
 
 export default function MatterDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,8 +41,8 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'timeline' | 'claims' | 'research' | 'drafts'>('overview')
-  const [activeDoc, setActiveDoc] = useState<{url: string, title: string} | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'research' | 'drafts'>('overview')
+  const [activeDoc, setActiveDoc] = useState<{id: string, url: string, title: string} | null>(null)
 
   // Fetch all matters and find current to pass to MatterContextHeader
   const { data: mattersResponse, isLoading: isLoadingMatters } = useListMatters()
@@ -50,8 +52,11 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
     status: '...',
     confidentiality_level: '...',
     legal_hold: false,
-    ai_processing_policy: '...'
+    ai_processing_policy: '...',
+    access_scope: 'read'
   }
+  
+  const canEdit = currentMatter.access_scope !== 'read'
 
   const { data: documentsResponse, isLoading: isLoadingDocs } = useListMatterDocuments(matterId, {
     query: {
@@ -68,6 +73,12 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
 
   const { data: claimsResponse, isLoading: isLoadingClaims } = useListClaims(matterId)
   const claims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : []
+
+  const { data: partiesResponse, isLoading: isLoadingParties } = useListMatterParties(matterId)
+  const parties = Array.isArray(partiesResponse?.data) ? partiesResponse.data : []
+
+  const { data: deadlinesResponse, isLoading: isLoadingDeadlines } = useListDeadlines({ matter_id: matterId })
+  const deadlines = Array.isArray(deadlinesResponse?.data) ? deadlinesResponse.data : []
 
   const { data: draftsResponse, isLoading: isLoadingDrafts } = useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet(matterId)
   const drafts = Array.isArray(draftsResponse?.data) ? draftsResponse.data : []
@@ -146,7 +157,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   }
 
   if (activeDoc) {
-    return <DocumentViewer url={activeDoc.url} title={activeDoc.title} onClose={() => setActiveDoc(null)} />
+    return <DocumentViewer documentId={activeDoc.id} matterId={matterId} url={activeDoc.url} title={activeDoc.title} onClose={() => setActiveDoc(null)} />
   }
 
   return (
@@ -170,7 +181,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
       {/* Tabs Navigation */}
       <div className="bg-[var(--bg-surface)] border-b border-[var(--border-surface)] px-6 py-2">
         <div className="flex items-center gap-1">
-          {['overview', 'timeline', 'claims', 'research', 'drafts'].map((tab) => (
+          {['overview', 'documents', 'drafts', 'research'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -186,26 +197,113 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
       <div className="flex-1 overflow-auto p-6 md:p-8">
         <div className="max-w-7xl mx-auto">
           {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-              
-              {/* Left Column: Timeline */}
-              <div className="lg:col-span-4 space-y-6">
-                <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                  <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
-                    <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                      Timeline Overview
-                    </h3>
-                  </div>
-                  <div className="max-h-[600px] overflow-y-auto">
-                    <Timeline matterId={matterId} />
-                  </div>
+            <div className="space-y-8">
+              {/* Grid 1: Parties */}
+              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
+                  <h3 className="font-semibold text-[var(--foreground)]">Matter Parties</h3>
+                </div>
+                <div className="p-4 overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
+                      <tr>
+                        <th className="px-4 py-2 rounded-tl-lg">Name</th>
+                        <th className="px-4 py-2">Role</th>
+                        <th className="px-4 py-2 rounded-tr-lg">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoadingParties ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
+                      ) : parties.length === 0 ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">No parties found.</td></tr>
+                      ) : (
+                        parties.map((p: any) => (
+                          <tr key={p.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
+                            <td className="px-4 py-3 font-medium text-[var(--foreground)]">{p.name}</td>
+                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{p.role}</td>
+                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{p.type}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              
-              {/* Middle Column: Documents and Drafts */}
-              <div className="lg:col-span-5 space-y-6">
-                
-                {/* Upload Action */}
+
+              {/* Grid 2: Claims */}
+              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
+                  <h3 className="font-semibold text-[var(--foreground)]">Claims</h3>
+                </div>
+                <div className="p-4 overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
+                      <tr>
+                        <th className="px-4 py-2 rounded-tl-lg">Description</th>
+                        <th className="px-4 py-2">Claimant ID</th>
+                        <th className="px-4 py-2 rounded-tr-lg">Defendant ID</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoadingClaims ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
+                      ) : claims.length === 0 ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">No claims found.</td></tr>
+                      ) : (
+                        claims.map((c: any) => (
+                          <tr key={c.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
+                            <td className="px-4 py-3 font-medium text-[var(--foreground)] max-w-[400px] truncate">{c.description}</td>
+                            <td className="px-4 py-3 text-[var(--color-anthracite-400)] truncate max-w-[150px]">{c.claimant_party_id}</td>
+                            <td className="px-4 py-3 text-[var(--color-anthracite-400)] truncate max-w-[150px]">{c.defendant_party_id}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Grid 3: Events & Deadlines */}
+              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
+                  <h3 className="font-semibold text-[var(--foreground)]">Events & Deadlines</h3>
+                </div>
+                <div className="p-4 overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
+                      <tr>
+                        <th className="px-4 py-2 rounded-tl-lg">Date</th>
+                        <th className="px-4 py-2">Description</th>
+                        <th className="px-4 py-2 rounded-tr-lg">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {isLoadingDeadlines ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
+                      ) : deadlines.length === 0 ? (
+                        <tr><td colSpan={3} className="px-4 py-4 text-center">No deadlines found.</td></tr>
+                      ) : (
+                        deadlines.map((d: any) => (
+                          <tr key={d.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
+                            <td className="px-4 py-3 font-medium text-[var(--foreground)] whitespace-nowrap">{d.calculated_date || d.trigger_date || 'Unknown'}</td>
+                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{d.description || d.trigger_event}</td>
+                            <td className="px-4 py-3"><StatusBadge status="neutral" label={d.status} /></td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="space-y-6">
+              {/* Upload Action */}
+              {canEdit && (
                 <div 
                   onClick={() => !isUploading && fileInputRef.current?.click()}
                   className={`border-2 border-dashed border-[var(--border-surface)] rounded-xl p-6 text-center cursor-pointer transition-colors ${isUploading ? 'opacity-50' : 'hover:border-[var(--color-lila-500)] bg-[var(--bg-surface)]'}`}
@@ -221,111 +319,41 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                   )}
                 </div>
+              )}
 
-                {/* Documents List */}
-                <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                  <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)] flex justify-between items-center">
-                    <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                      Recent Documents
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-[var(--border-surface)] max-h-[300px] overflow-y-auto">
-                    {isLoadingDocs ? (
-                      <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">Loading...</div>
-                    ) : documents.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">No documents uploaded.</div>
-                    ) : (
-                      documents.slice(0, 5).map((doc: any) => (
-                        <div key={doc.id} className="p-4 flex items-center justify-between hover:bg-[var(--bg-surface-hover)] transition-colors">
-                          <div className="flex items-center gap-3 truncate">
-                            <FileText className="w-4 h-4 text-[var(--color-anthracite-400)] shrink-0" />
-                            <span className="text-sm font-medium truncate">{doc.title}</span>
-                          </div>
-                          <StatusBadge status="neutral" label={doc.status || 'Processing'} />
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Drafts List */}
-                <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                  <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)] flex justify-between items-center">
-                    <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                      <PenTool className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                      Recent Drafts
-                    </h3>
-                    <Button variant="ghost" size="sm" onClick={handleCreateDraft} disabled={isCreatingDraft}>
-                      {isCreatingDraft ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                      New
-                    </Button>
-                  </div>
-                  <div className="divide-y divide-[var(--border-surface)] max-h-[200px] overflow-y-auto">
-                    {isLoadingDrafts ? (
-                      <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">Loading...</div>
-                    ) : drafts.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">No drafts found.</div>
-                    ) : (
-                      drafts.slice(0, 3).map((draft: any) => (
-                        <Link href={`/drafts/${draft.id}`} key={draft.id} className="p-4 flex flex-col hover:bg-[var(--bg-surface-hover)] transition-colors block">
-                          <span className="text-sm font-medium mb-1">{draft.title}</span>
-                          <span className="text-xs text-[var(--color-anthracite-400)]">Last edited: {new Date(draft.updated_at).toLocaleDateString()}</span>
-                        </Link>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Right Column: Claims / QA */}
-              <div className="lg:col-span-3 space-y-6">
-                
-                <div className="glass-card rounded-xl border border-[var(--border-surface)] p-4 bg-[var(--bg-surface)]">
-                  <h3 className="font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-[var(--color-lila-500)]" />
-                    Matter QA
+              {/* Documents List */}
+              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)] flex justify-between items-center">
+                  <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[var(--color-anthracite-400)]" />
+                    Matter Documents
                   </h3>
-                  <Button className="w-full justify-start" variant="outline" render={<Link href={`/matters/${matterId}/qa`} />}>
-                    Ask AI about Matter
-                  </Button>
-                  <Button className="w-full justify-start mt-2" variant="outline" onClick={handleRebuildMesa} disabled={isRebuilding}>
-                    {isRebuilding && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Sync MESA Core
-                  </Button>
                 </div>
-
-                <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                  <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
-                    <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                      <LayoutTemplate className="w-4 h-4 text-orange-400" />
-                      Claims Summary
-                    </h3>
-                  </div>
-                  <div className="p-4 space-y-4 max-h-[500px] overflow-y-auto">
-                    {isLoadingClaims ? (
-                      <div className="text-center text-sm text-[var(--color-anthracite-400)]">Loading...</div>
-                    ) : claims.length === 0 ? (
-                      <div className="text-center text-sm text-[var(--color-anthracite-400)]">No claims extracted.</div>
-                    ) : (
-                      claims.slice(0, 4).map((claim: any) => (
-                        <div key={claim.id} className="text-sm border-l-2 border-orange-400 pl-3 py-1">
-                          <span className="font-medium text-[var(--foreground)] block mb-1">{claim.status}</span>
-                          <span className="text-[var(--color-anthracite-400)] line-clamp-3">{claim.description}</span>
+                <div className="divide-y divide-[var(--border-surface)] max-h-[600px] overflow-y-auto">
+                  {isLoadingDocs ? (
+                    <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">Loading...</div>
+                  ) : documents.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">No documents uploaded.</div>
+                  ) : (
+                    documents.map((doc: any) => (
+                      <div 
+                        key={doc.id} 
+                        className="p-4 flex items-center justify-between hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer"
+                        onClick={() => setActiveDoc({ id: doc.id, url: doc.presigned_url || '#', title: doc.title })}
+                      >
+                        <div className="flex items-center gap-3 truncate">
+                          <FileText className="w-4 h-4 text-[var(--color-anthracite-400)] shrink-0" />
+                          <span className="text-sm font-medium truncate">{doc.title}</span>
                         </div>
-                      ))
-                    )}
-                  </div>
+                        <StatusBadge status="neutral" label={doc.status || 'Processing'} />
+                      </div>
+                    ))
+                  )}
                 </div>
-
               </div>
-
             </div>
           )}
 
-          {activeTab === 'timeline' && <Timeline matterId={matterId} />}
-          {activeTab === 'claims' && <ClaimsEvidence matterId={matterId} />}
           {activeTab === 'research' && <ResearchShell />}
           {activeTab === 'drafts' && <DraftStudioShell matterId={matterId} />}
         </div>

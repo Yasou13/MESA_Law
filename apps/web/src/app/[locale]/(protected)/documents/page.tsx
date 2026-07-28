@@ -14,7 +14,7 @@ import { toast } from 'react-hot-toast'
 export default function GlobalDocumentsPage() {
   const { data: res, isLoading, isError, refetch } = useListAllDocuments()
   const [search, setSearch] = useState('')
-  const [activeDoc, setActiveDoc] = useState<{url: string, title: string} | null>(null)
+  const [activeDoc, setActiveDoc] = useState<{url: string, title: string, documentId: string, matterId: string} | null>(null)
   
   const documents = (res?.data as any[]) || []
   const filteredDocuments = documents.filter((doc) => 
@@ -23,7 +23,7 @@ export default function GlobalDocumentsPage() {
   )
 
   if (activeDoc) {
-    return <DocumentViewer url={activeDoc.url} title={activeDoc.title} onClose={() => setActiveDoc(null)} />
+    return <DocumentViewer documentId={activeDoc.documentId} matterId={activeDoc.matterId} url={activeDoc.url} title={activeDoc.title} onClose={() => setActiveDoc(null)} />
   }
 
   return (
@@ -99,7 +99,7 @@ export default function GlobalDocumentsPage() {
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          setActiveDoc({ url: (res.data as any).presigned_url, title: doc.title })
+                          setActiveDoc({ url: (res.data as any).presigned_url, title: doc.title, documentId: doc.id, matterId: doc.matter_id || 'unknown' })
                         } catch (e: any) {
                           toast.error('Cannot view document yet')
                         }

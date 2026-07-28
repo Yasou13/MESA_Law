@@ -71,10 +71,10 @@ async def test_real_postgres_rls_isolation(db_engine):
         await conn.execute(text("GRANT USAGE, SELECT ON SEQUENCE test_real_rls_table_id_seq TO mesa_law_app;"))
         
         # Insert data as superuser
-        await conn.execute(text("SELECT set_config('app.current_tenant', 'tenant_A', false)"))
+        await conn.execute(text("SELECT set_config('app.current_tenant', 'tenant_A', true)"))
         await conn.execute(text("INSERT INTO test_real_rls_table (tenant_id, data) VALUES ('tenant_A', 'A_data')"))
         
-        await conn.execute(text("SELECT set_config('app.current_tenant', 'tenant_B', false)"))
+        await conn.execute(text("SELECT set_config('app.current_tenant', 'tenant_B', true)"))
         await conn.execute(text("INSERT INTO test_real_rls_table (tenant_id, data) VALUES ('tenant_B', 'B_data')"))
 
     # Now test with the non-superuser role
@@ -83,7 +83,7 @@ async def test_real_postgres_rls_isolation(db_engine):
         await session.execute(text("SET ROLE mesa_law_app"))
         
         # Set tenant A context
-        await session.execute(text("SELECT set_config('app.current_tenant', 'tenant_A', false)"))
+        await session.execute(text("SELECT set_config('app.current_tenant', 'tenant_A', true)"))
         
         # Query data
         result = await session.execute(text("SELECT data FROM test_real_rls_table"))
@@ -93,7 +93,7 @@ async def test_real_postgres_rls_isolation(db_engine):
         assert rows[0] == 'A_data'
         
         # Switch to Tenant B
-        await session.execute(text("SELECT set_config('app.current_tenant', 'tenant_B', false)"))
+        await session.execute(text("SELECT set_config('app.current_tenant', 'tenant_B', true)"))
         
         result2 = await session.execute(text("SELECT data FROM test_real_rls_table"))
         rows2 = result2.scalars().all()

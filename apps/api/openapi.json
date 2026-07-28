@@ -1,1 +1,2926 @@
-{"openapi": "3.1.0", "info": {"title": "MESA Law API", "version": "0.1.0"}, "paths": {"/api/v1/firms": {"get": {"summary": "List User Firms", "operationId": "listUserFirms", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"items": {"$ref": "#/components/schemas/FirmResponse"}, "type": "array", "title": "Response Listuserfirms"}}}}}, "security": [{"HTTPBearer": []}]}, "post": {"summary": "Create Firm", "operationId": "createFirm", "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/FirmCreateRequest"}}}, "required": true}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FirmResponse"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}, "security": [{"HTTPBearer": []}]}}, "/api/v1/firms/members": {"get": {"summary": "List Firm Members", "operationId": "listFirmMembers", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/firms/{firm_id}": {"get": {"summary": "Get Firm Details", "operationId": "getFirmDetails", "parameters": [{"name": "firm_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Firm Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FirmResponse"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/session/active-firm": {"post": {"tags": ["Session"], "summary": "Set Active Firm", "description": "Verified tenant switch flow.\nValidates that the currently authenticated user is an active member of the requested firm.\nReturns the firm details and role, which the frontend can then use to set the x-tenant-id header.", "operationId": "set_active_firm_api_v1_session_active_firm_post", "security": [{"HTTPBearer": []}], "parameters": [{"name": "firm_id", "in": "query", "required": true, "schema": {"type": "string", "title": "Firm Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters": {"get": {"summary": "List Matters", "operationId": "listMatters", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/MatterResponse"}, "title": "Response Listmatters"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}, "post": {"summary": "Create Matter", "operationId": "createMatter", "parameters": [{"name": "Idempotency-Key", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Idempotency-Key"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MatterCreate"}}}}, "responses": {"201": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MatterResponse"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/rebuild-mesa": {"post": {"summary": "Rebuild Matter Mesa", "operationId": "rebuildMatterMesa", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/qa": {"post": {"summary": "Matter Qa Endpoint", "operationId": "matterQA", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": true, "title": "Query"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents/upload-intent": {"post": {"summary": "Create Upload Intent", "operationId": "createUploadIntent", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UploadIntentRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UploadIntentResponse"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents/matters/{matter_id}": {"get": {"summary": "List Matter Documents", "operationId": "listMatterDocuments", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/DocumentResponse"}, "title": "Response Listmatterdocuments"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents": {"get": {"summary": "List All Documents", "operationId": "listAllDocuments", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/DocumentResponse"}, "title": "Response Listalldocuments"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents/{document_id}": {"get": {"summary": "Get Document", "operationId": "getDocument", "parameters": [{"name": "document_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Document Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DocumentResponse"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents/{document_id}/complete": {"post": {"summary": "Complete Upload", "operationId": "completeUpload", "parameters": [{"name": "document_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Document Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/documents/{document_id}/download": {"get": {"summary": "Download Document", "operationId": "downloadDocument", "parameters": [{"name": "document_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Document Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/parties": {"get": {"summary": "List Matter Parties", "operationId": "listMatterParties", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/claims": {"get": {"summary": "List Claims", "operationId": "listClaims", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/evidence": {"get": {"summary": "List Evidence", "operationId": "listEvidence", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/timeline": {"get": {"summary": "List Timeline Events", "operationId": "listTimelineEvents", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/matters/{matter_id}/claims-evidence": {"get": {"summary": "List Claims With Evidence", "operationId": "listClaimsWithEvidence", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/parser/document/{document_id}": {"get": {"summary": "List Parsed Documents", "operationId": "listParsedDocuments", "parameters": [{"name": "document_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Document Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/ParsedDocumentResponse"}, "title": "Response Listparseddocuments"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/parser/{parsed_document_id}/pages": {"get": {"summary": "List Parsed Pages", "operationId": "listParsedPages", "parameters": [{"name": "parsed_document_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Parsed Document Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/ParsedPageResponse"}, "title": "Response Listparsedpages"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/reviews": {"get": {"tags": ["reviews"], "summary": "List Draft Reviews", "operationId": "list_draft_reviews_api_v1_reviews_get", "parameters": [{"name": "matter_id", "in": "query", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/ReviewItemResponse"}, "title": "Response List Draft Reviews Api V1 Reviews Get"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/reviews/{review_id}/approve": {"post": {"tags": ["reviews"], "summary": "Approve Review", "operationId": "approve_review_api_v1_reviews__review_id__approve_post", "parameters": [{"name": "review_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Review Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/reviews/{review_id}/reject": {"post": {"tags": ["reviews"], "summary": "Reject Review", "operationId": "reject_review_api_v1_reviews__review_id__reject_post", "parameters": [{"name": "review_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Review Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/reviews/{review_id}/correct": {"post": {"tags": ["reviews"], "summary": "Correct Review", "operationId": "correct_review_api_v1_reviews__review_id__correct_post", "parameters": [{"name": "review_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Review Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CorrectReviewRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts": {"post": {"tags": ["draft-studio"], "summary": "Save Draft", "operationId": "save_draft_api_v1_draft_studio_drafts_post", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SaveDraftRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}, "get": {"tags": ["draft-studio"], "summary": "List All Drafts", "operationId": "list_all_drafts_api_v1_draft_studio_drafts_get", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts/matter/{matter_id}": {"get": {"tags": ["draft-studio"], "summary": "List Matter Drafts", "operationId": "list_matter_drafts_api_v1_draft_studio_drafts_matter__matter_id__get", "parameters": [{"name": "matter_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts/{draft_id}": {"get": {"tags": ["draft-studio"], "summary": "Get Draft", "operationId": "get_draft_api_v1_draft_studio_drafts__draft_id__get", "parameters": [{"name": "draft_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Draft Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}, "put": {"tags": ["draft-studio"], "summary": "Update Draft", "operationId": "update_draft_api_v1_draft_studio_drafts__draft_id__put", "parameters": [{"name": "draft_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Draft Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpdateDraftRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts/{draft_id}/approve": {"post": {"tags": ["draft-studio"], "summary": "Approve Draft", "operationId": "approveDraft", "parameters": [{"name": "draft_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Draft Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts/{draft_id}/export": {"post": {"tags": ["draft-studio"], "summary": "Export Draft", "operationId": "export_draft_api_v1_draft_studio_drafts__draft_id__export_post", "parameters": [{"name": "draft_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Draft Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ExportDraftRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/draft-studio/drafts/generate": {"post": {"tags": ["draft-studio"], "summary": "Generate Draft", "operationId": "generate_draft_api_v1_draft_studio_drafts_generate_post", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GenerateDraftRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/qa/ask": {"post": {"tags": ["qa"], "summary": "Ask Question", "operationId": "askQuestion", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/QAQuery"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/research/start": {"post": {"tags": ["research"], "summary": "Start Legal Research", "operationId": "startLegalResearch", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResearchRequest"}}}}, "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/research/search": {"get": {"tags": ["research"], "summary": "Search Legal Research", "operationId": "searchLegalResearch", "parameters": [{"name": "q", "in": "query", "required": true, "schema": {"type": "string", "title": "Q"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/LegalSourceResponse"}, "title": "Response Searchlegalresearch"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/users/me": {"get": {"tags": ["Users"], "summary": "Get Current User Profile", "operationId": "get_current_user_profile_api_v1_users_me_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}}, "security": [{"HTTPBearer": []}]}}, "/api/v1/notifications/sse": {"get": {"tags": ["notifications"], "summary": "Sse Endpoint", "description": "Server-Sent Events endpoint for real-time notifications.", "operationId": "sse_endpoint_api_v1_notifications_sse_get", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/notifications": {"get": {"tags": ["notifications"], "summary": "Get Notifications", "description": "Get all notifications for the current tenant.", "operationId": "get_notifications_api_v1_notifications_get", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/deadlines": {"get": {"tags": ["Deadlines"], "summary": "List Deadlines", "operationId": "listDeadlines", "parameters": [{"name": "matter_id", "in": "query", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Matter Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/DeadlineResponse"}, "title": "Response Listdeadlines"}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/deadlines/{deadline_id}/complete": {"post": {"tags": ["Deadlines"], "summary": "Complete Deadline", "operationId": "completeDeadline", "parameters": [{"name": "deadline_id", "in": "path", "required": true, "schema": {"type": "string", "title": "Deadline Id"}}, {"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/api/v1/dashboard/metrics": {"get": {"tags": ["Dashboard"], "summary": "Get Dashboard Metrics", "operationId": "get_dashboard_metrics_api_v1_dashboard_metrics_get", "parameters": [{"name": "x-tenant-id", "in": "header", "required": false, "schema": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "X-Tenant-Id"}}], "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}, "422": {"description": "Validation Error", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HTTPValidationError"}}}}}}}, "/health/live": {"get": {"tags": ["System"], "summary": "Live", "operationId": "live_health_live_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}}}}, "/health/ready": {"get": {"tags": ["System"], "summary": "Ready", "operationId": "ready_health_ready_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}}}}, "/api/v1/system/dependencies": {"get": {"tags": ["System"], "summary": "System Dependencies", "operationId": "system_dependencies_api_v1_system_dependencies_get", "responses": {"200": {"description": "Successful Response", "content": {"application/json": {"schema": {}}}}}}}}, "components": {"schemas": {"CorrectReviewRequest": {"properties": {"corrected_content": {"additionalProperties": true, "type": "object", "title": "Corrected Content"}}, "type": "object", "required": ["corrected_content"], "title": "CorrectReviewRequest"}, "DeadlineResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "matter_id": {"type": "string", "title": "Matter Id"}, "due_date": {"type": "string", "format": "date", "title": "Due Date"}, "description": {"type": "string", "title": "Description"}, "is_completed": {"type": "boolean", "title": "Is Completed"}}, "type": "object", "required": ["id", "matter_id", "due_date", "description", "is_completed"], "title": "DeadlineResponse"}, "DocumentResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "title": {"type": "string", "title": "Title"}, "status": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Status", "default": "clean"}}, "type": "object", "required": ["id", "title"], "title": "DocumentResponse"}, "ExportDraftRequest": {"properties": {"format": {"type": "string", "title": "Format"}}, "type": "object", "required": ["format"], "title": "ExportDraftRequest"}, "FirmCreateRequest": {"properties": {"name": {"type": "string", "maxLength": 100, "minLength": 2, "title": "Name"}}, "type": "object", "required": ["name"], "title": "FirmCreateRequest"}, "FirmResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "name": {"type": "string", "title": "Name"}}, "type": "object", "required": ["id", "name"], "title": "FirmResponse"}, "GenerateDraftRequest": {"properties": {"matter_id": {"type": "string", "title": "Matter Id"}, "template_name": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Template Name"}}, "type": "object", "required": ["matter_id"], "title": "GenerateDraftRequest"}, "HTTPValidationError": {"properties": {"detail": {"items": {"$ref": "#/components/schemas/ValidationError"}, "type": "array", "title": "Detail"}}, "type": "object", "title": "HTTPValidationError"}, "LegalSourceResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "title": {"type": "string", "title": "Title"}, "citation": {"type": "string", "title": "Citation"}, "source_type": {"type": "string", "title": "Source Type"}, "content": {"type": "string", "title": "Content"}}, "type": "object", "required": ["id", "title", "citation", "source_type", "content"], "title": "LegalSourceResponse"}, "MatterCreate": {"properties": {"title": {"type": "string", "maxLength": 255, "minLength": 3, "title": "Title", "description": "The title of the matter"}}, "type": "object", "required": ["title"], "title": "MatterCreate"}, "MatterResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "title": {"type": "string", "title": "Title"}, "status": {"type": "string", "title": "Status"}}, "type": "object", "required": ["id", "title", "status"], "title": "MatterResponse"}, "ParsedDocumentResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "document_id": {"type": "string", "title": "Document Id"}, "revision_id": {"type": "string", "title": "Revision Id"}, "parsing_revision": {"type": "integer", "title": "Parsing Revision"}, "parser_used": {"type": "string", "title": "Parser Used"}, "status": {"type": "string", "title": "Status"}}, "type": "object", "required": ["id", "document_id", "revision_id", "parsing_revision", "parser_used", "status"], "title": "ParsedDocumentResponse"}, "ParsedPageResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "page_number": {"type": "integer", "title": "Page Number"}, "text_content": {"type": "string", "title": "Text Content"}, "layout_data": {"anyOf": [{"additionalProperties": true, "type": "object"}, {"type": "null"}], "title": "Layout Data"}}, "type": "object", "required": ["id", "page_number", "text_content"], "title": "ParsedPageResponse"}, "QAQuery": {"properties": {"matter_id": {"type": "string", "title": "Matter Id"}, "question": {"type": "string", "title": "Question"}}, "type": "object", "required": ["matter_id", "question"], "title": "QAQuery"}, "ResearchRequest": {"properties": {"matter_id": {"type": "string", "title": "Matter Id"}, "query": {"type": "string", "title": "Query"}}, "type": "object", "required": ["matter_id", "query"], "title": "ResearchRequest"}, "ReviewItemResponse": {"properties": {"id": {"type": "string", "title": "Id"}, "matter_id": {"type": "string", "title": "Matter Id"}, "entity_type": {"type": "string", "title": "Entity Type"}, "entity_id": {"type": "string", "title": "Entity Id"}, "proposed_content": {"additionalProperties": true, "type": "object", "title": "Proposed Content"}, "status": {"type": "string", "title": "Status"}}, "type": "object", "required": ["id", "matter_id", "entity_type", "entity_id", "proposed_content", "status"], "title": "ReviewItemResponse"}, "SaveDraftRequest": {"properties": {"matter_id": {"type": "string", "title": "Matter Id"}, "title": {"type": "string", "title": "Title"}, "content": {"type": "string", "title": "Content"}}, "type": "object", "required": ["matter_id", "title", "content"], "title": "SaveDraftRequest"}, "UpdateDraftRequest": {"properties": {"title": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Title"}, "content": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Content"}, "expected_version": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Expected Version"}}, "type": "object", "title": "UpdateDraftRequest"}, "UploadIntentRequest": {"properties": {"matter_id": {"type": "string", "title": "Matter Id"}, "filename": {"type": "string", "maxLength": 255, "title": "Filename"}, "mime_type": {"type": "string", "maxLength": 100, "title": "Mime Type"}, "size_bytes": {"type": "integer", "title": "Size Bytes", "description": "File size in bytes"}}, "type": "object", "required": ["matter_id", "filename", "mime_type", "size_bytes"], "title": "UploadIntentRequest"}, "UploadIntentResponse": {"properties": {"document_id": {"type": "string", "title": "Document Id"}, "revision_id": {"type": "string", "title": "Revision Id"}, "presigned_url": {"type": "string", "title": "Presigned Url"}, "storage_key": {"type": "string", "title": "Storage Key"}}, "type": "object", "required": ["document_id", "revision_id", "presigned_url", "storage_key"], "title": "UploadIntentResponse"}, "ValidationError": {"properties": {"loc": {"items": {"anyOf": [{"type": "string"}, {"type": "integer"}]}, "type": "array", "title": "Location"}, "msg": {"type": "string", "title": "Message"}, "type": {"type": "string", "title": "Error Type"}, "input": {"title": "Input"}, "ctx": {"type": "object", "title": "Context"}}, "type": "object", "required": ["loc", "msg", "type"], "title": "ValidationError"}}, "securitySchemes": {"HTTPBearer": {"type": "http", "scheme": "bearer"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MESA Law API",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/v1/firms": {
+      "get": {
+        "summary": "List User Firms",
+        "operationId": "listUserFirms",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FirmResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Listuserfirms"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Create Firm",
+        "operationId": "createFirm",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirmCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirmResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/firms/members": {
+      "get": {
+        "summary": "List Firm Members",
+        "operationId": "listFirmMembers",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/firms/{firm_id}": {
+      "get": {
+        "summary": "Get Firm Details",
+        "operationId": "getFirmDetails",
+        "parameters": [
+          {
+            "name": "firm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Firm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirmResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/firms/{firm_id}/members/{user_id}/role": {
+      "put": {
+        "summary": "Elevate Role",
+        "operationId": "elevateRole",
+        "parameters": [
+          {
+            "name": "firm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Firm Id"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 300,
+              "title": "Max Age Seconds"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleElevationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session/context": {
+      "get": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Get Session Context",
+        "operationId": "get_session_context_api_v1_session_context_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/session/active-firm": {
+      "post": {
+        "tags": [
+          "Session"
+        ],
+        "summary": "Set Active Firm",
+        "description": "Verified tenant switch flow.\nValidates that the currently authenticated user is an active member of the requested firm.\nReturns the firm details and role, setting a secure server-side cookie.",
+        "operationId": "set_active_firm_api_v1_session_active_firm_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "firm_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Firm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters": {
+      "get": {
+        "summary": "List Matters",
+        "operationId": "listMatters",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MatterResponse"
+                  },
+                  "title": "Response Listmatters"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Matter",
+        "operationId": "createMatter",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatterCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MatterResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/rebuild-mesa": {
+      "post": {
+        "summary": "Rebuild Matter Mesa",
+        "operationId": "rebuildMatterMesa",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/qa": {
+      "post": {
+        "summary": "Matter Qa Endpoint",
+        "operationId": "matterQA",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Query"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/conflict-check": {
+      "post": {
+        "summary": "Check Conflicts",
+        "operationId": "conflictCheck",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConflictCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictCheckResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/override-conflict": {
+      "post": {
+        "summary": "Override Conflict",
+        "operationId": "overrideConflict",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 300,
+              "title": "Max Age Seconds"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OverrideConflictRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/upload-intent": {
+      "post": {
+        "summary": "Create Upload Intent",
+        "operationId": "createUploadIntent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadIntentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadIntentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/matters/{matter_id}": {
+      "get": {
+        "summary": "List Matter Documents",
+        "operationId": "listMatterDocuments",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "title": "Response Listmatterdocuments"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents": {
+      "get": {
+        "summary": "List All Documents",
+        "operationId": "listAllDocuments",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Listalldocuments"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}": {
+      "get": {
+        "summary": "Get Document",
+        "operationId": "getDocument",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/complete": {
+      "post": {
+        "summary": "Complete Upload",
+        "operationId": "completeUpload",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/documents/{document_id}/download": {
+      "get": {
+        "summary": "Download Document",
+        "operationId": "downloadDocument",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/parties": {
+      "get": {
+        "summary": "List Matter Parties",
+        "operationId": "listMatterParties",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/claims": {
+      "get": {
+        "summary": "List Claims",
+        "operationId": "listClaims",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/evidence": {
+      "get": {
+        "summary": "List Evidence",
+        "operationId": "listEvidence",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/timeline": {
+      "get": {
+        "summary": "List Timeline Events",
+        "operationId": "listTimelineEvents",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/matters/{matter_id}/claims-evidence": {
+      "get": {
+        "summary": "List Claims With Evidence",
+        "operationId": "listClaimsWithEvidence",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/parser/document/{document_id}": {
+      "get": {
+        "summary": "List Parsed Documents",
+        "operationId": "listParsedDocuments",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParsedDocumentResponse"
+                  },
+                  "title": "Response Listparseddocuments"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/parser/{parsed_document_id}/pages": {
+      "get": {
+        "summary": "List Parsed Pages",
+        "operationId": "listParsedPages",
+        "parameters": [
+          {
+            "name": "parsed_document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Parsed Document Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ParsedPageResponse"
+                  },
+                  "title": "Response Listparsedpages"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews": {
+      "get": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "List Draft Reviews",
+        "operationId": "list_draft_reviews_api_v1_reviews_get",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Matter Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "entity_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewItemResponse"
+                  },
+                  "title": "Response List Draft Reviews Api V1 Reviews Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{review_id}/approve": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Approve Review",
+        "operationId": "approve_review_api_v1_reviews__review_id__approve_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{review_id}/reject": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Reject Review",
+        "operationId": "reject_review_api_v1_reviews__review_id__reject_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reviews/{review_id}/correct": {
+      "post": {
+        "tags": [
+          "reviews"
+        ],
+        "summary": "Correct Review",
+        "operationId": "correct_review_api_v1_reviews__review_id__correct_post",
+        "parameters": [
+          {
+            "name": "review_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Review Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectReviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts": {
+      "get": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "List All Drafts",
+        "operationId": "list_all_drafts_api_v1_draft_studio_drafts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Save Draft",
+        "operationId": "save_draft_api_v1_draft_studio_drafts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/matter/{matter_id}": {
+      "get": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "List Matter Drafts",
+        "operationId": "list_matter_drafts_api_v1_draft_studio_drafts_matter__matter_id__get",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/{draft_id}": {
+      "get": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Get Draft",
+        "operationId": "get_draft_api_v1_draft_studio_drafts__draft_id__get",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Update Draft",
+        "operationId": "update_draft_api_v1_draft_studio_drafts__draft_id__put",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/{draft_id}/submit-review": {
+      "post": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Submit Review Draft",
+        "operationId": "submitReviewDraft",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/{draft_id}/approve": {
+      "post": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Approve Draft",
+        "operationId": "approveDraft",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          },
+          {
+            "name": "max_age_seconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 300,
+              "title": "Max Age Seconds"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/{draft_id}/citations": {
+      "get": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Get Draft Citations",
+        "operationId": "getDraftCitations",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/{draft_id}/export": {
+      "post": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Export Draft",
+        "operationId": "export_draft_api_v1_draft_studio_drafts__draft_id__export_post",
+        "parameters": [
+          {
+            "name": "draft_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Draft Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportDraftRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/draft-studio/drafts/generate": {
+      "post": {
+        "tags": [
+          "draft-studio"
+        ],
+        "summary": "Generate Draft",
+        "operationId": "generate_draft_api_v1_draft_studio_drafts_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateDraftRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/qa/ask": {
+      "post": {
+        "tags": [
+          "qa"
+        ],
+        "summary": "Ask Question",
+        "operationId": "askQuestion",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QAQuery"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/start": {
+      "post": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Start Legal Research",
+        "operationId": "startLegalResearch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/research/search": {
+      "get": {
+        "tags": [
+          "research"
+        ],
+        "summary": "Search Legal Research",
+        "operationId": "searchLegalResearch",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LegalSourceResponse"
+                  },
+                  "title": "Response Searchlegalresearch"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get Current User Profile",
+        "operationId": "get_current_user_profile_api_v1_users_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update Current User Profile",
+        "operationId": "updateCurrentUserProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/me/support-access": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Grant Support Access",
+        "operationId": "grantSupportAccess",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportAccessRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/sse": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Sse Endpoint",
+        "description": "Server-Sent Events endpoint for real-time notifications.",
+        "operationId": "sse_endpoint_api_v1_notifications_sse_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Get Notifications",
+        "description": "Get all notifications for the current tenant and user.",
+        "operationId": "get_notifications_api_v1_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/deadlines": {
+      "get": {
+        "tags": [
+          "Deadlines"
+        ],
+        "summary": "List Deadlines",
+        "operationId": "listDeadlines",
+        "parameters": [
+          {
+            "name": "matter_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Matter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeadlineResponse"
+                  },
+                  "title": "Response Listdeadlines"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deadlines/{deadline_id}/complete": {
+      "post": {
+        "tags": [
+          "Deadlines"
+        ],
+        "summary": "Complete Deadline",
+        "operationId": "completeDeadline",
+        "parameters": [
+          {
+            "name": "deadline_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deadline Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/dashboard/metrics": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Get Dashboard Metrics",
+        "operationId": "get_dashboard_metrics_api_v1_dashboard_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/live": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Live",
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Ready",
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/dependencies": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "System Dependencies",
+        "operationId": "system_dependencies_api_v1_system_dependencies_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/settings": {
+      "get": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Get System Settings",
+        "operationId": "getSystemSettings",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Update System Settings",
+        "operationId": "updateSystemSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/system/sync-mesa-core": {
+      "post": {
+        "tags": [
+          "System"
+        ],
+        "summary": "Sync Mesa Core",
+        "operationId": "syncMesaCore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncMesaCoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConflictCheckRequest": {
+        "properties": {
+          "party_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Party Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "party_names"
+        ],
+        "title": "ConflictCheckRequest"
+      },
+      "ConflictCheckResponse": {
+        "properties": {
+          "has_conflicts": {
+            "type": "boolean",
+            "title": "Has Conflicts"
+          },
+          "conflicts": {
+            "items": {
+              "$ref": "#/components/schemas/ConflictResult"
+            },
+            "type": "array",
+            "title": "Conflicts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "has_conflicts",
+          "conflicts"
+        ],
+        "title": "ConflictCheckResponse"
+      },
+      "ConflictResult": {
+        "properties": {
+          "searched_name": {
+            "type": "string",
+            "title": "Searched Name"
+          },
+          "matched_name": {
+            "type": "string",
+            "title": "Matched Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "matter_title": {
+            "type": "string",
+            "title": "Matter Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "searched_name",
+          "matched_name",
+          "role",
+          "matter_id",
+          "matter_title",
+          "status"
+        ],
+        "title": "ConflictResult"
+      },
+      "CorrectReviewRequest": {
+        "properties": {
+          "corrected_content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Corrected Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "corrected_content"
+        ],
+        "title": "CorrectReviewRequest"
+      },
+      "DeadlineResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "due_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Due Date"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "is_completed": {
+            "type": "boolean",
+            "title": "Is Completed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "matter_id",
+          "due_date",
+          "description",
+          "is_completed"
+        ],
+        "title": "DeadlineResponse"
+      },
+      "DocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "default": "clean"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "DocumentResponse"
+      },
+      "ExportDraftRequest": {
+        "properties": {
+          "format": {
+            "type": "string",
+            "title": "Format"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format"
+        ],
+        "title": "ExportDraftRequest"
+      },
+      "FirmCreateRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "FirmCreateRequest"
+      },
+      "FirmResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "FirmResponse"
+      },
+      "GenerateDraftRequest": {
+        "properties": {
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "template_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matter_id"
+        ],
+        "title": "GenerateDraftRequest"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LegalSourceResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "citation": {
+            "type": "string",
+            "title": "Citation"
+          },
+          "source_type": {
+            "type": "string",
+            "title": "Source Type"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "citation",
+          "source_type",
+          "content"
+        ],
+        "title": "LegalSourceResponse"
+      },
+      "MatterCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 3,
+            "title": "Title",
+            "description": "The title of the matter"
+          },
+          "jurisdiction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jurisdiction",
+            "description": "The jurisdiction of the matter"
+          },
+          "confidentiality_level": {
+            "type": "string",
+            "title": "Confidentiality Level",
+            "description": "Confidentiality level",
+            "default": "standard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title"
+        ],
+        "title": "MatterCreate"
+      },
+      "MatterResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "access_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Scope"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status"
+        ],
+        "title": "MatterResponse"
+      },
+      "OverrideConflictRequest": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "OverrideConflictRequest"
+      },
+      "ParsedDocumentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "parsing_revision": {
+            "type": "integer",
+            "title": "Parsing Revision"
+          },
+          "parser_used": {
+            "type": "string",
+            "title": "Parser Used"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "document_id",
+          "revision_id",
+          "parsing_revision",
+          "parser_used",
+          "status"
+        ],
+        "title": "ParsedDocumentResponse"
+      },
+      "ParsedPageResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "page_number": {
+            "type": "integer",
+            "title": "Page Number"
+          },
+          "text_content": {
+            "type": "string",
+            "title": "Text Content"
+          },
+          "layout_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Layout Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "page_number",
+          "text_content"
+        ],
+        "title": "ParsedPageResponse"
+      },
+      "QAQuery": {
+        "properties": {
+          "matter_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matter Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "QAQuery"
+      },
+      "ResearchRequest": {
+        "properties": {
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "query": {
+            "type": "string",
+            "title": "Query"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matter_id",
+          "query"
+        ],
+        "title": "ResearchRequest"
+      },
+      "ReviewItemResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "proposed_content": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Proposed Content"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "matter_id",
+          "entity_type",
+          "entity_id",
+          "proposed_content",
+          "status"
+        ],
+        "title": "ReviewItemResponse"
+      },
+      "RoleElevationRequest": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "title": "RoleElevationRequest"
+      },
+      "SaveDraftRequest": {
+        "properties": {
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matter_id",
+          "title",
+          "content"
+        ],
+        "title": "SaveDraftRequest"
+      },
+      "SupportAccessRequest": {
+        "properties": {
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours",
+            "default": 24
+          }
+        },
+        "type": "object",
+        "title": "SupportAccessRequest"
+      },
+      "SyncMesaCoreRequest": {
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "title": "Tenant Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tenant_id"
+        ],
+        "title": "SyncMesaCoreRequest"
+      },
+      "UpdateDraftRequest": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "title": "UpdateDraftRequest"
+      },
+      "UpdateUserProfileRequest": {
+        "properties": {
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "title": "UpdateUserProfileRequest"
+      },
+      "UploadIntentRequest": {
+        "properties": {
+          "matter_id": {
+            "type": "string",
+            "title": "Matter Id"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255,
+            "title": "Filename"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Mime Type"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "title": "Size Bytes",
+            "description": "File size in bytes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "matter_id",
+          "filename",
+          "mime_type",
+          "size_bytes"
+        ],
+        "title": "UploadIntentRequest"
+      },
+      "UploadIntentResponse": {
+        "properties": {
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "revision_id": {
+            "type": "string",
+            "title": "Revision Id"
+          },
+          "presigned_url": {
+            "type": "string",
+            "title": "Presigned Url"
+          },
+          "storage_key": {
+            "type": "string",
+            "title": "Storage Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "document_id",
+          "revision_id",
+          "presigned_url",
+          "storage_key"
+        ],
+        "title": "UploadIntentResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

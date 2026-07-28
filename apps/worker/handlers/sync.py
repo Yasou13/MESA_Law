@@ -57,12 +57,18 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
         return
         
     try:
-        content = review.proposed_content or {}
+        # Phase 10: Use corrected_content if available, otherwise proposed_content
+        content = review.corrected_content if review.corrected_content else (review.proposed_content or {})
+        
         if review.entity_type == "party":
+            name = content.get("name")
+            if not name or name == "Unknown Party":
+                raise ValueError("PARTY_NAME_REQUIRED: Party name is required for canonical insert")
+                
             party = MatterParty(
                 tenant_id=review.tenant_id,
                 matter_id=review.matter_id,
-                name=content.get("name", "Unknown Party"),
+                name=name,
                 role=content.get("role", "UNKNOWN"),
                 type=content.get("type", "ORGANIZATION")
             )
@@ -71,21 +77,48 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
             claimant_id = content.get("claimant_party_id")
             defendant_id = content.get("defendant_party_id")
             
-            if not claimant_id or not defendant_id or claimant_id in ("default_claimant", "unknown-party-id") or defendant_id in ("default_defendant", "unknown-party-id"):
+            # Phase 12: PARTY_LINK_REQUIRED
+            if not claimant_id or not defendant_id or claimant_id in ("default_claimant", "unknown-party-id", "placeholder") or defendant_id in ("default_defendant", "unknown-party-id", "placeholder"):
                 raise ValueError("PARTY_LINK_REQUIRED: Claims must be linked to valid MatterParty IDs")
+                
+            description = content.get("description")
+            if not description:
+                raise ValueError("CLAIM_DESCRIPTION_REQUIRED: Description is required")
                 
             claim = Claim(
                 tenant_id=review.tenant_id,
                 matter_id=review.matter_id,
                 claimant_party_id=claimant_id,
                 defendant_party_id=defendant_id,
-                description=content.get("description", "Unknown Claim")
+                description=description
             )
             session.add(claim)
         elif review.entity_type == "deadline":
             from datetime import datetime
-
-            from apps.api.models.deadline import DeadlineCandidate
+            from apps.api.models.deadline import DeadlineCandidate, DeadlineRule
+            
+            rule_name = content.get("rule_name")
+            if not rule_name:
+                rule_name = "Custom / Unspecified Rule"
+                
+            stmt = select(DeadlineRule).where(
+                DeadlineRule.tenant_id == review.tenant_id,
+                DeadlineRule.rule_name == rule_name
+            ).limit(1)
+            rule_res = await session.execute(stmt)
+            rule = rule_res.scalars().first()
+            
+            if not rule:
+                rule = DeadlineRule(
+                    tenant_id=review.tenant_id,
+                    rule_name=rule_name,
+                    trigger_type=content.get("trigger_event", "unknown"),
+                    duration=content.get("offset_days", 0),
+                    description="Automatically created via extraction publication"
+                )
+                session.add(rule)
+                await session.flush()
+            
             date_str = content.get("due_date", content.get("calculated_date"))
             calc_date = datetime.now().date()
             if date_str:
@@ -97,6 +130,8 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
             deadline = DeadlineCandidate(
                 tenant_id=review.tenant_id,
                 matter_id=review.matter_id,
+                rule_id=rule.id,
+                trigger_event=content.get("trigger_event"),
                 calculated_date=calc_date,
                 description=content.get("description", "Extracted Deadline")
             )
@@ -134,36 +169,13 @@ async def handle_build_lexical_index(payload: dict, session: AsyncSession):
         logger.warning(f"Lexical index maintenance note: {e}")
 
 async def handle_sync_approved_reviews(payload: dict, session: AsyncSession):
+    # Phase 9: Deprecate SYNC_APPROVED_REVIEWS
+    logger.warning("DEPRECATED: SYNC_APPROVED_REVIEWS pipeline is deprecated. Use PUBLISH_REVIEW for canonical publication.")
+    return
+
+    # Legacy code below (unreachable)
     # Polling job that syncs approved ReviewItem items to canonical domain models
     from apps.api.core.utils import utc_now
-    from apps.api.models.domain import (
-        Claim,
-        LegalAssertion,
-        MatterParty,
-    )
-    from apps.api.models.review import ReviewItem
-    
-    tenant_id = payload.get("tenant_id")
-    matter_id = payload.get("matter_id") # Optional filter
-    
-    if not tenant_id:
-        logger.error("Missing tenant_id for SYNC_CANONICAL_DOMAIN")
-        return
-        
-    query = select(ReviewItem).where(
-        ReviewItem.tenant_id == tenant_id,
-        ReviewItem.status == "approved",
-        ReviewItem.external_use_ready_at <= utc_now()
-    )
-    if matter_id:
-        query = query.where(ReviewItem.matter_id == matter_id)
-        
-    result = await session.execute(query)
-    approved_items = result.scalars().all()
-    
-    if not approved_items:
-        logger.info("No approved ReviewItems pending sync.")
-        return
         
     for item in approved_items:
         content = item.corrected_content if item.corrected_content else item.proposed_content

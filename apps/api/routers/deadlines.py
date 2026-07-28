@@ -25,7 +25,7 @@ async def list_deadlines(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context, matter_id)
+    await MatterAccessPolicy.can_read(context, db, matter_id)
     query = select(ApprovedDeadline).where(
         ApprovedDeadline.tenant_id == context.tenant_id,
         ApprovedDeadline.is_completed == False

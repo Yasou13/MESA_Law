@@ -64,21 +64,6 @@ export function OperationsMenu() {
             <Users className="w-4 h-4 text-[var(--color-anthracite-400)] group-hover:text-white mr-3" />
             <div className="flex-1 text-left">Manage Organization Members</div>
           </button>
-          <button className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--color-lila-500)] hover:text-white group transition-colors">
-            <Shield className="w-4 h-4 text-[var(--color-anthracite-400)] group-hover:text-white mr-3" />
-            <div className="flex-1 text-left">Access Control & Security</div>
-          </button>
-
-          <div className="px-2 py-1.5 mt-4 text-xs font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider">Data Processing</div>
-          
-          <button className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--color-lila-500)] hover:text-white group transition-colors">
-            <Database className="w-4 h-4 text-[var(--color-anthracite-400)] group-hover:text-white mr-3" />
-            <div className="flex-1 text-left">Re-index Vector Database</div>
-          </button>
-          <button className="w-full flex items-center px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--color-lila-500)] hover:text-white group transition-colors">
-            <Zap className="w-4 h-4 text-[var(--color-anthracite-400)] group-hover:text-white mr-3" />
-            <div className="flex-1 text-left">Clear Extraction Cache</div>
-          </button>
         </div>
         
         <div className="bg-[var(--bg-surface-hover)] px-4 py-3 border-t border-[var(--border-surface)] text-xs text-[var(--color-anthracite-400)] flex justify-between">

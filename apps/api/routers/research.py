@@ -52,18 +52,30 @@ async def search_legal_research(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(LegalSource).where(
+    from apps.api.models.document import Document
+    
+    # 1. Search external sources
+    stmt_external = select(LegalSource).where(
         or_(
             LegalSource.title.ilike(f"%{q}%"),
             LegalSource.content.ilike(f"%{q}%"),
             LegalSource.citation.ilike(f"%{q}%")
         )
-    ).limit(20)
+    ).limit(10)
     
-    result = await db.execute(stmt)
-    sources = result.scalars().all()
+    result_ext = await db.execute(stmt_external)
+    sources = result_ext.scalars().all()
     
-    return [
+    # 2. Search internal firm documents (as precedent)
+    stmt_internal = select(Document).where(
+        Document.tenant_id == context.tenant_id,
+        Document.title.ilike(f"%{q}%")
+    ).limit(10)
+    
+    result_int = await db.execute(stmt_internal)
+    internal_docs = result_int.scalars().all()
+    
+    responses = [
         {
             "id": s.id,
             "title": s.title,
@@ -72,4 +84,15 @@ async def search_legal_research(
             "content": s.content[:500] + "..." if len(s.content) > 500 else s.content
         } for s in sources
     ]
+    
+    for d in internal_docs:
+        responses.append({
+            "id": d.id,
+            "title": d.title,
+            "citation": f"Internal Doc: {d.id[:8]}",
+            "source_type": "internal_precedent",
+            "content": f"Internal document uploaded to matter {d.matter_id}. Title: {d.title}"
+        })
+        
+    return responses
 

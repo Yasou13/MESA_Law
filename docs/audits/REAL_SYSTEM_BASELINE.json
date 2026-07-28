@@ -1,0 +1,72 @@
+{
+  "timestamp": "2026-07-28T10:35:00Z",
+  "overall_status": "BLOCKED",
+  "modules": {
+    "authentication_tenant": {
+      "status": "IMPLEMENTED",
+      "findings": [
+        "auth.py has undefined tenant_id issues",
+        "frontend sends x-tenant-id and localStorage tenant",
+        "mock tokens are used in E2E",
+        "cross-tenant leakage tests fail"
+      ]
+    },
+    "database_bootstrap": {
+      "status": "IMPLEMENTED",
+      "findings": [
+        "mesa_law_app role connects before migration",
+        "superuser privileges likely used for app runtime",
+        "RLS isolation fails on real postgres"
+      ]
+    },
+    "document_pipeline": {
+      "status": "IMPLEMENTED",
+      "findings": [
+        "OCR failures are saved as real text",
+        "source_locator_id uses string values like 'unknown'",
+        "status='draft' is used instead of valid ReviewState enum"
+      ]
+    },
+    "review_canonical": {
+      "status": "IMPLEMENTED",
+      "findings": [
+        "Two publishers exist (SYNC_APPROVED_REVIEWS and PUBLISH_REVIEW)",
+        "corrected_content is ignored in favor of proposed_content in some places",
+        "Dependencies (Party) are not validated before Claim publication"
+      ]
+    },
+    "deadlines": {
+      "status": "SCAFFOLDED",
+      "findings": [
+        "Missing trigger dates default to today",
+        "Hardcoded UI mock data",
+        "Invalid enum states used (under_review, approved)"
+      ]
+    },
+    "qa_citations": {
+      "status": "SCAFFOLDED",
+      "findings": [
+        "Global Q&A uses setTimeout and simulated responses",
+        "Document Chat is simulated",
+        "Source governance does not return snapshot IDs or accurate status"
+      ]
+    },
+    "frontend": {
+      "status": "IMPLEMENTED",
+      "findings": [
+        "UI stubs in admin settings",
+        "Math.random used for support access codes",
+        "Permission checks missing or only UI-level"
+      ]
+    },
+    "ci_tests": {
+      "status": "FAILED",
+      "findings": [
+        "pytest fails with 41 errors",
+        "pnpm typecheck fails",
+        "pnpm lint fails",
+        ".python-version is missing"
+      ]
+    }
+  }
+}

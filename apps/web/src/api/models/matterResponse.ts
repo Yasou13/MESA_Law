@@ -9,4 +9,5 @@ export interface MatterResponse {
   id: string;
   title: string;
   status: string;
+  access_scope?: string | null;
 }

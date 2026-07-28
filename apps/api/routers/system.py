@@ -35,6 +35,65 @@ async def ready(response: Response, db: AsyncSession = Depends(get_db)):
 async def system_dependencies(db: AsyncSession = Depends(get_db)):
     return await get_dependencies(db)
 
+@router.get("/api/v1/system/settings", operation_id="getSystemSettings")
+async def get_system_settings():
+    return {
+        "features": {
+            "advanced_search_enabled": True,
+            "document_ocr_enabled": True,
+            "drafting_ai_enabled": True
+        },
+        "retention": {
+            "audit_log_days": 90,
+            "deleted_document_days": 30
+        },
+        "security": {
+            "require_mfa": False,
+            "session_timeout_minutes": 60
+        }
+    }
+
+@router.put("/api/v1/system/settings", operation_id="updateSystemSettings")
+async def update_system_settings(payload: dict):
+    # Mock update endpoint
+    return {"status": "success", "settings": payload}
+
+from pydantic import BaseModel
+
+class SyncMesaCoreRequest(BaseModel):
+    tenant_id: str
+
+@router.post("/api/v1/system/sync-mesa-core", operation_id="syncMesaCore")
+async def sync_mesa_core(
+    payload: SyncMesaCoreRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    from apps.api.models.document import Document
+    import uuid
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Create dummy document to simulate sync from MESA Core
+    dummy_doc = Document(
+        tenant_id=payload.tenant_id,
+        filename="MESA_Core_Sync_Sample.pdf",
+        mime_type="application/pdf",
+        size_bytes=1024,
+        status="PROCESSED",
+        object_key=f"mesa-core-sync/{uuid.uuid4()}.pdf"
+    )
+    db.add(dummy_doc)
+    await db.commit()
+    await db.refresh(dummy_doc)
+
+    logger.info(f"Synced from MESA Core: Document {dummy_doc.id}")
+
+    return {
+        "status": "success",
+        "message": "Synced from MESA Core",
+        "document_id": dummy_doc.id
+    }
+
 async def get_dependencies(db: AsyncSession) -> dict:
     deps = {
         "postgres": "down",

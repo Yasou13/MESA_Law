@@ -21,10 +21,37 @@ async def list_matters(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context)
-    result = await db.execute(select(Matter).where(Matter.tenant_id == context.tenant_id).order_by(Matter.created_at.desc()))
-    matters = result.scalars().all()
-    return [{"id": m.id, "title": m.title, "status": m.status} for m in matters]
+    await MatterAccessPolicy.can_read(context, db)
+    from apps.api.models.domain import MatterMember, Role
+    
+    # Firm admins have 'admin' scope on all matters implicitly
+    user_roles = {r.value if hasattr(r, 'value') else r for r in context.roles}
+    is_admin = Role.FIRM_ADMIN.value in user_roles
+    
+    stmt = select(Matter, MatterMember.access_scope).outerjoin(
+        MatterMember, 
+        (Matter.id == MatterMember.matter_id) & (MatterMember.user_id == context.principal_id)
+    ).where(Matter.tenant_id == context.tenant_id).order_by(Matter.created_at.desc())
+    
+    result = await db.execute(stmt)
+    rows = result.all()
+    
+    return [
+        {
+            "id": m.id, 
+            "title": m.title, 
+            "internal_reference": m.internal_reference,
+            "status": m.status, 
+            "client_name": m.client_name,
+            "jurisdiction": m.jurisdiction,
+            "case_type": m.case_type,
+            "confidentiality_level": m.confidentiality_level,
+            "ai_processing_policy": m.ai_processing_policy,
+            "opened_at": m.opened_at.isoformat() if m.opened_at else None,
+            "closed_at": m.closed_at.isoformat() if m.closed_at else None,
+            "access_scope": "admin" if is_admin else (scope or "read")
+        } for m, scope in rows
+    ]
 
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
 from fastapi import Header
@@ -44,13 +71,18 @@ async def create_matter(
         if cached and cached.response_body:
             return cached.response_body
             
-    MatterAccessPolicy.can_create(context)
+    await MatterAccessPolicy.can_create(context)
     matter = Matter(
         title=matter_data.title, 
+        internal_reference=matter_data.internal_reference,
+        client_name=matter_data.client_name,
         tenant_id=context.tenant_id,
         jurisdiction=matter_data.jurisdiction,
+        case_type=matter_data.case_type,
         confidentiality_level=matter_data.confidentiality_level,
-        lead_attorney_id=context.principal_id
+        ai_processing_policy=matter_data.ai_processing_policy,
+        responsible_attorney_id=context.principal_id,
+        opened_at=__import__('datetime').datetime.now(__import__('datetime').timezone.utc)
     )
     db.add(matter)
     await db.flush()
@@ -67,7 +99,20 @@ async def create_matter(
     await db.commit()
     await db.refresh(matter)
     
-    resp = {"id": matter.id, "title": matter.title, "status": matter.status}
+    resp = {
+        "id": matter.id, 
+        "title": matter.title, 
+        "internal_reference": matter.internal_reference,
+        "status": matter.status,
+        "client_name": matter.client_name,
+        "jurisdiction": matter.jurisdiction,
+        "case_type": matter.case_type,
+        "confidentiality_level": matter.confidentiality_level,
+        "ai_processing_policy": matter.ai_processing_policy,
+        "opened_at": matter.opened_at.isoformat() if matter.opened_at else None,
+        "closed_at": matter.closed_at.isoformat() if matter.closed_at else None,
+        "access_scope": "admin"
+    }
     
     if idem_key:
         await complete_idempotency(db, idem_key, 201, resp)
@@ -104,13 +149,13 @@ async def matter_qa_endpoint(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context, matter_id)
+    await MatterAccessPolicy.can_read(context, db, matter_id)
     question = query.get("question")
     if not question:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Missing question in body")
         
-    return await ask_matter_question(db, matter_id, question)
+    return await ask_matter_question(db, context.tenant_id, matter_id, None, question)
 
 class ConflictCheckRequest(BaseModel):
     party_names: list[str]
@@ -135,7 +180,7 @@ async def check_conflicts(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context)
+    await MatterAccessPolicy.can_read(context, db)
     
     from apps.api.models.domain import Matter, MatterParty
     from sqlalchemy import select
@@ -173,7 +218,7 @@ async def override_conflict(
     db: AsyncSession = Depends(get_db),
     _=Depends(require_recent_auth)
 ):
-    MatterAccessPolicy.can_create(context)
+    await MatterAccessPolicy.can_create(context)
     
     # Normally we'd log the reason to the matter metadata or an audit trail.
     matter = await db.get(Matter, matter_id)

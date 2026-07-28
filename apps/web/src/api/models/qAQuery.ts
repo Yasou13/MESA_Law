@@ -6,6 +6,7 @@
  */
 
 export interface QAQuery {
-  matter_id: string;
+  matter_id?: string | null;
+  document_id?: string | null;
   question: string;
 }

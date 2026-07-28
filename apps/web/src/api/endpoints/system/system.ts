@@ -5,19 +5,29 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
+
+import type {
+  HTTPValidationError,
+  SyncMesaCoreRequest,
+  UpdateSystemSettingsBody
+} from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
 
@@ -377,3 +387,293 @@ export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<
 
 
 
+export type getSystemSettingsResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type getSystemSettingsResponseSuccess = (getSystemSettingsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getSystemSettingsResponse = (getSystemSettingsResponseSuccess)
+
+export const getGetSystemSettingsUrl = () => {
+
+
+
+
+  return `/api/v1/system/settings`
+}
+
+/**
+ * @summary Get System Settings
+ */
+export const getSystemSettings = async ( options?: RequestInit): Promise<getSystemSettingsResponse> => {
+
+  return customInstance<getSystemSettingsResponse>(getGetSystemSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSystemSettingsQueryKey = () => {
+    return [
+    `/api/v1/system/settings`
+    ] as const;
+    }
+
+
+export const getGetSystemSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemSettings>>> = ({ signal }) => getSystemSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSystemSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemSettings>>>
+export type GetSystemSettingsQueryError = unknown
+
+
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSystemSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getSystemSettings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSystemSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getSystemSettings>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get System Settings
+ */
+
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSystemSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type updateSystemSettingsResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type updateSystemSettingsResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type updateSystemSettingsResponseSuccess = (updateSystemSettingsResponse200) & {
+  headers: Headers;
+};
+export type updateSystemSettingsResponseError = (updateSystemSettingsResponse422) & {
+  headers: Headers;
+};
+
+export type updateSystemSettingsResponse = (updateSystemSettingsResponseSuccess | updateSystemSettingsResponseError)
+
+export const getUpdateSystemSettingsUrl = () => {
+
+
+
+
+  return `/api/v1/system/settings`
+}
+
+/**
+ * @summary Update System Settings
+ */
+export const updateSystemSettings = async (updateSystemSettingsBody: UpdateSystemSettingsBody, options?: RequestInit): Promise<updateSystemSettingsResponse> => {
+
+  return customInstance<updateSystemSettingsResponse>(getUpdateSystemSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateSystemSettingsBody)
+  }
+);}
+
+
+
+
+
+export const getUpdateSystemSettingsMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext> => {
+
+const mutationKey = ['updateSystemSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystemSettings>>, {data: UpdateSystemSettingsBody}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateSystemSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSystemSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSystemSettings>>>
+    export type UpdateSystemSettingsMutationBody = UpdateSystemSettingsBody
+    export type UpdateSystemSettingsMutationError = HTTPValidationError
+
+    /**
+ * @summary Update System Settings
+ */
+export const useUpdateSystemSettings = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof updateSystemSettings>>,
+        TError,
+        {data: UpdateSystemSettingsBody},
+        TContext
+      > => {
+      return useMutation(getUpdateSystemSettingsMutationOptions(options), queryClient);
+    }
+    export type syncMesaCoreResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type syncMesaCoreResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type syncMesaCoreResponseSuccess = (syncMesaCoreResponse200) & {
+  headers: Headers;
+};
+export type syncMesaCoreResponseError = (syncMesaCoreResponse422) & {
+  headers: Headers;
+};
+
+export type syncMesaCoreResponse = (syncMesaCoreResponseSuccess | syncMesaCoreResponseError)
+
+export const getSyncMesaCoreUrl = () => {
+
+
+
+
+  return `/api/v1/system/sync-mesa-core`
+}
+
+/**
+ * @summary Sync Mesa Core
+ */
+export const syncMesaCore = async (syncMesaCoreRequest: SyncMesaCoreRequest, options?: RequestInit): Promise<syncMesaCoreResponse> => {
+
+  return customInstance<syncMesaCoreResponse>(getSyncMesaCoreUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(syncMesaCoreRequest)
+  }
+);}
+
+
+
+
+
+export const getSyncMesaCoreMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext> => {
+
+const mutationKey = ['syncMesaCore'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncMesaCore>>, {data: SyncMesaCoreRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  syncMesaCore(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncMesaCoreMutationResult = NonNullable<Awaited<ReturnType<typeof syncMesaCore>>>
+    export type SyncMesaCoreMutationBody = SyncMesaCoreRequest
+    export type SyncMesaCoreMutationError = HTTPValidationError
+
+    /**
+ * @summary Sync Mesa Core
+ */
+export const useSyncMesaCore = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof syncMesaCore>>,
+        TError,
+        {data: SyncMesaCoreRequest},
+        TContext
+      > => {
+      return useMutation(getSyncMesaCoreMutationOptions(options), queryClient);
+    }

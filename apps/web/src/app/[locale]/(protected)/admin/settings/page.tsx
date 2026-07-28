@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Settings, Building2, Sliders, Shield, Database, Save, Server, Loader2, Sparkles, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useTranslations } from 'next-intl'
 
 import {
   Select,
@@ -13,17 +14,47 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
+import { useGetSystemSettings, useUpdateSystemSettings } from '@/api/endpoints/system/system'
+import { toast } from 'react-hot-toast'
 
 // UI Stub for Phase 29
 export default function AdminSettingsPage() {
-  const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'firm' | 'ai' | 'security'>('firm')
 
+  const { data: settingsResponse, isLoading } = useGetSystemSettings()
+  const { mutateAsync: updateSettings, isPending: isUpdating } = useUpdateSystemSettings()
+  const settings: any = settingsResponse?.data || {}
+
+  const [localSettings, setLocalSettings] = useState<any>(null)
+
+  // Sync state when data loads
+  if (settings.features && !localSettings) {
+    setLocalSettings(settings)
+  }
+
+  const updateMutation = useUpdateSystemSettings({
+    mutation: {
+      onSuccess: () => {
+        toast.success("Settings saved successfully")
+      },
+      onError: () => {
+        toast.error("Failed to save settings")
+      }
+    }
+  })
+
   const handleSave = () => {
-    setIsSaving(true)
-    setTimeout(() => {
-      setIsSaving(false)
-    }, 1500)
+    if (localSettings) {
+      updateMutation.mutate({ data: localSettings })
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--color-lila-500)]" />
+      </div>
+    )
   }
 
   return (
@@ -33,9 +64,9 @@ export default function AdminSettingsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">System Settings</h1>
           <p className="text-[var(--color-anthracite-500)] mt-1">Manage firm-wide configuration, AI models, and security policies.</p>
         </div>
-        <Button onClick={handleSave} disabled={isSaving} className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {isSaving ? 'Saving...' : 'Save Settings'}
+        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
+          {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
         </Button>
       </div>
 
@@ -133,7 +164,10 @@ export default function AdminSettingsPage() {
                         Automatically extract entities, claims, and dates from documents the moment they are uploaded.
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={localSettings?.features?.document_ocr_enabled} 
+                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, features: { ...prev.features, document_ocr_enabled: checked } }))} 
+                    />
                   </div>
                 </div>
 
@@ -145,7 +179,10 @@ export default function AdminSettingsPage() {
                         Allow the AI agent to browse public court dockets and news sites when internal knowledge is insufficient.
                       </p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={localSettings?.features?.advanced_search_enabled} 
+                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, features: { ...prev.features, advanced_search_enabled: checked } }))} 
+                    />
                   </div>
                 </div>
               </div>
@@ -175,7 +212,10 @@ export default function AdminSettingsPage() {
                       <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Require Multi-Factor Authentication (MFA)</label>
                       <p className="text-sm text-[var(--color-anthracite-500)] mt-1">Enforce MFA for all firm members across all devices.</p>
                     </div>
-                    <Switch defaultChecked />
+                    <Switch 
+                      checked={localSettings?.security?.require_mfa} 
+                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, security: { ...prev.security, require_mfa: checked } }))} 
+                    />
                   </div>
                 </div>
 

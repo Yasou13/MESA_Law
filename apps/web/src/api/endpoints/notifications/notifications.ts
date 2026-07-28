@@ -19,10 +19,6 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
-import type {
-  HTTPValidationError
-} from '../../models';
-
 import { customInstance } from '../../../lib/api/client';
 
 
@@ -50,19 +46,12 @@ export type sseEndpointApiV1NotificationsSseGetResponse200 = {
   status: 200
 }
 
-export type sseEndpointApiV1NotificationsSseGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
 export type sseEndpointApiV1NotificationsSseGetResponseSuccess = (sseEndpointApiV1NotificationsSseGetResponse200) & {
   headers: Headers;
 };
-export type sseEndpointApiV1NotificationsSseGetResponseError = (sseEndpointApiV1NotificationsSseGetResponse422) & {
-  headers: Headers;
-};
+;
 
-export type sseEndpointApiV1NotificationsSseGetResponse = (sseEndpointApiV1NotificationsSseGetResponseSuccess | sseEndpointApiV1NotificationsSseGetResponseError)
+export type sseEndpointApiV1NotificationsSseGetResponse = (sseEndpointApiV1NotificationsSseGetResponseSuccess)
 
 export const getSseEndpointApiV1NotificationsSseGetUrl = () => {
 
@@ -98,7 +87,7 @@ export const getSseEndpointApiV1NotificationsSseGetQueryKey = () => {
     }
 
 
-export const getSseEndpointApiV1NotificationsSseGetQueryOptions = <TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getSseEndpointApiV1NotificationsSseGetQueryOptions = <TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -117,10 +106,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type SseEndpointApiV1NotificationsSseGetQueryResult = NonNullable<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>>
-export type SseEndpointApiV1NotificationsSseGetQueryError = HTTPValidationError
+export type SseEndpointApiV1NotificationsSseGetQueryError = unknown
 
 
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = HTTPValidationError>(
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
@@ -130,7 +119,7 @@ export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnTyp
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = HTTPValidationError>(
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
@@ -140,7 +129,7 @@ export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnTyp
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = HTTPValidationError>(
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -148,7 +137,7 @@ export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnTyp
  * @summary Sse Endpoint
  */
 
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = HTTPValidationError>(
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -170,19 +159,12 @@ export type getNotificationsApiV1NotificationsGetResponse200 = {
   status: 200
 }
 
-export type getNotificationsApiV1NotificationsGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
 export type getNotificationsApiV1NotificationsGetResponseSuccess = (getNotificationsApiV1NotificationsGetResponse200) & {
   headers: Headers;
 };
-export type getNotificationsApiV1NotificationsGetResponseError = (getNotificationsApiV1NotificationsGetResponse422) & {
-  headers: Headers;
-};
+;
 
-export type getNotificationsApiV1NotificationsGetResponse = (getNotificationsApiV1NotificationsGetResponseSuccess | getNotificationsApiV1NotificationsGetResponseError)
+export type getNotificationsApiV1NotificationsGetResponse = (getNotificationsApiV1NotificationsGetResponseSuccess)
 
 export const getGetNotificationsApiV1NotificationsGetUrl = () => {
 
@@ -193,7 +175,7 @@ export const getGetNotificationsApiV1NotificationsGetUrl = () => {
 }
 
 /**
- * Get all notifications for the current tenant.
+ * Get all notifications for the current tenant and user.
  * @summary Get Notifications
  */
 export const getNotificationsApiV1NotificationsGet = async ( options?: RequestInit): Promise<getNotificationsApiV1NotificationsGetResponse> => {
@@ -218,7 +200,7 @@ export const getGetNotificationsApiV1NotificationsGetQueryKey = () => {
     }
 
 
-export const getGetNotificationsApiV1NotificationsGetQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetNotificationsApiV1NotificationsGetQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -237,10 +219,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetNotificationsApiV1NotificationsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>>
-export type GetNotificationsApiV1NotificationsGetQueryError = HTTPValidationError
+export type GetNotificationsApiV1NotificationsGetQueryError = unknown
 
 
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
@@ -250,7 +232,7 @@ export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnT
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
@@ -260,7 +242,7 @@ export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnT
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -268,7 +250,7 @@ export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnT
  * @summary Get Notifications
  */
 
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = HTTPValidationError>(
+export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

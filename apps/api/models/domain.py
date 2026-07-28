@@ -23,6 +23,11 @@ class User(Base, AuditMixin):
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     keycloak_id: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     full_name: Mapped[str] = mapped_column(String, nullable=False)
+    
+    from datetime import datetime
+    from sqlalchemy import DateTime
+    is_support_access_granted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    support_access_granted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 class Membership(Base, AuditMixin):
     __tablename__ = "memberships"
@@ -37,10 +42,19 @@ class Membership(Base, AuditMixin):
 class Matter(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "matters"
     title: Mapped[str] = mapped_column(String, nullable=False)
+    internal_reference: Mapped[str | None] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, default="open", nullable=False)
+    client_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    responsible_attorney_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     jurisdiction: Mapped[str | None] = mapped_column(String, nullable=True)
+    case_type: Mapped[str | None] = mapped_column(String, nullable=True)
     confidentiality_level: Mapped[str] = mapped_column(String, default="standard", nullable=False)
-    lead_attorney_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    ai_processing_policy: Mapped[str] = mapped_column(String, default="standard", nullable=False)
+    
+    from datetime import datetime
+    from sqlalchemy import DateTime
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 class MatterMember(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "matter_members"
@@ -111,10 +125,26 @@ class ClaimEvidenceLink(Base, AuditMixin, TenantAwareMixin):
 
 class SourceLocator(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "source_locators"
+    matter_id: Mapped[str | None] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=True)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False)
+    document_revision_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    parsed_document_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    parsed_page_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    
     page_number: Mapped[int] = mapped_column(nullable=False)
+    paragraph_index: Mapped[int | None] = mapped_column(nullable=True)
+    block_index: Mapped[int | None] = mapped_column(nullable=True)
+    
+    character_start: Mapped[int | None] = mapped_column(nullable=True)
+    character_end: Mapped[int | None] = mapped_column(nullable=True)
+    
     bbox_x0: Mapped[float | None] = mapped_column(Float, nullable=True)
     bbox_y0: Mapped[float | None] = mapped_column(Float, nullable=True)
     bbox_x1: Mapped[float | None] = mapped_column(Float, nullable=True)
     bbox_y1: Mapped[float | None] = mapped_column(Float, nullable=True)
+    
     text_snippet: Mapped[str | None] = mapped_column(String, nullable=True)
+    text_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    
+    parser_version: Mapped[str | None] = mapped_column(String, nullable=True)
+    ocr_version: Mapped[str | None] = mapped_column(String, nullable=True)

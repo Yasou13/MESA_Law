@@ -15,9 +15,6 @@ AXIOS_INSTANCE.interceptors.request.use(async (config) => {
       if (session.accessToken) {
         config.headers['Authorization'] = `Bearer ${session.accessToken}`;
       }
-      if (session.activeFirmId) {
-        config.headers['x-tenant-id'] = session.activeFirmId;
-      }
     }
   }
   return config;

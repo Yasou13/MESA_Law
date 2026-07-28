@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useMatterQA } from '@/api/endpoints/default/default';
+import { useAskQuestion } from '@/api/endpoints/qa/qa';
 import { Send, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 
 export function QAShell({ matterId = "1" }: { matterId?: string }) {
   const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[]}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[], review_warning?: boolean, source_coverage?: string}[]>([]);
   
-  const qaMutation = useMatterQA();
+  const qaMutation = useAskQuestion();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,16 +17,18 @@ export function QAShell({ matterId = "1" }: { matterId?: string }) {
     setQuery('');
 
     qaMutation.mutate(
-      { matterId, data: { question: newQuery } },
+      { data: { matter_id: matterId, question: newQuery } },
       {
         onSuccess: (res: any) => {
           const data = res.data;
-          const formattedCitations = data.citations?.map((c: any) => `${c.doc_title} (Page ${c.page_number})`) || [];
+          const formattedCitations = data.citations?.map((c: any) => `Doc ID: ${c.document_id.substring(0,8)} (Page ${c.page_number})`) || [];
           
           setMessages(prev => [...prev, { 
             role: 'ai', 
             content: data.answer || 'No relevant answer found.', 
-            citations: formattedCitations 
+            citations: formattedCitations,
+            review_warning: data.review_warning,
+            source_coverage: data.source_coverage
           }]);
         },
         onError: (error: any) => {
@@ -61,7 +63,18 @@ export function QAShell({ matterId = "1" }: { matterId?: string }) {
         
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-sm ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
+            <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-sm ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.review_warning ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
+              {msg.review_warning && (
+                <div className="flex items-center gap-1.5 mb-1 font-semibold text-xs uppercase tracking-wider">
+                  <AlertCircle className="w-4 h-4" />
+                  Verification Warning
+                </div>
+              )}
+              {msg.source_coverage === 'INVALID' && (
+                <div className="text-red-500 font-medium mb-1">
+                  Response blocked due to unverified citations.
+                </div>
+              )}
               <p className="leading-relaxed">{msg.content}</p>
               {msg.citations && msg.citations.length > 0 && (
                 <div className="mt-4 pt-3 border-t border-[var(--border-surface)]">

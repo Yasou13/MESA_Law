@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context
+from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
 from apps.api.main import app
 from httpx import ASGITransport, AsyncClient
 
@@ -50,6 +50,7 @@ def override_draft_deps():
     
     app.dependency_overrides[setup_tenant_context] = lambda: mock_context
     app.dependency_overrides[get_db] = lambda: mock_session
+    app.dependency_overrides[require_recent_auth] = lambda: True
     yield mock_session
     app.dependency_overrides.clear()
 

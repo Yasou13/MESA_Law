@@ -5,13 +5,22 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
-  useMutation
+  useMutation,
+  useQuery
 } from '@tanstack/react-query';
 import type {
+  DataTag,
+  DefinedInitialDataOptions,
+  DefinedUseQueryResult,
   MutationFunction,
   QueryClient,
+  QueryFunction,
+  QueryKey,
+  UndefinedInitialDataOptions,
   UseMutationOptions,
-  UseMutationResult
+  UseMutationResult,
+  UseQueryOptions,
+  UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
@@ -23,6 +32,133 @@ import { customInstance } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKey: K } => {
+  const result = { queryKey } as T & { queryKey: K };
+  for (const key of Object.keys(query)) {
+    // The explicit queryKey always wins, matching the previous
+    // `{ ...query, queryKey }` spread where it was set last.
+    if (key === 'queryKey') continue;
+    Object.defineProperty(result, key, {
+      enumerable: true,
+      configurable: true,
+      get: () => (query as Record<string, unknown>)[key],
+    });
+  }
+  return result;
+};
+
+export type getSessionContextApiV1SessionContextGetResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type getSessionContextApiV1SessionContextGetResponseSuccess = (getSessionContextApiV1SessionContextGetResponse200) & {
+  headers: Headers;
+};
+;
+
+export type getSessionContextApiV1SessionContextGetResponse = (getSessionContextApiV1SessionContextGetResponseSuccess)
+
+export const getGetSessionContextApiV1SessionContextGetUrl = () => {
+
+
+
+
+  return `/api/v1/session/context`
+}
+
+/**
+ * @summary Get Session Context
+ */
+export const getSessionContextApiV1SessionContextGet = async ( options?: RequestInit): Promise<getSessionContextApiV1SessionContextGetResponse> => {
+
+  return customInstance<getSessionContextApiV1SessionContextGetResponse>(getGetSessionContextApiV1SessionContextGetUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSessionContextApiV1SessionContextGetQueryKey = () => {
+    return [
+    `/api/v1/session/context`
+    ] as const;
+    }
+
+
+export const getGetSessionContextApiV1SessionContextGetQueryOptions = <TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSessionContextApiV1SessionContextGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>> = ({ signal }) => getSessionContextApiV1SessionContextGet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSessionContextApiV1SessionContextGetQueryResult = NonNullable<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>>
+export type GetSessionContextApiV1SessionContextGetQueryError = unknown
+
+
+export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>,
+          TError,
+          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>,
+          TError,
+          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Session Context
+ */
+
+export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSessionContextApiV1SessionContextGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
 
 
 
@@ -63,7 +199,7 @@ export const getSetActiveFirmApiV1SessionActiveFirmPostUrl = (params: SetActiveF
 /**
  * Verified tenant switch flow.
  * Validates that the currently authenticated user is an active member of the requested firm.
- * Returns the firm details and role, which the frontend can then use to set the x-tenant-id header.
+ * Returns the firm details and role, setting a secure server-side cookie.
  * @summary Set Active Firm
  */
 export const setActiveFirmApiV1SessionActiveFirmPost = async (params: SetActiveFirmApiV1SessionActiveFirmPostParams, options?: RequestInit): Promise<setActiveFirmApiV1SessionActiveFirmPostResponse> => {

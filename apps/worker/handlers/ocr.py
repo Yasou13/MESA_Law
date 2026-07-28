@@ -42,6 +42,10 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
     tenant_id = doc.tenant_id
     logger.info(f"Running OCR on document {document_id} (revision {revision_id})")
     
+    # Phase 15: State transition to OCR_PROCESSING
+    doc.status = "OCR_PROCESSING"
+    await session.commit()
+    
     ext = os.path.splitext(s3_key)[1].lower() if s3_key else ".pdf"
     if not ext:
         ext = ".pdf"
@@ -150,6 +154,11 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
                 }
             )
             session.add(job)
+            
+            # Phase 15: State transition to OCR_COMPLETED
+            doc.status = "OCR_COMPLETED"
+            if rev:
+                rev.scan_status = "READY"
             await session.commit()
             
     except Exception as e:

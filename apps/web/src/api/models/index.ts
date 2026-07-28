@@ -5,10 +5,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './approveDraftParams';
+export * from './conflictCheckRequest';
+export * from './conflictCheckResponse';
+export * from './conflictResult';
 export * from './correctReviewRequest';
 export * from './correctReviewRequestCorrectedContent';
 export * from './deadlineResponse';
 export * from './documentResponse';
+export * from './elevateRoleParams';
 export * from './exportDraftRequest';
 export * from './firmCreateRequest';
 export * from './firmResponse';
@@ -20,6 +25,8 @@ export * from './listDraftReviewsApiV1ReviewsGetParams';
 export * from './matterCreate';
 export * from './matterQABody';
 export * from './matterResponse';
+export * from './overrideConflictParams';
+export * from './overrideConflictRequest';
 export * from './parsedDocumentResponse';
 export * from './parsedPageResponse';
 export * from './parsedPageResponseLayoutData';
@@ -27,10 +34,15 @@ export * from './qAQuery';
 export * from './researchRequest';
 export * from './reviewItemResponse';
 export * from './reviewItemResponseProposedContent';
+export * from './roleElevationRequest';
 export * from './saveDraftRequest';
 export * from './searchLegalResearchParams';
 export * from './setActiveFirmApiV1SessionActiveFirmPostParams';
+export * from './supportAccessRequest';
+export * from './syncMesaCoreRequest';
 export * from './updateDraftRequest';
+export * from './updateSystemSettingsBody';
+export * from './updateUserProfileRequest';
 export * from './uploadIntentRequest';
 export * from './uploadIntentResponse';
 export * from './validationError';

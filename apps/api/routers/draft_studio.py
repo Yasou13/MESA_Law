@@ -55,7 +55,7 @@ async def list_matter_drafts(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context, matter_id)
+    await MatterAccessPolicy.can_read(context, db, matter_id)
     stmt = select(Draft).where(Draft.matter_id == matter_id, Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
     result = await db.execute(stmt)
     drafts = result.scalars().all()
@@ -76,7 +76,7 @@ async def list_all_drafts(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context)
+    await MatterAccessPolicy.can_read(context, db)
     stmt = select(Draft).where(Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
     result = await db.execute(stmt)
     drafts = result.scalars().all()
@@ -102,7 +102,7 @@ async def get_draft(
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
         
-    MatterAccessPolicy.can_read(context, draft.matter_id)
+    await MatterAccessPolicy.can_read(context, db, draft.matter_id)
         
     return {
         "id": draft.id,
@@ -169,6 +169,26 @@ async def update_draft(
     response.headers["ETag"] = f'"{draft.etag}"'
     return response
 
+@router.post("/drafts/{draft_id}/submit-review", operation_id="submitReviewDraft")
+async def submit_review_draft(
+    request: Request,
+    draft_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    draft = await db.get(Draft, draft_id)
+    if not draft or draft.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Draft not found")
+        
+    DraftAccessPolicy.can_manage(context)
+    
+    if draft.status not in ["DRAFT", "REJECTED"]:
+        raise HTTPException(status_code=400, detail="Only DRAFT or REJECTED drafts can be submitted for review")
+        
+    draft.status = "IN_REVIEW"
+    await db.commit()
+    return {"status": draft.status}
+
 @router.post("/drafts/{draft_id}/approve", operation_id="approveDraft")
 async def approve_draft(
     request: Request,
@@ -182,6 +202,9 @@ async def approve_draft(
         raise HTTPException(status_code=404, detail="Draft not found")
         
     DraftAccessPolicy.can_approve_external(context)
+    
+    if draft.status != "IN_REVIEW":
+        raise HTTPException(status_code=400, detail="Only IN_REVIEW drafts can be approved")
         
     from apps.api.models.draft import DraftCitation
     from sqlalchemy import select
@@ -194,6 +217,35 @@ async def approve_draft(
     draft.status = "APPROVED_FOR_EXTERNAL_USE"
     await db.commit()
     return {"status": draft.status}
+
+@router.get("/drafts/{draft_id}/citations", operation_id="getDraftCitations")
+async def get_draft_citations(
+    request: Request,
+    draft_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    draft = await db.get(Draft, draft_id)
+    if not draft or draft.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Draft not found")
+        
+    await MatterAccessPolicy.can_read(context, db, draft.matter_id)
+        
+    from apps.api.models.draft import DraftCitation
+    from sqlalchemy import select
+    stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id)
+    result = await db.execute(stmt)
+    citations = result.scalars().all()
+    
+    return [
+        {
+            "id": c.id,
+            "document_id": c.document_id,
+            "text_snippet": c.text_snippet,
+            "verification_state": c.verification_state
+        }
+        for c in citations
+    ]
 
 @router.post("/drafts/{draft_id}/export")
 async def export_draft(

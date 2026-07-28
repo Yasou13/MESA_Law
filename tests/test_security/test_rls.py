@@ -39,6 +39,7 @@ async def test_tenant_rls_isolation():
     async with SessionLocal() as session:
         # Start transaction for Tenant A
         set_tenant_id(tenant_a)
+        await session.execute(text("SELECT set_config('app.current_tenant', :t, true)"), {"t": tenant_a})
         
         from sqlalchemy import select
         # ORM query (which adds where clause)
@@ -60,6 +61,7 @@ async def test_tenant_rls_isolation():
     async with SessionLocal() as session:
         # Start transaction for Tenant B
         set_tenant_id(tenant_b)
+        await session.execute(text("SELECT set_config('app.current_tenant', :t, true)"), {"t": tenant_b})
         
         res = await session.execute(text("SELECT id, title, tenant_id FROM matters"))
         raw_matters_b = res.all()

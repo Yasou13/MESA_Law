@@ -59,7 +59,7 @@ class DeadlineCandidate(Base, AuditMixin, TenantAwareMixin):
     tenant_id: Mapped[str] = mapped_column(ForeignKey("firms.id"), nullable=False, index=True)
     matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), nullable=False, index=True)
     
-    rule_id: Mapped[str] = mapped_column(ForeignKey("deadline_rules.id"), nullable=True)
+    rule_id: Mapped[str] = mapped_column(ForeignKey("deadline_rules.id"), nullable=False)
     
     trigger_event: Mapped[str | None] = mapped_column(String, nullable=True)
     trigger_date: Mapped[Date | None] = mapped_column(Date, nullable=True)

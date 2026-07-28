@@ -10,7 +10,7 @@ class PostgresLexicalAdapter:
     def __init__(self, session: AsyncSession):
         self.session = session
         
-    async def search(self, matter_id: str, query: str, limit: int = 5) -> list[dict]:
+    async def search(self, tenant_id: str, matter_id: str | None, document_id: str | None, query: str, limit: int = 5) -> list[dict]:
         """
         Fallback RAG using PostgreSQL Full Text Search (tsvector).
         We join DocumentChunk with ParsedPage and Document to filter by matter_id.
@@ -18,24 +18,36 @@ class PostgresLexicalAdapter:
         """
         # Note: In a real system, you'd normalize query tokens here to avoid TS query syntax errors.
         # Simple normalization: replace spaces with & for to_tsquery, or use plainto_tsquery.
-        stmt = text("""
+        stmt_str = """
             SELECT c.id as chunk_id, p.page_number, c.text_content, d.id as doc_id, pd.revision_id as document_revision_id,
                    ts_rank_cd(c.fts_vector, plainto_tsquery('turkish', :query)) AS rank
             FROM document_chunks c
             JOIN parsed_pages p ON c.page_id = p.id
             JOIN parsed_documents pd ON p.parsed_document_id = pd.id
             JOIN documents d ON c.document_id = d.id
-            WHERE d.matter_id = :matter_id
+            WHERE d.tenant_id = :tenant_id
               AND c.fts_vector @@ plainto_tsquery('turkish', :query)
-            ORDER BY rank DESC
-            LIMIT :limit
-        """)
+        """
+        if matter_id:
+            stmt_str += " AND d.matter_id = :matter_id"
+        if document_id:
+            stmt_str += " AND d.id = :document_id"
+            
+        stmt_str += " ORDER BY rank DESC LIMIT :limit"
         
-        result = await self.session.execute(stmt, {
-            "matter_id": matter_id, 
+        stmt = text(stmt_str)
+        
+        params = {
+            "tenant_id": tenant_id,
             "query": query, 
             "limit": limit
-        })
+        }
+        if matter_id:
+            params["matter_id"] = matter_id
+        if document_id:
+            params["document_id"] = document_id
+            
+        result = await self.session.execute(stmt, params)
         rows = result.all()
         
         return [
@@ -50,7 +62,7 @@ class PostgresLexicalAdapter:
             for row in rows
         ]
 
-async def ask_matter_question(session: AsyncSession, matter_id: str, question: str) -> dict:
+async def ask_matter_question(session: AsyncSession, tenant_id: str, matter_id: str | None, document_id: str | None, question: str) -> dict:
     if os.getenv("MESA_LAW_ENVIRONMENT") == "test":
         return {
             "state": "MOCK_RESPONSE",
@@ -62,7 +74,7 @@ async def ask_matter_question(session: AsyncSession, matter_id: str, question: s
         }
         
     adapter = PostgresLexicalAdapter(session)
-    results = await adapter.search(matter_id, question)
+    results = await adapter.search(tenant_id, matter_id, document_id, question)
     
     if not results:
         return {

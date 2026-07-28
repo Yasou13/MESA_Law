@@ -12,4 +12,8 @@ export interface MatterCreate {
      * @maxLength 255
      */
   title: string;
+  /** The jurisdiction of the matter */
+  jurisdiction?: string | null;
+  /** Confidentiality level */
+  confidentiality_level?: string;
 }

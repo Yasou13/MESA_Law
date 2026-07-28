@@ -7,4 +7,6 @@
 
 export type ListDraftReviewsApiV1ReviewsGetParams = {
 matter_id?: string | null;
+status?: string | null;
+entity_type?: string | null;
 };

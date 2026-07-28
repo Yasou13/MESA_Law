@@ -27,16 +27,26 @@ class CorrectReviewRequest(BaseModel):
 @router.get("", response_model=list[ReviewItemResponse])
 async def list_draft_reviews(
     matter_id: str | None = None,
+    status: str | None = None,
+    entity_type: str | None = None,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    MatterAccessPolicy.can_read(context, matter_id)
+    await MatterAccessPolicy.can_read(context, db, matter_id)
+    
     query = select(ReviewItem).where(
         ReviewItem.tenant_id == context.tenant_id,
-        ReviewItem.status == ReviewState.PENDING
+        ReviewItem.status.in_([ReviewState.PENDING, ReviewState.IN_REVIEW])
     )
+    
     if matter_id:
         query = query.where(ReviewItem.matter_id == matter_id)
+        
+    if status and status in (ReviewState.PENDING.value, ReviewState.IN_REVIEW.value):
+        query = query.where(ReviewItem.status == status)
+        
+    if entity_type:
+        query = query.where(ReviewItem.entity_type == entity_type)
         
     result = await db.execute(query)
     return result.scalars().all()
@@ -53,7 +63,7 @@ async def approve_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
         
-    ReviewAccessPolicy.can_approve(context, review.matter_id)
+    await ReviewAccessPolicy.can_approve(context, db, review.matter_id)
     
     if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
         raise HTTPException(status_code=400, detail="Item is not in a valid state for approval")
@@ -102,7 +112,7 @@ async def reject_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
         
-    ReviewAccessPolicy.can_approve(context, review.matter_id)
+    await ReviewAccessPolicy.can_approve(context, db, review.matter_id)
         
     if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
         raise HTTPException(status_code=400, detail="Item is not in a valid state for rejection")
@@ -138,7 +148,7 @@ async def correct_review(
     if not review:
         raise HTTPException(status_code=404, detail="Review item not found")
         
-    ReviewAccessPolicy.can_approve(context, review.matter_id)
+    await ReviewAccessPolicy.can_approve(context, db, review.matter_id)
         
     if review.status not in (ReviewState.PENDING, ReviewState.IN_REVIEW):
         raise HTTPException(status_code=400, detail="Item is not in a valid state for correction")

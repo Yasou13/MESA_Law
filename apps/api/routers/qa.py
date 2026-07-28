@@ -10,7 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(prefix="/qa", tags=["qa"])
 
 class QAQuery(BaseModel):
-    matter_id: str
+    matter_id: str | None = None
+    document_id: str | None = None
     question: str
 
 @router.post("/ask", operation_id="askQuestion")
@@ -21,4 +22,4 @@ async def ask_question(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db)
 ):
-    return await ask_matter_question(db, query.matter_id, query.question)
+    return await ask_matter_question(db, context.tenant_id, query.matter_id, query.document_id, query.question)

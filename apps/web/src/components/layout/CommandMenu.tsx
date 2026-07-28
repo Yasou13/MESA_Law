@@ -60,28 +60,7 @@ export function CommandMenu() {
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
           
-          <CommandGroup heading="Recent Matters">
-            <CommandItem onSelect={() => runCommand(() => router.push('/matters/1'))}>
-              <Briefcase className="mr-2 h-4 w-4 text-[var(--color-lila-500)]" />
-              <span>Smith v. Jones (IP Dispute)</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push('/matters/2'))}>
-              <Briefcase className="mr-2 h-4 w-4 text-[var(--color-lila-500)]" />
-              <span>TechCorp Merger</span>
-            </CommandItem>
-          </CommandGroup>
-          
-          <CommandSeparator />
-          
           <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => runCommand(() => router.push('/matters/1/research'))}>
-              <Search className="mr-2 h-4 w-4" />
-              <span>Start Legal Research</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push('/qa'))}>
-              <Smile className="mr-2 h-4 w-4" />
-              <span>Ask Global AI</span>
-            </CommandItem>
             <CommandItem onSelect={() => runCommand(() => router.push('/drafts'))}>
               <FileText className="mr-2 h-4 w-4" />
               <span>Create New Draft</span>

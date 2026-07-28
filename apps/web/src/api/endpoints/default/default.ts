@@ -24,15 +24,21 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ConflictCheckRequest,
+  ConflictCheckResponse,
   DocumentResponse,
+  ElevateRoleParams,
   FirmCreateRequest,
   FirmResponse,
   HTTPValidationError,
   MatterCreate,
   MatterQABody,
   MatterResponse,
+  OverrideConflictParams,
+  OverrideConflictRequest,
   ParsedDocumentResponse,
   ParsedPageResponse,
+  RoleElevationRequest,
   UploadIntentRequest,
   UploadIntentResponse
 } from '../../models';
@@ -265,19 +271,12 @@ export const useCreateFirm = <TError = HTTPValidationError,
   status: 200
 }
 
-export type listFirmMembersResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
 export type listFirmMembersResponseSuccess = (listFirmMembersResponse200) & {
   headers: Headers;
 };
-export type listFirmMembersResponseError = (listFirmMembersResponse422) & {
-  headers: Headers;
-};
+;
 
-export type listFirmMembersResponse = (listFirmMembersResponseSuccess | listFirmMembersResponseError)
+export type listFirmMembersResponse = (listFirmMembersResponseSuccess)
 
 export const getListFirmMembersUrl = () => {
 
@@ -312,7 +311,7 @@ export const getListFirmMembersQueryKey = () => {
     }
 
 
-export const getListFirmMembersQueryOptions = <TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListFirmMembersQueryOptions = <TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -331,10 +330,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListFirmMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listFirmMembers>>>
-export type ListFirmMembersQueryError = HTTPValidationError
+export type ListFirmMembersQueryError = unknown
 
 
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listFirmMembers>>,
@@ -344,7 +343,7 @@ export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMem
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listFirmMembers>>,
@@ -354,7 +353,7 @@ export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMem
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -362,7 +361,7 @@ export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMem
  * @summary List Firm Members
  */
 
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = HTTPValidationError>(
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -498,24 +497,118 @@ export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetai
 
 
 
-export type listMattersResponse200 = {
-  data: MatterResponse[]
+export type elevateRoleResponse200 = {
+  data: unknown
   status: 200
 }
 
-export type listMattersResponse422 = {
+export type elevateRoleResponse422 = {
   data: HTTPValidationError
   status: 422
+}
+
+export type elevateRoleResponseSuccess = (elevateRoleResponse200) & {
+  headers: Headers;
+};
+export type elevateRoleResponseError = (elevateRoleResponse422) & {
+  headers: Headers;
+};
+
+export type elevateRoleResponse = (elevateRoleResponseSuccess | elevateRoleResponseError)
+
+export const getElevateRoleUrl = (firmId: string,
+    userId: string,
+    params?: ElevateRoleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/firms/${firmId}/members/${userId}/role?${stringifiedParams}` : `/api/v1/firms/${firmId}/members/${userId}/role`
+}
+
+/**
+ * @summary Elevate Role
+ */
+export const elevateRole = async (firmId: string,
+    userId: string,
+    roleElevationRequest: RoleElevationRequest,
+    params?: ElevateRoleParams, options?: RequestInit): Promise<elevateRoleResponse> => {
+
+  return customInstance<elevateRoleResponse>(getElevateRoleUrl(firmId,userId,params),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(roleElevationRequest)
+  }
+);}
+
+
+
+
+
+export const getElevateRoleMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext> => {
+
+const mutationKey = ['elevateRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof elevateRole>>, {firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}> = (props) => {
+          const {firmId,userId,data,params} = props ?? {};
+
+          return  elevateRole(firmId,userId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ElevateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof elevateRole>>>
+    export type ElevateRoleMutationBody = RoleElevationRequest
+    export type ElevateRoleMutationError = HTTPValidationError
+
+    /**
+ * @summary Elevate Role
+ */
+export const useElevateRole = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof elevateRole>>,
+        TError,
+        {firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams},
+        TContext
+      > => {
+      return useMutation(getElevateRoleMutationOptions(options), queryClient);
+    }
+    export type listMattersResponse200 = {
+  data: MatterResponse[]
+  status: 200
 }
 
 export type listMattersResponseSuccess = (listMattersResponse200) & {
   headers: Headers;
 };
-export type listMattersResponseError = (listMattersResponse422) & {
-  headers: Headers;
-};
+;
 
-export type listMattersResponse = (listMattersResponseSuccess | listMattersResponseError)
+export type listMattersResponse = (listMattersResponseSuccess)
 
 export const getListMattersUrl = () => {
 
@@ -550,7 +643,7 @@ export const getListMattersQueryKey = () => {
     }
 
 
-export const getListMattersQueryOptions = <TData = Awaited<ReturnType<typeof listMatters>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListMattersQueryOptions = <TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -569,10 +662,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListMattersQueryResult = NonNullable<Awaited<ReturnType<typeof listMatters>>>
-export type ListMattersQueryError = HTTPValidationError
+export type ListMattersQueryError = unknown
 
 
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = HTTPValidationError>(
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMatters>>,
@@ -582,7 +675,7 @@ export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = HTTPValidationError>(
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listMatters>>,
@@ -592,7 +685,7 @@ export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = HTTPValidationError>(
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -600,7 +693,7 @@ export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, 
  * @summary List Matters
  */
 
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = HTTPValidationError>(
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -885,6 +978,194 @@ export const useMatterQA = <TError = HTTPValidationError,
       > => {
       return useMutation(getMatterQAMutationOptions(options), queryClient);
     }
+    export type conflictCheckResponse200 = {
+  data: ConflictCheckResponse
+  status: 200
+}
+
+export type conflictCheckResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type conflictCheckResponseSuccess = (conflictCheckResponse200) & {
+  headers: Headers;
+};
+export type conflictCheckResponseError = (conflictCheckResponse422) & {
+  headers: Headers;
+};
+
+export type conflictCheckResponse = (conflictCheckResponseSuccess | conflictCheckResponseError)
+
+export const getConflictCheckUrl = () => {
+
+
+
+
+  return `/api/v1/matters/conflict-check`
+}
+
+/**
+ * @summary Check Conflicts
+ */
+export const conflictCheck = async (conflictCheckRequest: ConflictCheckRequest, options?: RequestInit): Promise<conflictCheckResponse> => {
+
+  return customInstance<conflictCheckResponse>(getConflictCheckUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(conflictCheckRequest)
+  }
+);}
+
+
+
+
+
+export const getConflictCheckMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext> => {
+
+const mutationKey = ['conflictCheck'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof conflictCheck>>, {data: ConflictCheckRequest}> = (props) => {
+          const {data} = props ?? {};
+
+          return  conflictCheck(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConflictCheckMutationResult = NonNullable<Awaited<ReturnType<typeof conflictCheck>>>
+    export type ConflictCheckMutationBody = ConflictCheckRequest
+    export type ConflictCheckMutationError = HTTPValidationError
+
+    /**
+ * @summary Check Conflicts
+ */
+export const useConflictCheck = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof conflictCheck>>,
+        TError,
+        {data: ConflictCheckRequest},
+        TContext
+      > => {
+      return useMutation(getConflictCheckMutationOptions(options), queryClient);
+    }
+    export type overrideConflictResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type overrideConflictResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type overrideConflictResponseSuccess = (overrideConflictResponse200) & {
+  headers: Headers;
+};
+export type overrideConflictResponseError = (overrideConflictResponse422) & {
+  headers: Headers;
+};
+
+export type overrideConflictResponse = (overrideConflictResponseSuccess | overrideConflictResponseError)
+
+export const getOverrideConflictUrl = (matterId: string,
+    params?: OverrideConflictParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/matters/${matterId}/override-conflict?${stringifiedParams}` : `/api/v1/matters/${matterId}/override-conflict`
+}
+
+/**
+ * @summary Override Conflict
+ */
+export const overrideConflict = async (matterId: string,
+    overrideConflictRequest: OverrideConflictRequest,
+    params?: OverrideConflictParams, options?: RequestInit): Promise<overrideConflictResponse> => {
+
+  return customInstance<overrideConflictResponse>(getOverrideConflictUrl(matterId,params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(overrideConflictRequest)
+  }
+);}
+
+
+
+
+
+export const getOverrideConflictMutationOptions = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext> => {
+
+const mutationKey = ['overrideConflict'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof overrideConflict>>, {matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}> = (props) => {
+          const {matterId,data,params} = props ?? {};
+
+          return  overrideConflict(matterId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OverrideConflictMutationResult = NonNullable<Awaited<ReturnType<typeof overrideConflict>>>
+    export type OverrideConflictMutationBody = OverrideConflictRequest
+    export type OverrideConflictMutationError = HTTPValidationError
+
+    /**
+ * @summary Override Conflict
+ */
+export const useOverrideConflict = <TError = HTTPValidationError,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof overrideConflict>>,
+        TError,
+        {matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams},
+        TContext
+      > => {
+      return useMutation(getOverrideConflictMutationOptions(options), queryClient);
+    }
     export type createUploadIntentResponse200 = {
   data: UploadIntentResponse
   status: 200
@@ -1098,19 +1379,12 @@ export type listAllDocumentsResponse200 = {
   status: 200
 }
 
-export type listAllDocumentsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
 export type listAllDocumentsResponseSuccess = (listAllDocumentsResponse200) & {
   headers: Headers;
 };
-export type listAllDocumentsResponseError = (listAllDocumentsResponse422) & {
-  headers: Headers;
-};
+;
 
-export type listAllDocumentsResponse = (listAllDocumentsResponseSuccess | listAllDocumentsResponseError)
+export type listAllDocumentsResponse = (listAllDocumentsResponseSuccess)
 
 export const getListAllDocumentsUrl = () => {
 
@@ -1145,7 +1419,7 @@ export const getListAllDocumentsQueryKey = () => {
     }
 
 
-export const getListAllDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListAllDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1164,10 +1438,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAllDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAllDocuments>>>
-export type ListAllDocumentsQueryError = HTTPValidationError
+export type ListAllDocumentsQueryError = unknown
 
 
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAllDocuments>>,
@@ -1177,7 +1451,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAllDocuments>>,
@@ -1187,7 +1461,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1195,7 +1469,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
  * @summary List All Documents
  */
 
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = HTTPValidationError>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

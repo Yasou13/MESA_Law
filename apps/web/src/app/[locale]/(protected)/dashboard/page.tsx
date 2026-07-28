@@ -135,7 +135,7 @@ export default function DashboardPage() {
                 ) : (
                   upcomingDeadlines.map(d => (
                     <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.title}</TableCell>
+                      <TableCell className="font-medium">{d.description}</TableCell>
                       <TableCell className="text-orange-500">{new Date(d.due_date).toLocaleDateString()}</TableCell>
                     </TableRow>
                   ))

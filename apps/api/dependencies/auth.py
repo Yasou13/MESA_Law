@@ -47,7 +47,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             algorithms=["RS256"], 
             audience=[settings.keycloak_client_id, "account"],
             issuer=settings.keycloak_issuer,
-            options={"verify_aud": True, "verify_exp": True, "verify_iss": True}
+            options={"verify_aud": True, "verify_exp": True, "verify_iss": True, "verify_signature": True}
         )
         
         user_id = payload.get("sub")
@@ -65,13 +65,6 @@ async def require_recent_auth(
     request: Request,
     max_age_seconds: int = 300
 ) -> None:
-    # --- DEV-MODE BYPASS ---
-    auth_header = request.headers.get("authorization")
-    is_mock_token = auth_header == "Bearer mock-e2e-token"
-    if settings.test_auth_enabled and settings.env == "test" and (not auth_header or is_mock_token):
-        return
-    # --- END DEV-MODE BYPASS ---
-    
     cred = await security(request)
     user = await get_current_user(cred)
     auth_time = user.get("auth_time")
@@ -83,86 +76,52 @@ async def require_recent_auth(
 
 async def setup_tenant_context(
     request: Request,
-    x_tenant_id: str | None = Header(default=None, alias="x-tenant-id"),
     db: AsyncSession = Depends(get_db)
 ) -> RequestContext:
-    # --- DEV-MODE BYPASS ---
-    # In test environments, allow unauthenticated access
-    # with a synthetic context for E2E testing without Keycloak.
-    auth_header = request.headers.get("authorization")
-    is_mock_token = auth_header == "Bearer mock-e2e-token"
-    if settings.test_auth_enabled and settings.env == "test" and (not auth_header or is_mock_token):
-        dev_tenant = x_tenant_id or "dev-tenant-default"
-        set_tenant_id(dev_tenant)
-        try:
-            # Create dev firm if not exists
-            res = await db.execute(text("SELECT id FROM firms WHERE id = :id"), {"id": dev_tenant})
-            if not res.scalar():
-                await db.execute(
-                    text("INSERT INTO firms (id, name, created_at, updated_at, version_id) VALUES (:id, :name, NOW(), NOW(), 1) ON CONFLICT (id) DO NOTHING"),
-                    {"id": dev_tenant, "name": "Dev Default Firm"}
-                )
-                await db.commit()
-                
-            await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(dev_tenant)})
-        except Exception:
-            await db.rollback()
-            # Try setting config again after rollback
-            try:
-                await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(dev_tenant)})
-            except Exception:
-                pass
-        return RequestContext(
-            tenant_id=dev_tenant,
-            principal_id="dev-user-id",
-            roles={"FIRM_ADMIN"}
-        )
-    # --- END DEV-MODE BYPASS ---
 
-    user = await get_current_user(
-        await security(request)
-    )
+    user = await get_current_user(await security(request))
     keycloak_id = user["id"]
     
-    # Check User
+    # Resolve user
     result = await db.execute(select(User).where(User.keycloak_id == keycloak_id))
     db_user = result.scalars().first()
     
     if not db_user:
         raise HTTPException(status_code=403, detail="User not registered in the system")
         
-    x_tenant_id = tenant_id or request.cookies.get("mesa_tenant_id")
+    # Phase 2: Resolve server-side active firm from secure cookie
+    cookie_tenant_id = request.cookies.get("mesa_active_firm_id")
     
-    # Check Membership with active status and deterministic ordering
+    # Get active memberships
     query = select(Membership).where(
         Membership.user_id == db_user.id,
         Membership.is_active == True
     ).order_by(Membership.created_at.asc())
     
-    if x_tenant_id:
-        query = query.where(Membership.firm_id == x_tenant_id)
+    if cookie_tenant_id:
+        query = query.where(Membership.firm_id == cookie_tenant_id)
         
     mem_result = await db.execute(query)
     membership = mem_result.scalars().first()
     
     if not membership:
-        if x_tenant_id:
-            raise HTTPException(status_code=403, detail=f"User is not an active member of requested firm {x_tenant_id}")
-        raise HTTPException(status_code=403, detail="User is not an active member of any firm")
+        if cookie_tenant_id:
+            raise HTTPException(status_code=403, detail=f"User is not an active member of the requested firm context.")
+        raise HTTPException(status_code=403, detail="User is not an active member of any firm.")
         
-    tenant_id = membership.firm_id
+    active_firm_id = membership.firm_id
     firm_role = membership.role
     
-    set_tenant_id(tenant_id)
+    set_tenant_id(active_firm_id)
     try:
-        await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(tenant_id)})
+        await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(active_firm_id)})
     except Exception as e:
         import logging
         logging.error(f"Failed to execute set_config for app.current_tenant: {e}")
         raise HTTPException(status_code=500, detail="Failed to initialize tenant security context") from e
 
     return RequestContext(
-        tenant_id=tenant_id,
+        tenant_id=active_firm_id,
         principal_id=db_user.id,
         roles={firm_role} if firm_role else user["roles"]
     )

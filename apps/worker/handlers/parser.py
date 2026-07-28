@@ -117,7 +117,6 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                 ]
                 parsed_text = "Mock parsed content for page 1."
                 
-            # Create ParsedDocument
             parsed_doc = ParsedDocument(
                 tenant_id=tenant_id,
                 document_id=document_id,
@@ -126,6 +125,13 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
                 status="completed"
             )
             session.add(parsed_doc)
+            
+            # Update Revision Status
+            from apps.api.models.document import DocumentRevision
+            rev = await session.get(DocumentRevision, revision_id)
+            if rev:
+                rev.scan_status = "READY"
+                
             await session.flush()
             
             # Phase 7: Mark old citations as STALE_REVISION

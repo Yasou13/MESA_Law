@@ -11,8 +11,12 @@ def sanitize_text(v: str) -> str:
 
 class MatterCreate(BaseModel):
     title: str = Field(..., min_length=3, max_length=255, description="The title of the matter")
+    internal_reference: str | None = Field(None, description="Internal reference ID")
+    client_name: str | None = Field(None, description="Client name")
     jurisdiction: str | None = Field(None, description="The jurisdiction of the matter")
+    case_type: str | None = Field(None, description="Type of case")
     confidentiality_level: str = Field("standard", description="Confidentiality level")
+    ai_processing_policy: str = Field("standard", description="AI processing policy")
     
     @field_validator('title')
     @classmethod
@@ -22,7 +26,16 @@ class MatterCreate(BaseModel):
 class MatterResponse(BaseModel):
     id: str
     title: str
+    internal_reference: str | None = None
     status: str
+    client_name: str | None = None
+    jurisdiction: str | None = None
+    case_type: str | None = None
+    confidentiality_level: str
+    ai_processing_policy: str
+    opened_at: str | None = None
+    closed_at: str | None = None
+    access_scope: str | None = None
 
 class UploadIntentRequest(BaseModel):
     matter_id: str

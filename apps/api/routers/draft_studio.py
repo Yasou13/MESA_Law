@@ -1,13 +1,17 @@
+from apps.api.core.database import get_db
+from apps.api.core.models import RequestContext
+from apps.api.core.policies import (
+    DraftAccessPolicy,
+    ExportAccessPolicy,
+    MatterAccessPolicy,
+)
+from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
+from apps.api.models.draft import Draft
+from apps.api.models.queue import Job
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from apps.api.core.database import get_db
-from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.draft import Draft
-from apps.api.models.queue import Job
-from apps.api.core.policies import DraftAccessPolicy, ExportAccessPolicy, MatterAccessPolicy
 
 router = APIRouter(prefix="/draft-studio", tags=["draft-studio"])
 
@@ -170,7 +174,8 @@ async def approve_draft(
     request: Request,
     draft_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_recent_auth)
 ):
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
@@ -178,6 +183,14 @@ async def approve_draft(
         
     DraftAccessPolicy.can_approve_external(context)
         
+    from apps.api.models.draft import DraftCitation
+    from sqlalchemy import select
+    stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id)
+    citations = await db.execute(stmt)
+    for citation in citations.scalars():
+        if citation.verification_state in ["unverified", "STALE_REVISION"]:
+            raise HTTPException(status_code=403, detail=f"Cannot approve draft. Contains {citation.verification_state} citations.")
+            
     draft.status = "APPROVED_FOR_EXTERNAL_USE"
     await db.commit()
     return {"status": draft.status}
@@ -209,6 +222,12 @@ async def export_draft(
         
     if draft.status != "APPROVED_FOR_EXTERNAL_USE":
         raise HTTPException(status_code=403, detail="Draft must be APPROVED_FOR_EXTERNAL_USE to be exported")
+        
+    from apps.api.models.draft import DraftCitation
+    stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id, DraftCitation.verification_state == "unverified")
+    res = await db.execute(stmt)
+    if res.scalars().first():
+        raise HTTPException(status_code=403, detail="Draft cannot be exported while containing UNVERIFIED citations")
         
     job = Job(
         type="EXPORT_DRAFT",

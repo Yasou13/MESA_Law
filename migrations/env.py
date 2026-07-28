@@ -15,12 +15,12 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 # Import all models so Alembic can detect them for autogenerate
-import apps.api.core.idempotency  # noqa
-import apps.api.models.benchmark  # noqa
-import apps.api.models.document  # noqa
-import apps.api.models.domain  # noqa
-import apps.api.models.parser  # noqa
-import apps.api.models.queue  # noqa
+import apps.api.core.idempotency
+import apps.api.models.benchmark
+import apps.api.models.document
+import apps.api.models.domain
+import apps.api.models.parser
+import apps.api.models.queue
 import apps.api.models.review  # noqa
 from apps.api.core.models import Base
 

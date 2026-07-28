@@ -1,9 +1,10 @@
-import os
-import pytest
 from unittest.mock import patch
+
+import pytest
 from apps.api.core.config import settings
 from apps.api.core.extraction import get_extraction_adapter
 from apps.worker.core.queue import Worker
+
 
 def test_mock_extraction_prohibited_in_production(monkeypatch):
     monkeypatch.setenv("MESA_LAW_EXTRACTION_ADAPTER", "mock")

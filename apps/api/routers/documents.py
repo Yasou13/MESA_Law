@@ -1,23 +1,22 @@
-import os
-import uuid6
 import hashlib
+
+import uuid6
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
+from apps.api.core.policies import DocumentAccessPolicy
+from apps.api.core.ratelimit import limiter
 from apps.api.core.storage import storage_service
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.document import Document, DocumentRevision, DocumentState
+from apps.api.models.queue import Job
 from apps.api.schemas.api import (
     DocumentResponse,
     UploadIntentRequest,
     UploadIntentResponse,
 )
-from apps.api.core.policies import DocumentAccessPolicy
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from apps.api.models.queue import Job
-
-from apps.api.core.ratelimit import limiter
 
 router = APIRouter()
 
@@ -184,8 +183,9 @@ async def complete_upload(
         if not file_bytes:
             raise HTTPException(status_code=400, detail="Could not read file data from storage")
             
-        import zipfile
         import io
+        import zipfile
+
         import fitz
 
         # MIME Sniffing & Extension mismatch

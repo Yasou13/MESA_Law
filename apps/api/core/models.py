@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import DateTime, Integer, String, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
 from .utils import generate_uuid, utc_now
@@ -17,6 +17,9 @@ class AuditMixin:
     created_by: Mapped[str | None] = mapped_column(String, nullable=True)
     updated_by: Mapped[str | None] = mapped_column(String, nullable=True)
     version_id: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    legal_hold: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     @declared_attr
     def __mapper_args__(cls):

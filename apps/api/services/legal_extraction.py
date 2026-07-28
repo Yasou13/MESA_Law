@@ -1,6 +1,7 @@
 """Legal Extraction — extracts structured entities (claims, dates, parties) from parsed text using heuristics and regex."""
 import logging
 import re
+
 from apps.api.core.extraction import LegalExtractionAdapter
 
 logger = logging.getLogger("api.services.legal_extraction")

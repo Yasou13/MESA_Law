@@ -1,17 +1,16 @@
-from pydantic import BaseModel
 from apps.api.core.database import get_db
 from apps.api.core.factory import get_intelligence_adapter
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context
+from apps.api.core.policies import AdminAccessPolicy, MatterAccessPolicy
+from apps.api.core.ratelimit import limiter
+from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
 from apps.api.models.domain import Matter
 from apps.api.schemas.api import MatterCreate, MatterResponse
-from apps.api.core.policies import MatterAccessPolicy, AdminAccessPolicy
 from apps.api.services.mesa_sync import MesaSyncService
 from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.api.core.ratelimit import limiter
 
 router = APIRouter()
 
@@ -27,8 +26,9 @@ async def list_matters(
     matters = result.scalars().all()
     return [{"id": m.id, "title": m.title, "status": m.status} for m in matters]
 
-from fastapi import Header
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
+from fastapi import Header
+
 
 @router.post("", response_model=MatterResponse, operation_id="createMatter", status_code=201)
 @limiter.limit("30/minute")
@@ -94,6 +94,7 @@ async def rebuild_matter_mesa(
 
 from apps.api.core.qa import ask_matter_question
 
+
 @router.post("/{matter_id}/qa", operation_id="matterQA")
 @limiter.limit("20/minute")
 async def matter_qa_endpoint(
@@ -136,8 +137,8 @@ async def check_conflicts(
 ):
     MatterAccessPolicy.can_read(context)
     
-    from sqlalchemy import select, or_, and_
-    from apps.api.models.domain import MatterParty, Matter
+    from apps.api.models.domain import Matter, MatterParty
+    from sqlalchemy import select
     
     results = []
     for party_name in payload.party_names:
@@ -158,3 +159,34 @@ async def check_conflicts(
             ))
             
     return ConflictCheckResponse(conflicts=results, has_conflicts=len(results) > 0)
+
+class OverrideConflictRequest(BaseModel):
+    reason: str
+
+@router.post("/{matter_id}/override-conflict", operation_id="overrideConflict")
+@limiter.limit("5/minute")
+async def override_conflict(
+    request: Request,
+    matter_id: str,
+    payload: OverrideConflictRequest,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_recent_auth)
+):
+    MatterAccessPolicy.can_create(context)
+    
+    # Normally we'd log the reason to the matter metadata or an audit trail.
+    matter = await db.get(Matter, matter_id)
+    if not matter or matter.tenant_id != context.tenant_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Matter not found")
+        
+    # Mark as overridden in metadata
+    if not matter.metadata_info:
+        matter.metadata_info = {}
+    matter.metadata_info["conflict_overridden"] = True
+    matter.metadata_info["conflict_override_reason"] = payload.reason
+    matter.metadata_info["conflict_override_by"] = context.principal_id
+    
+    await db.commit()
+    return {"status": "success", "message": "Conflict check overridden"}

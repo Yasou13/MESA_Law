@@ -2,6 +2,7 @@ from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+
 class Draft(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "drafts"
     tenant_id: Mapped[str] = mapped_column(ForeignKey("firms.id"), nullable=False, index=True)

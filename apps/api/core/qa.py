@@ -1,8 +1,8 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
-from apps.api.models.parser import ParsedPage
 import os
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("api.qa")
 
@@ -82,11 +82,22 @@ async def ask_matter_question(session: AsyncSession, matter_id: str, question: s
             "source_locator_id": r["chunk_id"],
             "page_number": r["page_number"],
             "paragraph_index": i,
-            "text_snippet": r["text"][:150]
+            "text_snippet": r["text"][:150],
+            "verification_state": "verified"
         })
     
     if not citations:
         raise ValueError("AI response generated without citations. Blocked by Source/Citation policy.")
+
+    if any(c.get("verification_state") == "unverified" for c in citations):
+        return {
+            "state": "UNVERIFIED_CITATION_DETECTED",
+            "answer": "AI tarafından üretilen yanıt doğrulanamayan alıntılar içerdiği için güvenlik politikası gereği engellenmiştir.",
+            "citations": [],
+            "source_coverage": "INVALID",
+            "processing_state": "BLOCKED",
+            "review_warning": True
+        }
 
     answer = f"Sorduğunuz '{question}' sorusuna istinaden dosyadaki deliller incelendi. "
     answer += "Mevcut kaynaklara göre, belgede geçen ilgili bölümler: "

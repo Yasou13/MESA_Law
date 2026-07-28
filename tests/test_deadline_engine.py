@@ -1,8 +1,10 @@
 import datetime
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+from apps.api.models.deadline import ApprovedDeadline, DeadlineCandidate
 from apps.api.services.deadline_engine import DeadlineEngine
-from apps.api.models.deadline import DeadlineCandidate, ApprovedDeadline
+
 
 def test_is_adli_tatil():
     assert DeadlineEngine.is_adli_tatil(datetime.date(2026, 7, 19)) is False

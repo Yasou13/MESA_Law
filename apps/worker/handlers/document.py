@@ -1,12 +1,12 @@
 import asyncio
 import logging
-import struct
 import os
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+import struct
+
+from apps.api.core.storage import storage_service
 from apps.api.models.document import DocumentRevision
 from apps.api.models.queue import Job
-from apps.api.core.storage import storage_service
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.document")
 

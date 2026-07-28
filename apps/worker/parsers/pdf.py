@@ -1,6 +1,4 @@
 import asyncio
-import os
-import tempfile
 from collections.abc import AsyncGenerator
 
 import fitz  # PyMuPDF
@@ -14,10 +12,12 @@ except ImportError:
 
 from .base import DocumentParser
 
+
 def _run_ocr_isolated(img_bytes: bytes) -> str:
+    import io
+
     import pytesseract
     from PIL import Image
-    import io
     return pytesseract.image_to_string(Image.open(io.BytesIO(img_bytes)), lang='tur+eng')
 
 

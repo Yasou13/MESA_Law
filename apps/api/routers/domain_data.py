@@ -1,12 +1,17 @@
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
+from apps.api.core.ratelimit import limiter
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.domain import Claim, EvidenceItem, MatterParty, MatterEvent, ClaimEvidenceLink
-from fastapi import APIRouter, Depends
+from apps.api.models.domain import (
+    Claim,
+    ClaimEvidenceLink,
+    EvidenceItem,
+    MatterEvent,
+    MatterParty,
+)
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from apps.api.core.ratelimit import limiter
-from fastapi import Request
 
 router = APIRouter()
 

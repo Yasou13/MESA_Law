@@ -1,8 +1,9 @@
-from apps.api.core.models import Base, AuditMixin
-from sqlalchemy import ForeignKey, String, JSON
-from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
-from sqlalchemy import DateTime, func
+
+from apps.api.core.models import AuditMixin, Base
+from sqlalchemy import JSON, DateTime, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column
+
 
 class AuditEvent(Base, AuditMixin):
     __tablename__ = "audit_events"

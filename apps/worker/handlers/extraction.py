@@ -1,9 +1,9 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from apps.api.models.parser import ParsedDocument, ParsedPage
-from apps.api.models.domain import MatterParty, Claim
+
 from apps.api.core.extraction import get_extraction_adapter
+from apps.api.models.parser import ParsedDocument, ParsedPage
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.extraction")
 
@@ -38,8 +38,9 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         logger.warning(f"ParsedDocument {parsed_document_id} has no text content")
         return
         
-    from apps.api.models.review import ReviewItem, ExtractionSuggestion
     import hashlib
+
+    from apps.api.models.review import ExtractionSuggestion, ReviewItem
 
     adapter = get_extraction_adapter()
     matter_id = parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id")
@@ -176,7 +177,6 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
             session.add(review_item)
 
     from apps.api.models.audit import AuditEvent, Notification
-    from apps.api.models.domain import User
     
     # Audit Event
     audit = AuditEvent(

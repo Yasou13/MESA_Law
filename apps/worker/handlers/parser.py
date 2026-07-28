@@ -2,12 +2,12 @@ import asyncio
 import logging
 import os
 import tempfile
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from apps.api.models.document import Document, DocumentRevision
-from apps.api.models.parser import ParsedDocument, ParsedPage
+
 from apps.api.core.config import settings
 from apps.api.core.storage import storage_service
+from apps.api.models.document import Document
+from apps.api.models.parser import ParsedDocument, ParsedPage
+from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
     from llama_parse import LlamaParse
@@ -127,6 +127,13 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             )
             session.add(parsed_doc)
             await session.flush()
+            
+            # Phase 7: Mark old citations as STALE_REVISION
+            from sqlalchemy import text
+            await session.execute(
+                text("UPDATE draft_citations SET verification_state = 'STALE_REVISION' WHERE document_id = :doc_id AND document_revision_id != :new_rev AND verification_state != 'STALE_REVISION'"),
+                {"doc_id": document_id, "new_rev": revision_id}
+            )
             
             # Save pages and chunks
             from apps.api.models.parser import DocumentChunk

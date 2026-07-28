@@ -1,11 +1,8 @@
-import asyncio
 import pytest
-from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from apps.api.core.database import AsyncSessionLocal
-from apps.api.models.review import AuditLog, ReviewItem
+from apps.api.models.review import ReviewItem
+from sqlalchemy import select
+
 
 @pytest.mark.asyncio
 async def test_review_item_model_exists():

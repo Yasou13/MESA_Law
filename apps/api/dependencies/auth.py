@@ -1,18 +1,17 @@
-import urllib.request
 import json
 import time
-from typing import Optional
-from jose import jwt, JWTError
-from fastapi import Depends, Header, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
+import urllib.request
 
 from apps.api.core.config import settings
+from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.rls import set_tenant_id
-from apps.api.core.database import get_db
-from apps.api.models.domain import User, Membership
+from apps.api.models.domain import Membership, User
+from fastapi import Depends, Header, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 security = HTTPBearer()
 
@@ -28,7 +27,7 @@ def get_jwks(force_refresh: bool = False) -> dict:
             data = json.loads(response.read().decode("utf-8"))
             _jwks_cache = {"keys": data.get("keys", []), "expires_at": now + 300}
             return _jwks_cache
-    except Exception as e:
+    except Exception:
         if _jwks_cache["keys"]:
             return _jwks_cache
         return {"keys": []}
@@ -58,13 +57,33 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         realm_access = payload.get("realm_access", {})
         roles = realm_access.get("roles", [])
         
-        return {"id": user_id, "roles": set(roles), "email": payload.get("email")}
+        return {"id": user_id, "roles": set(roles), "email": payload.get("email"), "auth_time": payload.get("auth_time")}
     except JWTError as e:
         raise HTTPException(status_code=401, detail="Invalid authentication credentials") from e
 
+async def require_recent_auth(
+    request: Request,
+    max_age_seconds: int = 300
+) -> None:
+    # --- DEV-MODE BYPASS ---
+    auth_header = request.headers.get("authorization")
+    is_mock_token = auth_header == "Bearer mock-e2e-token"
+    if settings.test_auth_enabled and settings.env == "test" and (not auth_header or is_mock_token):
+        return
+    # --- END DEV-MODE BYPASS ---
+    
+    cred = await security(request)
+    user = await get_current_user(cred)
+    auth_time = user.get("auth_time")
+    if not auth_time:
+        raise HTTPException(status_code=401, detail="auth_time claim missing in token, re-authentication required")
+    
+    if time.time() - auth_time > max_age_seconds:
+        raise HTTPException(status_code=401, detail="Recent authentication required")
+
 async def setup_tenant_context(
     request: Request,
-    x_tenant_id: Optional[str] = Header(default=None, alias="x-tenant-id"),
+    x_tenant_id: str | None = Header(default=None, alias="x-tenant-id"),
     db: AsyncSession = Depends(get_db)
 ) -> RequestContext:
     # --- DEV-MODE BYPASS ---
@@ -86,7 +105,7 @@ async def setup_tenant_context(
                 await db.commit()
                 
             await db.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(dev_tenant)})
-        except Exception as e:
+        except Exception:
             await db.rollback()
             # Try setting config again after rollback
             try:

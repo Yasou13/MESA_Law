@@ -1,7 +1,8 @@
 import asyncio
-import sys
-from sqlalchemy.ext.asyncio import create_async_engine
+
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+
 
 async def create_roles():
     url = "postgresql+psycopg://mesa:mesa@127.0.0.1:5432/mesa_law"

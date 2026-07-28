@@ -1,9 +1,10 @@
+
 import pytest
-import asyncio
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy import text
-from apps.api.models.domain import Matter
 from apps.api.core.rls import set_tenant_id
+from apps.api.models.domain import Matter
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
 
 @pytest.mark.asyncio
 async def test_tenant_rls_isolation():
@@ -12,8 +13,9 @@ async def test_tenant_rls_isolation():
     su_engine = create_async_engine(su_url)
     su_session = async_sessionmaker(su_engine, expire_on_commit=False)()
     
-    from apps.api.models.domain import Firm
     import uuid
+
+    from apps.api.models.domain import Firm
     tenant_a = str(uuid.uuid4())
     tenant_b = str(uuid.uuid4())
     

@@ -1,9 +1,10 @@
 import os
 import socket
-from fastapi import APIRouter, Depends, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+
 from apps.api.core.database import get_db
+from fastapi import APIRouter, Depends, Response
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["System"])
 

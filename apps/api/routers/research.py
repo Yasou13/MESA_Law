@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy import select, or_
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.core.ratelimit import limiter
+from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.research import LegalSource
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy import or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["research"])
 
 from pydantic import BaseModel
+
 
 class ResearchRequest(BaseModel):
     matter_id: str

@@ -5,7 +5,6 @@ from apps.api.core.ports.intelligence import (
     MesaIntelligencePort,
     OperationState,
 )
-from apps.api.models.parser import ParsedDocument, ParsedPage
 from sqlalchemy import func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,9 +15,10 @@ class PostgresLexicalAdapter(MesaIntelligencePort):
         self.session = session
 
     async def query(self, query: IntelligenceQuery) -> IntelligenceResponse:
+        import time
+
         from apps.api.core.observability import get_meter
         from opentelemetry import trace
-        import time
 
         tracer = trace.get_tracer(__name__)
         meter = get_meter("mesa.intelligence")

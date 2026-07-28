@@ -1,43 +1,44 @@
+from apps.api.models.audit import AuditEvent, Notification
+from apps.api.models.deadline import ApprovedDeadline, DeadlineCandidate, DeadlineRule
+from apps.api.models.domain import Claim, EvidenceItem, LegalAssertion, MatterParty
+from apps.api.models.draft import Draft, DraftCitation, DraftRevision
+from apps.api.models.research import LegalSource, SourcePackage
+
 from .benchmark import BenchmarkDataset, BenchmarkItem, GoldAnnotation
 from .document import Document, DocumentRevision
 from .domain import Firm, Matter, Membership, User
 from .parser import ParsedDocument, ParsedPage
 from .queue import Job, JobAttempt, Outbox
-from .review import AuditLog, ReviewItem, ExtractionSuggestion
-from apps.api.models.domain import Claim, EvidenceItem, LegalAssertion, MatterParty
-from apps.api.models.research import SourcePackage, LegalSource
-from apps.api.models.deadline import DeadlineRule, DeadlineCandidate, ApprovedDeadline
-from apps.api.models.draft import Draft, DraftRevision, DraftCitation
-from apps.api.models.audit import AuditEvent, Notification
+from .review import AuditLog, ExtractionSuggestion, ReviewItem
 
 __all__ = [
-    "Firm",
-    "User",
-    "Membership",
-    "Matter",
-    "MatterParty",
+    "ApprovedDeadline",
+    "AuditEvent",
+    "AuditLog",
     "Claim",
-    "EvidenceItem",
-    "LegalAssertion",
+    "DeadlineCandidate",
+    "DeadlineRule",
     "Document",
     "DocumentRevision",
+    "Draft",
+    "DraftCitation",
+    "DraftRevision",
+    "EvidenceItem",
+    "ExtractionSuggestion",
+    "Firm",
+    "Job",
+    "LegalAssertion",
+    "LegalSource",
+    "Matter",
+    "MatterParty",
+    "Membership",
+    "Notification",
+    "Outbox",
     "ParsedDocument",
     "ParsedPage",
-    "ReviewTask",
     "ReviewComment",
-    "AuditLog",
     "ReviewItem",
-    "ExtractionSuggestion",
-    "Job",
-    "Outbox",
+    "ReviewTask",
     "SourcePackage",
-    "LegalSource",
-    "DeadlineRule",
-    "DeadlineCandidate",
-    "ApprovedDeadline",
-    "Draft",
-    "DraftRevision",
-    "DraftCitation",
-    "AuditEvent",
-    "Notification",
+    "User",
 ]

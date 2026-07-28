@@ -1,8 +1,10 @@
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, patch
-from apps.api.main import app
+
+import pytest
 from apps.api.core.database import get_db
+from apps.api.main import app
+from httpx import ASGITransport, AsyncClient
+
 
 @pytest.mark.asyncio
 async def test_health_live_probe():

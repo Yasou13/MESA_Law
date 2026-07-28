@@ -1,5 +1,7 @@
 import re
+
 from pydantic import BaseModel, Field, field_validator
+
 
 def sanitize_text(v: str) -> str:
     # Basic XSS prevention: remove script tags and on* attributes

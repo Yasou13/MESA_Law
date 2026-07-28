@@ -1,9 +1,9 @@
 import os
 import sys
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from apps.api.core.config import settings
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 redis_url = settings.redis_url
 

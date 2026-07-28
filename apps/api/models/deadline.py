@@ -1,8 +1,10 @@
-from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import ForeignKey, String, Date, Boolean, JSON, Float
-from sqlalchemy.orm import Mapped, mapped_column
 import enum
+
+from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+from sqlalchemy import JSON, Boolean, Date, Float, ForeignKey, String
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
+
 
 class DeadlineState(str, enum.Enum):
     POTENTIAL_DEADLINE = "POTENTIAL_DEADLINE"
@@ -40,8 +42,9 @@ class DeadlineRule(Base, AuditMixin, TenantAwareMixin):
     duration_unit: Mapped[str] = mapped_column(String, default="days", nullable=False) # days, weeks, months
     calculation_method: Mapped[str] = mapped_column(String, default="calendar_days", nullable=False) # calendar_days, business_days
     
-    from sqlalchemy import DateTime
     from datetime import datetime
+
+    from sqlalchemy import DateTime
     
     effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     effective_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -57,6 +60,10 @@ class DeadlineCandidate(Base, AuditMixin, TenantAwareMixin):
     matter_id: Mapped[str] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), nullable=False, index=True)
     
     rule_id: Mapped[str] = mapped_column(ForeignKey("deadline_rules.id"), nullable=True)
+    
+    trigger_event: Mapped[str | None] = mapped_column(String, nullable=True)
+    trigger_date: Mapped[Date | None] = mapped_column(Date, nullable=True)
+    calculation_trace: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
     calculated_date: Mapped[Date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=False)

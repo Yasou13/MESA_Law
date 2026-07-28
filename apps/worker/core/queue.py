@@ -86,9 +86,10 @@ class Worker:
             session.add(attempt)
             await session.commit()
             
-            from apps.api.core.observability import job_id_cv, tenant_id_cv, get_meter
-            from opentelemetry import trace
             import time
+
+            from apps.api.core.observability import get_meter, job_id_cv, tenant_id_cv
+            from opentelemetry import trace
             
             meter = get_meter("mesa.worker")
             duration_histogram = meter.create_histogram("job_processing_duration", description="Time spent processing a job")

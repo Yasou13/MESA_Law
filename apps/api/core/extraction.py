@@ -7,12 +7,10 @@ class LegalExtractionAdapter(ABC):
     @abstractmethod
     async def extract_claims(self, text: str) -> list[dict]:
         """Extract legal claims from text."""
-        pass
         
     @abstractmethod
     async def extract_parties(self, text: str) -> list[dict]:
         """Extract legal parties from text."""
-        pass
 
 class MockLegalExtractionAdapter(LegalExtractionAdapter):
     async def extract_claims(self, text: str) -> list[dict]:
@@ -46,6 +44,7 @@ class MockLegalExtractionAdapter(LegalExtractionAdapter):
         ]
 
 from apps.api.core.config import settings
+
 
 def get_extraction_adapter() -> LegalExtractionAdapter:
     import os

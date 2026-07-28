@@ -1,8 +1,10 @@
-from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+import enum
+
+from apps.api.core.models import AuditMixin, Base
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
-import enum
-from sqlalchemy import Enum as SQLEnum
+
 
 class LegalSourceStatus(str, enum.Enum):
     CURRENT = "CURRENT"
@@ -31,8 +33,9 @@ class LegalSource(Base, AuditMixin):
     chamber: Mapped[str] = mapped_column(String, nullable=True)
     decision_number: Mapped[str] = mapped_column(String, nullable=True)
     
-    from sqlalchemy import DateTime
     from datetime import datetime
+
+    from sqlalchemy import DateTime
     
     decision_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     effective_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

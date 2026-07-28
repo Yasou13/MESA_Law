@@ -1,10 +1,11 @@
+import enum
 from datetime import datetime
 
 from apps.api.core.models import AuditMixin, Base
 from sqlalchemy import JSON, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
-import enum
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, mapped_column
+
 
 class ReviewState(str, enum.Enum):
     PENDING = "PENDING"

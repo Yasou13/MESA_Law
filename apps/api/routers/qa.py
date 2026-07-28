@@ -1,12 +1,11 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.core.qa import ask_matter_question
 from apps.api.core.ratelimit import limiter
-from fastapi import Request
+from apps.api.dependencies.auth import setup_tenant_context
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/qa", tags=["qa"])
 

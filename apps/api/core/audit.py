@@ -1,5 +1,6 @@
-from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.models.audit import AuditEvent, Notification
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 async def log_audit_event(
     session: AsyncSession,

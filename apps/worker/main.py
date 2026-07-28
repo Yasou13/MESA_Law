@@ -2,22 +2,25 @@ import asyncio
 import logging
 import signal
 import sys
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.core.config import settings
 from apps.worker.core.queue import Worker
 from apps.worker.handlers.document import handle_scan_document
-from apps.worker.handlers.parser import handle_parse_document
+from apps.worker.handlers.export import handle_export_draft
 from apps.worker.handlers.extraction import handle_extract_legal_data
 from apps.worker.handlers.ocr import handle_ocr_document
-from apps.worker.handlers.export import handle_export_draft
-from apps.worker.handlers.sync import handle_sync_mesa_document, handle_publish_outbox, handle_build_lexical_index, handle_publish_review
+from apps.worker.handlers.parser import handle_parse_document
+from apps.worker.handlers.sync import (
+    handle_build_lexical_index,
+    handle_publish_outbox,
+    handle_publish_review,
+    handle_sync_mesa_document,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("worker")
 
-import os
 from apps.api.core.observability import setup_observability
+
 
 async def main():
     setup_observability(service_name="mesa-law-worker")

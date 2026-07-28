@@ -1,0 +1,15 @@
+{
+  "status": "PASS",
+  "commit": "bf852cbe",
+  "branch": "master",
+  "tests": {
+    "total": 27,
+    "passed": 26,
+    "skipped": 1,
+    "failed": 0
+  },
+  "lint": {
+    "remaining_warnings": 50,
+    "fatal_errors": 0
+  }
+}

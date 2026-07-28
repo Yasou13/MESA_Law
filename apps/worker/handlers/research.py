@@ -1,6 +1,7 @@
 import logging
+
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
 
 logger = logging.getLogger("worker.research")
 
@@ -34,10 +35,11 @@ async def handle_perform_legal_research(payload: dict, session: AsyncSession):
         return
         
     # 2. Add to ReviewQueue as LegalAssertion Drafts
-    from apps.api.models.review import ReviewItem, ExtractionSuggestion
-    import uuid6
-    import json
     import hashlib
+    import json
+
+    import uuid6
+    from apps.api.models.review import ExtractionSuggestion, ReviewItem
     
     def generate_idempotency_key(type_str: str, locator: str) -> str:
         raw = f"{matter_id}_research_{query}_{type_str}_{locator}"

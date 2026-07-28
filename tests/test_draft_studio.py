@@ -1,11 +1,12 @@
-import pytest
-from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, MagicMock
-from apps.api.main import app
-from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.core.models import RequestContext
+
+import pytest
 from apps.api.core.database import get_db
-from apps.api.models.draft import Draft
+from apps.api.core.models import RequestContext
+from apps.api.dependencies.auth import setup_tenant_context
+from apps.api.main import app
+from httpx import ASGITransport, AsyncClient
+
 
 class MockResult:
     def __init__(self, items=None):

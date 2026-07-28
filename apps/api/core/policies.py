@@ -1,11 +1,12 @@
-from typing import Set
-from apps.api.core.models import RequestContext
+
 from apps.api.core.errors import ProblemException
+from apps.api.core.models import RequestContext
 from apps.api.models.domain import Role
+
 
 class BasePolicy:
     @staticmethod
-    def _enforce(context: RequestContext, allowed: Set[Role], action: str):
+    def _enforce(context: RequestContext, allowed: set[Role], action: str):
         # Context roles might be strings if loaded from JWT, convert them safely
         # or compare with string values of Role.
         user_roles = {r for r in context.roles}

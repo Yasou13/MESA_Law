@@ -1,8 +1,9 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from apps.api.models.domain import Claim, MatterParty, LegalAssertion
+
+from apps.api.models.domain import Claim, LegalAssertion, MatterParty
 from apps.api.models.draft import Draft
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.draft")
 

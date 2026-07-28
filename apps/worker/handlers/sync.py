@@ -1,7 +1,8 @@
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+
 from apps.api.models.document import Document
+from sqlalchemy import text, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.sync")
 
@@ -11,10 +12,9 @@ async def handle_sync_mesa_document(payload: dict, session: AsyncSession):
         logger.error("Missing parsed_document_id in SYNC_MESA_DOCUMENT payload")
         return
         
-    from apps.api.models.parser import ParsedDocument
-    from apps.api.models.document import Document
-    from apps.api.services.mesa_sync import MesaSyncService
     from apps.api.core.factory import get_intelligence_adapter
+    from apps.api.models.parser import ParsedDocument
+    from apps.api.services.mesa_sync import MesaSyncService
     
     parsed_doc = await session.get(ParsedDocument, parsed_document_id)
     if not parsed_doc:
@@ -39,9 +39,8 @@ async def handle_sync_mesa_document(payload: dict, session: AsyncSession):
             await adapter.close()
 
 async def handle_publish_review(payload: dict, session: AsyncSession):
+    from apps.api.models.domain import Claim, MatterParty
     from apps.api.models.review import ReviewItem, ReviewState
-    from apps.api.models.domain import MatterParty, Claim
-    from sqlalchemy import select
     
     review_id = payload.get("review_id")
     if not review_id:
@@ -84,8 +83,9 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
             )
             session.add(claim)
         elif review.entity_type == "deadline":
-            from apps.api.models.deadline import DeadlineCandidate
             from datetime import datetime
+
+            from apps.api.models.deadline import DeadlineCandidate
             date_str = content.get("due_date", content.get("calculated_date"))
             calc_date = datetime.now().date()
             if date_str:
@@ -135,9 +135,13 @@ async def handle_build_lexical_index(payload: dict, session: AsyncSession):
 
 async def handle_sync_approved_reviews(payload: dict, session: AsyncSession):
     # Polling job that syncs approved ReviewItem items to canonical domain models
-    from apps.api.models.review import ReviewItem
-    from apps.api.models.domain import MatterParty, Claim, EvidenceItem, LegalAssertion, MatterEvent
     from apps.api.core.utils import utc_now
+    from apps.api.models.domain import (
+        Claim,
+        LegalAssertion,
+        MatterParty,
+    )
+    from apps.api.models.review import ReviewItem
     
     tenant_id = payload.get("tenant_id")
     matter_id = payload.get("matter_id") # Optional filter
@@ -205,8 +209,9 @@ async def handle_sync_approved_reviews(payload: dict, session: AsyncSession):
             session.add(la)
             
         elif r.entity_type == "deadline":
-            from apps.api.models.deadline import DeadlineCandidate, DeadlineRule
             import datetime
+
+            from apps.api.models.deadline import DeadlineCandidate, DeadlineRule
             
             # 1. Get or Create Deadline Rule
             rule_name = content.get("rule_name", "Unknown Rule")
@@ -243,7 +248,6 @@ async def handle_sync_approved_reviews(payload: dict, session: AsyncSession):
         
     if approved_items:
         from apps.api.models.audit import AuditEvent, Notification
-        from apps.api.models.domain import User
         
         # Audit
         audit = AuditEvent(

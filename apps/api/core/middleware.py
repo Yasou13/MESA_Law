@@ -4,13 +4,20 @@ from starlette.requests import Request
 from .utils import generate_uuid
 
 
+from .observability import trace_id_cv
+
 class TraceMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         trace_id = request.headers.get("X-Trace-Id") or generate_uuid()
         request.state.trace_id = trace_id
-        response = await call_next(request)
-        response.headers["X-Trace-Id"] = trace_id
-        return response
+        
+        token = trace_id_cv.set(trace_id)
+        try:
+            response = await call_next(request)
+            response.headers["X-Trace-Id"] = trace_id
+            return response
+        finally:
+            trace_id_cv.reset(token)
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -22,7 +29,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
 
-import asyncio
 from starlette.responses import JSONResponse
 
 _idempotency_locks = set()

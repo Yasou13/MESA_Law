@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
+from apps.api.core.policies import MatterAccessPolicy, ReviewAccessPolicy
 from apps.api.core.utils import utc_now
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.review import AuditLog, ReviewItem, ReviewState
@@ -9,11 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
-
-from apps.api.models.domain import MatterParty, Claim
-from apps.api.models.deadline import DeadlineCandidate
-from apps.api.core.policies import ReviewAccessPolicy, MatterAccessPolicy
 
 router = APIRouter(tags=["reviews"])
 

@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from typing import Optional
-
 from apps.api.core.database import get_db
 from apps.api.dependencies.auth import get_current_user
-from apps.api.models.domain import User, Membership
+from apps.api.models.domain import Membership, User
+from fastapi import APIRouter, Depends, HTTPException, Response
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/session", tags=["Session"])
 

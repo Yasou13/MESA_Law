@@ -1,19 +1,17 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from datetime import datetime, timezone
-import os
+from datetime import UTC, datetime
 
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.routers.system import get_dependencies
-
-from apps.api.models.domain import Matter
-from apps.api.models.review import ReviewItem
-from apps.api.models.deadline import ApprovedDeadline
 from apps.api.models.audit import Notification
+from apps.api.models.deadline import ApprovedDeadline
+from apps.api.models.domain import Matter
 from apps.api.models.queue import Job
+from apps.api.models.review import ReviewItem
+from apps.api.routers.system import get_dependencies
+from fastapi import APIRouter, Depends
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Dashboard"])
 
@@ -35,7 +33,7 @@ async def get_dashboard_metrics(
     )
 
     # Upcoming Deadlines
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     deadlines_count = await db.scalar(
         select(func.count(ApprovedDeadline.id)).where(
             ApprovedDeadline.tenant_id == tenant_id,

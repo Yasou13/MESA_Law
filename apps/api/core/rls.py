@@ -1,8 +1,8 @@
 import contextvars
-from sqlalchemy import event
+
+from sqlalchemy import bindparam, event, text
 from sqlalchemy.orm import ORMExecuteState, Session, with_loader_criteria
-from sqlalchemy.pool import Pool
-from sqlalchemy import bindparam, text
+
 from .models import TenantAwareMixin
 
 current_tenant_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_tenant_id", default=None)

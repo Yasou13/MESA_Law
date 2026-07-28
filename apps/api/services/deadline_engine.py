@@ -1,9 +1,10 @@
 """Deadline Engine — computes legal deadlines from parsed documents and legal rules under Turkish Law (HMK/İİK)."""
 import datetime
 import logging
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.models.deadline import ApprovedDeadline, DeadlineCandidate, DeadlineRule
 from sqlalchemy import select
-from apps.api.models.deadline import DeadlineRule, DeadlineCandidate, ApprovedDeadline
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("api.services.deadline_engine")
 

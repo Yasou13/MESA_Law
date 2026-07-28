@@ -1,9 +1,9 @@
+import enum
+
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
 from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-
-import enum
 
 class DocumentState(str, enum.Enum):
     UPLOAD_INTENT_CREATED = "UPLOAD_INTENT_CREATED"

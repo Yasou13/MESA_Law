@@ -1,6 +1,8 @@
-from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import Boolean, ForeignKey, String, Float, Enum as SQLEnum
 import enum
+
+from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
+from sqlalchemy import Boolean, Float, ForeignKey, String
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -87,8 +89,9 @@ class MatterEvent(Base, AuditMixin, TenantAwareMixin):
     event_type: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[str] = mapped_column(String, nullable=True)
     
-    from sqlalchemy import DateTime
     from datetime import datetime
+
+    from sqlalchemy import DateTime
     
     event_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     date_precision: Mapped[str] = mapped_column(String, default="day", nullable=False) # day, month, year

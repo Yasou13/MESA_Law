@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.ratelimit import limiter
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.parser import ParsedDocument, ParsedPage
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 

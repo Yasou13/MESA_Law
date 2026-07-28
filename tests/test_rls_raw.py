@@ -1,9 +1,5 @@
 import pytest
-import pytest_asyncio
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-from apps.api.core.config import settings
 
 # Note: In CI or Docker environment, we test RLS policies directly against PostgreSQL.
 # In SQLite or memory test environments without postgres, we verify the SQL generation and parameter binding.

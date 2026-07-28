@@ -12,6 +12,7 @@ async_engine = create_async_engine(
 )
 
 import os
+
 if os.getenv("MESA_LAW_ENVIRONMENT", "development") != "test":
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
     SQLAlchemyInstrumentor().instrument(

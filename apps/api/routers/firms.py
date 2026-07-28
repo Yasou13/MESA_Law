@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel, Field
-
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.ratelimit import limiter
-from apps.api.dependencies.auth import get_current_user, setup_tenant_context
+from apps.api.dependencies.auth import get_current_user, setup_tenant_context, require_recent_auth
 from apps.api.models.domain import Firm, Membership, User
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
@@ -98,3 +97,31 @@ async def create_firm(
     await db.commit()
     return {"id": firm.id, "name": firm.name}
 
+class RoleElevationRequest(BaseModel):
+    role: str
+
+@router.put("/firms/{firm_id}/members/{user_id}/role", operation_id="elevateRole")
+@limiter.limit("10/minute")
+async def elevate_role(
+    request: Request,
+    firm_id: str,
+    user_id: str,
+    payload: RoleElevationRequest,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db),
+    _=Depends(require_recent_auth)
+):
+    from apps.api.core.policies import AdminAccessPolicy
+    AdminAccessPolicy.can_manage_firm(context)
+    
+    if context.tenant_id != firm_id:
+        raise HTTPException(status_code=403, detail="Cross-tenant access forbidden")
+        
+    mem_res = await db.execute(select(Membership).where(Membership.firm_id == firm_id, Membership.user_id == user_id))
+    membership = mem_res.scalars().first()
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+        
+    membership.role = payload.role
+    await db.commit()
+    return {"status": "success", "new_role": membership.role}

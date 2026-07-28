@@ -2,12 +2,13 @@ import asyncio
 import logging
 import os
 import tempfile
-from sqlalchemy.ext.asyncio import AsyncSession
+
+from apps.api.core.config import settings
+from apps.api.core.storage import storage_service
 from apps.api.models.document import Document
 from apps.api.models.parser import ParsedDocument, ParsedPage
 from apps.api.models.queue import Job
-from apps.api.core.config import settings
-from apps.api.core.storage import storage_service
+from sqlalchemy.ext.asyncio import AsyncSession
 
 try:
     import fitz  # PyMuPDF
@@ -99,6 +100,7 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
                 parsed_text = "[Mock OCR Page Content]"
                 
             import hashlib
+
             from apps.api.models.document import DocumentRevision
             out_hash = hashlib.sha256(parsed_text.encode('utf-8')).hexdigest()
             in_hash = ""
@@ -157,7 +159,6 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
             doc.status = "OCR_FAILED"
             from apps.api.models.audit import AuditEvent, Notification
             from sqlalchemy import select
-            from apps.api.models.domain import User
             
             # Create Audit
             audit = AuditEvent(

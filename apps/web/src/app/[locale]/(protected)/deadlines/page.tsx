@@ -10,7 +10,7 @@ export default function DeadlinesPage() {
   const { data: res, isLoading, isError, refetch } = useListDeadlines()
   const { mutate: completeMutate, isPending } = useCompleteDeadline()
 
-  const deadlines = (res?.data as any[]) || []
+  const deadlines = (res as unknown as any[]) || []
 
   if (isLoading) {
     return (

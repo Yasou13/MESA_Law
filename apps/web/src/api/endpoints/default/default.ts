@@ -799,7 +799,126 @@ export const useCreateMatter = <TError = HTTPValidationError,
       > => {
       return useMutation(getCreateMatterMutationOptions(options), queryClient);
     }
-    export type rebuildMatterMesaResponse200 = {
+    export type getMatterResponse200 = {
+  data: MatterResponse
+  status: 200
+}
+
+export type getMatterResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type getMatterResponseSuccess = (getMatterResponse200) & {
+  headers: Headers;
+};
+export type getMatterResponseError = (getMatterResponse422) & {
+  headers: Headers;
+};
+
+export type getMatterResponse = (getMatterResponseSuccess | getMatterResponseError)
+
+export const getGetMatterUrl = (matterId: string,) => {
+
+
+
+
+  return `/api/v1/matters/${matterId}`
+}
+
+/**
+ * @summary Get Matter
+ */
+export const getMatter = async (matterId: string, options?: RequestInit): Promise<getMatterResponse> => {
+
+  return customInstance<getMatterResponse>(getGetMatterUrl(matterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMatterQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}`
+    ] as const;
+    }
+
+
+export const getGetMatterQueryOptions = <TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMatterQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatter>>> = ({ signal }) => getMatter(matterId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMatterQueryResult = NonNullable<Awaited<ReturnType<typeof getMatter>>>
+export type GetMatterQueryError = HTTPValidationError
+
+
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMatter>>,
+          TError,
+          Awaited<ReturnType<typeof getMatter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMatter>>,
+          TError,
+          Awaited<ReturnType<typeof getMatter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Matter
+ */
+
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMatterQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type rebuildMatterMesaResponse200 = {
   data: unknown
   status: 200
 }
@@ -978,7 +1097,126 @@ export const useMatterQA = <TError = HTTPValidationError,
       > => {
       return useMutation(getMatterQAMutationOptions(options), queryClient);
     }
-    export type conflictCheckResponse200 = {
+    export type listMatterPartiesResponse200 = {
+  data: unknown
+  status: 200
+}
+
+export type listMatterPartiesResponse422 = {
+  data: HTTPValidationError
+  status: 422
+}
+
+export type listMatterPartiesResponseSuccess = (listMatterPartiesResponse200) & {
+  headers: Headers;
+};
+export type listMatterPartiesResponseError = (listMatterPartiesResponse422) & {
+  headers: Headers;
+};
+
+export type listMatterPartiesResponse = (listMatterPartiesResponseSuccess | listMatterPartiesResponseError)
+
+export const getListMatterPartiesUrl = (matterId: string,) => {
+
+
+
+
+  return `/api/v1/matters/${matterId}/parties`
+}
+
+/**
+ * @summary List Matter Parties
+ */
+export const listMatterParties = async (matterId: string, options?: RequestInit): Promise<listMatterPartiesResponse> => {
+
+  return customInstance<listMatterPartiesResponse>(getListMatterPartiesUrl(matterId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMatterPartiesQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}/parties`
+    ] as const;
+    }
+
+
+export const getListMatterPartiesQueryOptions = <TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMatterPartiesQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterParties>>> = ({ signal }) => listMatterParties(matterId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMatterPartiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterParties>>>
+export type ListMatterPartiesQueryError = HTTPValidationError
+
+
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterParties>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterParties>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterParties>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterParties>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Matter Parties
+ */
+
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMatterPartiesQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type conflictCheckResponse200 = {
   data: ConflictCheckResponse
   status: 200
 }
@@ -1802,125 +2040,6 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getDownloadDocumentQueryOptions(documentId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type listMatterPartiesResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listMatterPartiesResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listMatterPartiesResponseSuccess = (listMatterPartiesResponse200) & {
-  headers: Headers;
-};
-export type listMatterPartiesResponseError = (listMatterPartiesResponse422) & {
-  headers: Headers;
-};
-
-export type listMatterPartiesResponse = (listMatterPartiesResponseSuccess | listMatterPartiesResponseError)
-
-export const getListMatterPartiesUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/parties`
-}
-
-/**
- * @summary List Matter Parties
- */
-export const listMatterParties = async (matterId: string, options?: RequestInit): Promise<listMatterPartiesResponse> => {
-
-  return customInstance<listMatterPartiesResponse>(getListMatterPartiesUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListMatterPartiesQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/matters/${matterId}/parties`
-    ] as const;
-    }
-
-
-export const getListMatterPartiesQueryOptions = <TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMatterPartiesQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterParties>>> = ({ signal }) => listMatterParties(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMatterPartiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterParties>>>
-export type ListMatterPartiesQueryError = HTTPValidationError
-
-
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterParties>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterParties>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterParties>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterParties>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Matter Parties
- */
-
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListMatterPartiesQueryOptions(matterId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

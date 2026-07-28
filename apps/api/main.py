@@ -6,17 +6,23 @@ from apps.api.core.errors import (
 from apps.api.core.middleware import SecurityHeadersMiddleware, TraceMiddleware
 from apps.api.core.ratelimit import limiter
 from apps.api.routers import (
+    audit,
+    dashboard,
+    deadlines,
     documents,
     domain_data,
     draft_studio,
     firms,
     matters,
+    notifications,
+    operations,
     parser,
     qa,
     research,
     reviews,
     session,
     system,
+    users,
 )
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,3 +77,5 @@ from apps.api.routers import deadlines
 app.include_router(deadlines.router, prefix="/api/v1/deadlines")
 app.include_router(dashboard.router)
 app.include_router(system.router)
+app.include_router(operations.router, prefix="/api/v1")
+app.include_router(audit.router, prefix="/api/v1")

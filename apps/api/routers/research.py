@@ -27,6 +27,7 @@ async def start_legal_research(
     from apps.api.models.queue import Job
     job = Job(
         type="PERFORM_LEGAL_RESEARCH",
+        tenant_id=context.tenant_id,
         payload={
             "matter_id": payload.matter_id,
             "query": payload.query,

@@ -23,7 +23,7 @@ async def test_worker_processing():
     
     # Insert job
     async with AsyncSessionLocal() as session:
-        job = Job(type="test_job", payload={"hello": "world"})
+        job = Job(type="test_job", payload={"hello": "world"}, tenant_id="test-tenant")
         session.add(job)
         await session.commit()
         job_id = job.id
@@ -50,7 +50,7 @@ async def test_worker_failure_and_retry():
     worker.register("fail_job", sample_handler)
     
     async with AsyncSessionLocal() as session:
-        job = Job(type="fail_job", payload={"should_fail": True}, max_retries=2, retries=2)
+        job = Job(type="fail_job", payload={"should_fail": True}, max_retries=2, retries=2, tenant_id="test-tenant")
         session.add(job)
         await session.commit()
         job_id = job.id
@@ -86,7 +86,7 @@ async def test_duplicate_delivery_idempotency():
     worker.register("test_idempotent", sample_handler)
     
     async with AsyncSessionLocal() as session:
-        job = Job(type="test_idempotent", payload={})
+        job = Job(type="test_idempotent", payload={}, tenant_id="test-tenant")
         session.add(job)
         await session.commit()
         job_id = job.id

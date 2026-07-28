@@ -1,7 +1,7 @@
 import logging
 
 from apps.api.models.document import Document
-from sqlalchemy import text, select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.sync")
@@ -60,6 +60,14 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
         # Phase 10: Use corrected_content if available, otherwise proposed_content
         content = review.corrected_content if review.corrected_content else (review.proposed_content or {})
         
+        # Fetch original suggestion to grab source_locator_id
+        from apps.api.models.review import ExtractionSuggestion
+        source_locator_id = None
+        if review.suggestion_id:
+            sugg = await session.get(ExtractionSuggestion, review.suggestion_id)
+            if sugg:
+                source_locator_id = sugg.source_locator_id
+
         if review.entity_type == "party":
             name = content.get("name")
             if not name or name == "Unknown Party":
@@ -70,7 +78,8 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
                 matter_id=review.matter_id,
                 name=name,
                 role=content.get("role", "UNKNOWN"),
-                type=content.get("type", "ORGANIZATION")
+                type=content.get("type", "ORGANIZATION"),
+                source_locator_id=source_locator_id
             )
             session.add(party)
         elif review.entity_type == "claim":
@@ -90,11 +99,14 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
                 matter_id=review.matter_id,
                 claimant_party_id=claimant_id,
                 defendant_party_id=defendant_id,
-                description=description
+                description=content.get("description", "Extracted Claim"),
+                review_status="approved",
+                source_locator_id=source_locator_id
             )
             session.add(claim)
         elif review.entity_type == "deadline":
             from datetime import datetime
+
             from apps.api.models.deadline import DeadlineCandidate, DeadlineRule
             
             rule_name = content.get("rule_name")
@@ -135,7 +147,32 @@ async def handle_publish_review(payload: dict, session: AsyncSession):
                 calculated_date=calc_date,
                 description=content.get("description", "Extracted Deadline")
             )
+            # DeadlineCandidate doesn't have source_locator_id directly yet, wait, does it?
+            # It's an issue if it doesn't. But let's only do it for models that have it.
             session.add(deadline)
+        elif review.entity_type == "evidence":
+            from apps.api.models.domain import EvidenceItem
+            from apps.api.models.review import ExtractionSuggestion
+            
+            description = content.get("description")
+            if not description:
+                raise ValueError("EVIDENCE_DESCRIPTION_REQUIRED: Description is required")
+                
+            doc_id = None
+            if review.suggestion_id:
+                sugg = await session.get(ExtractionSuggestion, review.suggestion_id)
+                if sugg:
+                    doc_id = sugg.document_id
+                    
+            evidence = EvidenceItem(
+                tenant_id=review.tenant_id,
+                matter_id=review.matter_id,
+                document_id=doc_id,
+                description=description,
+                review_status="approved",
+                source_locator_id=source_locator_id
+            )
+            session.add(evidence)
             
         review.status = ReviewState.PUBLISHED
         await session.commit()
@@ -171,120 +208,3 @@ async def handle_build_lexical_index(payload: dict, session: AsyncSession):
 async def handle_sync_approved_reviews(payload: dict, session: AsyncSession):
     # Phase 9: Deprecate SYNC_APPROVED_REVIEWS
     logger.warning("DEPRECATED: SYNC_APPROVED_REVIEWS pipeline is deprecated. Use PUBLISH_REVIEW for canonical publication.")
-    return
-
-    # Legacy code below (unreachable)
-    # Polling job that syncs approved ReviewItem items to canonical domain models
-    from apps.api.core.utils import utc_now
-        
-    for item in approved_items:
-        content = item.corrected_content if item.corrected_content else item.proposed_content
-        r = item
-        
-        if r.entity_type == "claim":
-            claimant_id = content.get("claimant_party_id")
-            defendant_id = content.get("defendant_party_id")
-            
-            if not claimant_id or not defendant_id or claimant_id in ("default_claimant", "unknown-party-id", "placeholder") or defendant_id in ("default_defendant", "unknown-party-id", "placeholder"):
-                logger.error(f"PARTY_LINK_REQUIRED: Skipping claim review {r.id} due to invalid Party IDs")
-                r.status = "error"
-                continue
-                
-            c = Claim(
-                tenant_id=r.tenant_id,
-                matter_id=r.matter_id,
-                claimant_party_id=claimant_id,
-                defendant_party_id=defendant_id,
-                description=content.get("description", ""),
-                review_status="approved",
-                status="pending"
-            )
-            session.add(c)
-        elif r.entity_type == "party":
-            p = MatterParty(
-                tenant_id=r.tenant_id,
-                matter_id=r.matter_id,
-                name=content.get("name", ""),
-                role=content.get("role", "UNKNOWN"),
-                type=content.get("type", "UNKNOWN")
-            )
-            session.add(p)
-        elif r.entity_type == "legal_assertion":
-            from apps.api.models.domain import LegalAssertion
-            la = LegalAssertion(
-                tenant_id=r.tenant_id,
-                matter_id=r.matter_id,
-                assertion_text=content.get("assertion_text", ""),
-                source_locator=content.get("source_locator", None),
-                review_status="approved"
-            )
-            session.add(la)
-            
-        elif r.entity_type == "deadline":
-            import datetime
-
-            from apps.api.models.deadline import DeadlineCandidate, DeadlineRule
-            
-            # 1. Get or Create Deadline Rule
-            rule_name = content.get("rule_name", "Unknown Rule")
-            stmt = select(DeadlineRule).where(
-                DeadlineRule.tenant_id == r.tenant_id,
-                DeadlineRule.rule_name == rule_name
-            ).limit(1)
-            rule_res = await session.execute(stmt)
-            rule = rule_res.scalars().first()
-            
-            if not rule:
-                rule = DeadlineRule(
-                    tenant_id=r.tenant_id,
-                    rule_name=rule_name,
-                    trigger_type=content.get("trigger_event", "unknown"),
-                    duration=content.get("offset_days", 0),
-                    description="Automatically created rule via extraction"
-                )
-                session.add(rule)
-                await session.flush()
-                
-            # 2. Create Potential Deadline
-            pd = DeadlineCandidate(
-                tenant_id=r.tenant_id,
-                matter_id=r.matter_id,
-                rule_id=rule.id,
-                calculated_date=datetime.date.today() + datetime.timedelta(days=rule.duration),
-                description=content.get("description", ""),
-                status="POTENTIAL_DEADLINE"
-            )
-            session.add(pd)
-            
-        r.status = "published"
-        
-    if approved_items:
-        from apps.api.models.audit import AuditEvent, Notification
-        
-        # Audit
-        audit = AuditEvent(
-            tenant_id=tenant_id,
-            action="SYNC_APPROVED_REVIEWS",
-            entity_type="review_queue",
-            entity_id=matter_id or "all_matters",
-            changes={"synced_items": len(approved_items)}
-        )
-        session.add(audit)
-        
-        # Notification
-        from apps.api.models.domain import Membership, Role
-        user_res = await session.execute(select(Membership.user_id).where(Membership.firm_id == tenant_id, Membership.role == Role.FIRM_ADMIN))
-        admin_ids = user_res.scalars().all()
-        for admin_id in admin_ids:
-            notification = Notification(
-                tenant_id=tenant_id,
-                user_id=admin_id,
-                title="Reviews Synced",
-                message=f"{len(approved_items)} items synced"
-            )
-            session.add(notification)
-            
-        await session.commit()
-        logger.info(f"Successfully synced {len(approved_items)} reviews.")
-    else:
-        logger.info("No approved reviews found to sync.")

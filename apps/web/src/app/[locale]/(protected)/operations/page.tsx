@@ -8,21 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/ui/status-badge'
 import { formatDistanceToNow } from 'date-fns'
 
-// UI Stub for Phase 27
-const mockJobs = [
-  { id: 'job_48291a', type: 'Legal Research Deep Scan', matter: 'Smith v. Jones (IP Dispute)', status: 'processing', progress: 65, startedAt: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  { id: 'job_48291b', type: 'Batch Document OCR', matter: 'TechCorp Merger', status: 'completed', progress: 100, startedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
-  { id: 'job_48291c', type: 'Citation Verification', matter: 'Smith v. Jones (IP Dispute)', status: 'failed', progress: 30, startedAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), error: 'Timeout waiting for external database.' },
-  { id: 'job_48291d', type: 'Extract Claims & Defenses', matter: 'Estate of M. Robert', status: 'queued', progress: 0, startedAt: new Date(Date.now() - 1000 * 60 * 1).toISOString() },
-]
+import { useListJobs } from '@/api/endpoints/operations/operations'
 
 export default function OperationsPage() {
   const [search, setSearch] = useState('')
-  const [jobs] = useState(mockJobs)
+  const { data: res, isLoading, refetch } = useListJobs()
+  const jobs = (res as unknown as any[]) || []
   
-  const filteredJobs = jobs.filter(j => 
+  const filteredJobs = jobs.filter((j: any) => 
     j.type.toLowerCase().includes(search.toLowerCase()) || 
-    j.matter.toLowerCase().includes(search.toLowerCase()) ||
+    (j.matter_id && j.matter_id.toLowerCase().includes(search.toLowerCase())) ||
     j.id.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -44,8 +39,8 @@ export default function OperationsPage() {
           <p className="text-[var(--color-anthracite-500)] mt-1">Monitor background tasks, data extractions, and research jobs.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" className="gap-2">
-            <RotateCw className="w-4 h-4" /> Refresh
+          <Button variant="outline" className="gap-2" onClick={() => refetch()} disabled={isLoading}>
+            <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
           <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
             <PlayCircle className="w-4 h-4" /> Start Manual Job
@@ -121,39 +116,40 @@ export default function OperationsPage() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-[var(--color-anthracite-400)]">
-                    {job.matter}
+                  <TableCell className="text-sm text-[var(--color-anthracite-400)] font-mono">
+                    {job.matter_id || '-'}
                   </TableCell>
                   <TableCell>
                     <StatusBadge 
-                      status={job.status === 'completed' ? 'success' : job.status === 'failed' ? 'error' : job.status === 'processing' ? 'processing' : 'default'} 
+                      status={job.status === 'completed' ? 'success' : job.status === 'failed' || job.status === 'dead' ? 'error' : job.status === 'processing' ? 'processing' : 'default'} 
                       label={job.status.toUpperCase()} 
                     />
-                    {job.error && (
-                      <div className="text-xs text-[var(--color-semantic-error)] mt-1 max-w-[200px] truncate" title={job.error}>
-                        {job.error}
+                    {job.error_message && (
+                      <div className="text-xs text-[var(--color-semantic-error)] mt-1 max-w-[200px] truncate" title={job.error_message}>
+                        {job.error_message}
                       </div>
                     )}
                   </TableCell>
                   <TableCell>
                     <div className="w-full max-w-[150px]">
                       <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[var(--color-anthracite-400)]">{job.progress}%</span>
+                        <span className="text-[var(--color-anthracite-400)]">
+                          {job.status === 'completed' ? '100%' : job.status === 'failed' || job.status === 'dead' ? 'Error' : 'Running...'}
+                        </span>
                       </div>
                       <div className="h-1.5 w-full bg-[var(--bg-surface-hover)] rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all duration-500 ${
-                            job.status === 'completed' ? 'bg-emerald-500' :
-                            job.status === 'failed' ? 'bg-[var(--color-semantic-error)]' :
-                            'bg-[var(--color-lila-500)]'
+                            job.status === 'completed' ? 'bg-emerald-500 w-full' :
+                            job.status === 'failed' || job.status === 'dead' ? 'bg-[var(--color-semantic-error)] w-full' :
+                            'bg-[var(--color-lila-500)] w-2/3 animate-pulse'
                           }`}
-                          style={{ width: `${job.progress}%` }}
                         ></div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-[var(--color-anthracite-500)]">
-                    {formatDistanceToNow(new Date(job.startedAt), { addSuffix: true })}
+                    {job.created_at ? formatDistanceToNow(new Date(job.created_at), { addSuffix: true }) : ''}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="sm" className="text-[var(--color-lila-500)] hover:text-[var(--color-lila-600)]">

@@ -1,7 +1,7 @@
 import enum
 
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import Boolean, Float, ForeignKey, String
+from sqlalchemy import Boolean, Float, ForeignKey, String, JSON
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -25,6 +25,7 @@ class User(Base, AuditMixin):
     full_name: Mapped[str] = mapped_column(String, nullable=False)
     
     from datetime import datetime
+
     from sqlalchemy import DateTime
     is_support_access_granted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     support_access_granted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -52,9 +53,19 @@ class Matter(Base, AuditMixin, TenantAwareMixin):
     ai_processing_policy: Mapped[str] = mapped_column(String, default="standard", nullable=False)
     
     from datetime import datetime
+
     from sqlalchemy import DateTime
     opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+class ConflictCheckResult(Base, AuditMixin, TenantAwareMixin):
+    __tablename__ = "conflict_checks"
+    matter_id: Mapped[str | None] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=True)
+    requested_by: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    party_names: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    has_conflicts: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    results: Mapped[list[dict]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String, default="completed", nullable=False)
 
 class MatterMember(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "matter_members"
@@ -68,6 +79,7 @@ class MatterParty(Base, AuditMixin, TenantAwareMixin):
     name: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False) # e.g. PLAINTIFF, DEFENDANT
     type: Mapped[str] = mapped_column(String, nullable=False) # e.g. PERSON, ORGANIZATION
+    source_locator_id: Mapped[str | None] = mapped_column(ForeignKey("source_locators.id", ondelete="SET NULL"), index=True, nullable=True)
     
 class Claim(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "claims"
@@ -78,6 +90,7 @@ class Claim(Base, AuditMixin, TenantAwareMixin):
     status: Mapped[str] = mapped_column(String, default="pending", nullable=False)
     # AI models create claims in 'suggested' state; humans move them to 'approved'.
     review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+    source_locator_id: Mapped[str | None] = mapped_column(ForeignKey("source_locators.id", ondelete="SET NULL"), index=True, nullable=True)
 
 class EvidenceItem(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "evidence_items"
@@ -85,6 +98,7 @@ class EvidenceItem(Base, AuditMixin, TenantAwareMixin):
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id"), nullable=True) # Source document
     description: Mapped[str] = mapped_column(String, nullable=False)
     review_status: Mapped[str] = mapped_column(String, default="approved", nullable=False)
+    source_locator_id: Mapped[str | None] = mapped_column(ForeignKey("source_locators.id", ondelete="SET NULL"), index=True, nullable=True)
 
 class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "legal_assertions"
@@ -127,10 +141,14 @@ class SourceLocator(Base, AuditMixin, TenantAwareMixin):
     __tablename__ = "source_locators"
     matter_id: Mapped[str | None] = mapped_column(ForeignKey("matters.id", ondelete="CASCADE"), index=True, nullable=True)
     document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True, nullable=False)
-    document_revision_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
-    parsed_document_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
-    parsed_page_id: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    document_revision_id: Mapped[str | None] = mapped_column(ForeignKey("document_revisions.id", ondelete="SET NULL"), index=True, nullable=True)
+    parsed_document_id: Mapped[str | None] = mapped_column(ForeignKey("parsed_documents.id", ondelete="SET NULL"), index=True, nullable=True)
+    parsed_page_id: Mapped[str | None] = mapped_column(ForeignKey("parsed_pages.id", ondelete="SET NULL"), index=True, nullable=True)
     
+    # Relationships for Canonical Entity Mapping
+    document_revision = relationship("DocumentRevision")
+    parsed_document = relationship("ParsedDocument")
+    parsed_page = relationship("ParsedPage")
     page_number: Mapped[int] = mapped_column(nullable=False)
     paragraph_index: Mapped[int | None] = mapped_column(nullable=True)
     block_index: Mapped[int | None] = mapped_column(nullable=True)

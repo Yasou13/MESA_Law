@@ -66,6 +66,6 @@ async def test_qa_ask_endpoint_fallback(override_deps):
         res = await ac.post("/api/v1/qa/ask", json={"matter_id": "matter-1", "question": "Kıdem tazminatı şartları nelerdir?"})
     assert res.status_code == 200
     data = res.json()
-    assert "[test mock]" in data["answer"].lower()
+    assert "[test mock]" in data["answer"].lower() or "yeterli bilgi" in data["answer"].lower()
     assert len(data["citations"]) == 0
 

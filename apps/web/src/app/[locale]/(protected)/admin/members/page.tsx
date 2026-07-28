@@ -9,7 +9,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 
 export default function MembersPage() {
   const { data: membersRes, isLoading, isError } = useListFirmMembers()
-  const members = (membersRes?.data as any[]) || []
+  const members = (membersRes as unknown as any[]) || []
 
   return (
     <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">

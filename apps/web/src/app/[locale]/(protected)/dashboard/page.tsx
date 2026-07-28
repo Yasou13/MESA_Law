@@ -34,9 +34,9 @@ export default function DashboardPage() {
   }
 
   const metrics: any = response?.data || {}
-  const recentMatters: any[] = ((mattersRes?.data as any)?.items || (mattersRes?.data as any) || []).slice(0, 5)
-  const upcomingDeadlines: any[] = ((deadlinesRes?.data as any)?.items || (deadlinesRes?.data as any) || []).slice(0, 5)
-  const pendingReviews: any[] = ((reviewsRes?.data as any) || []).slice(0, 5)
+  const recentMatters: any[] = ((mattersRes as any)?.items || (mattersRes as any) || []).slice(0, 5)
+  const upcomingDeadlines: any[] = ((deadlinesRes as any)?.items || (deadlinesRes as any) || []).slice(0, 5)
+  const pendingReviews: any[] = ((reviewsRes as any) || []).slice(0, 5)
 
   return (
     <div className="space-y-8">

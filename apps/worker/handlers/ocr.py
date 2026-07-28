@@ -5,7 +5,7 @@ import tempfile
 
 from apps.api.core.config import settings
 from apps.api.core.storage import storage_service
-from apps.api.models.document import Document
+from apps.api.models.document import Document, DocumentState
 from apps.api.models.parser import ParsedDocument, ParsedPage
 from apps.api.models.queue import Job
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -148,6 +148,7 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
             
             job = Job(
                 type="EXTRACT_LEGAL_DATA",
+                tenant_id=payload["tenant_id"],
                 payload={
                     "parsed_document_id": parsed_doc.id,
                     "matter_id": doc.matter_id
@@ -158,7 +159,7 @@ async def handle_ocr_document(payload: dict, session: AsyncSession):
             # Phase 15: State transition to OCR_COMPLETED
             doc.status = "OCR_COMPLETED"
             if rev:
-                rev.scan_status = "READY"
+                rev.scan_status = DocumentState.READY
             await session.commit()
             
     except Exception as e:

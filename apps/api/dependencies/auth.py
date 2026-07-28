@@ -7,7 +7,7 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.rls import set_tenant_id
 from apps.api.models.domain import Membership, User
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select, text
@@ -106,7 +106,7 @@ async def setup_tenant_context(
     
     if not membership:
         if cookie_tenant_id:
-            raise HTTPException(status_code=403, detail=f"User is not an active member of the requested firm context.")
+            raise HTTPException(status_code=403, detail="User is not an active member of the requested firm context.")
         raise HTTPException(status_code=403, detail="User is not an active member of any firm.")
         
     active_firm_id = membership.firm_id

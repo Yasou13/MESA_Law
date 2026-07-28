@@ -5,7 +5,7 @@ from apps.api.core.policies import (
     ExportAccessPolicy,
     MatterAccessPolicy,
 )
-from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
+from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
 from apps.api.models.draft import Draft
 from apps.api.models.queue import Job
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -182,7 +182,7 @@ async def submit_review_draft(
         
     DraftAccessPolicy.can_manage(context)
     
-    if draft.status not in ["DRAFT", "REJECTED"]:
+    if draft.status.upper() not in ["DRAFT", "REJECTED"]:
         raise HTTPException(status_code=400, detail="Only DRAFT or REJECTED drafts can be submitted for review")
         
     draft.status = "IN_REVIEW"
@@ -283,6 +283,7 @@ async def export_draft(
         
     job = Job(
         type="EXPORT_DRAFT",
+        tenant_id=context.tenant_id,
         payload={
             "draft_id": draft_id,
             "format": payload.format
@@ -311,6 +312,7 @@ async def generate_draft(
     DraftAccessPolicy.can_manage(context)
     job = Job(
         type="GENERATE_DRAFT",
+        tenant_id=context.tenant_id,
         payload={
             "tenant_id": context.tenant_id,
             "matter_id": payload.matter_id,

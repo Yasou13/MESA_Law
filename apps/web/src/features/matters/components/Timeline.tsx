@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, Clock } from 'lucide-react';
 
 export function Timeline({ matterId = "1" }: { matterId?: string }) {
   const { data: timelineResponse, isLoading: loading, error, refetch } = useListTimelineEvents(matterId);
-  const events = Array.isArray(timelineResponse?.data) ? timelineResponse.data : [];
+  const events = Array.isArray(timelineResponse) ? timelineResponse : [];
 
   if (loading) {
     return (

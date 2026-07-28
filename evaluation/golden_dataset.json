@@ -1,0 +1,284 @@
+{
+  "version": "1.0.0",
+  "created_at": "2026-07-28",
+  "description": "MESA Law Evaluation Golden Dataset — Turkish Legal Domain",
+  "categories": ["extraction", "qa", "deadline", "citation_integrity"],
+  "entries": [
+    {
+      "id": "ext-001",
+      "category": "extraction",
+      "subcategory": "party_extraction",
+      "input_text": "Davacı Mehmet Yılmaz vekili Av. Ayşe Kaya tarafından davalı ABC İnşaat San. ve Tic. A.Ş. aleyhine açılan işçilik alacakları davasında,",
+      "expected": {
+        "parties": [
+          {"name": "Mehmet Yılmaz", "role": "PLAINTIFF", "type": "PERSON"},
+          {"name": "ABC İnşaat San. ve Tic. A.Ş.", "role": "DEFENDANT", "type": "ORGANIZATION"}
+        ]
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "ext-002",
+      "category": "extraction",
+      "subcategory": "party_extraction",
+      "input_text": "Başvuran: XYZ Teknoloji Ltd. Şti. (Vekili Av. Can Demir)\nKarşı Taraf: T.C. Enerji Piyasası Düzenleme Kurumu\nDava konusu: İdari para cezasının iptali",
+      "expected": {
+        "parties": [
+          {"name": "XYZ Teknoloji Ltd. Şti.", "role": "PLAINTIFF", "type": "ORGANIZATION"},
+          {"name": "T.C. Enerji Piyasası Düzenleme Kurumu", "role": "DEFENDANT", "type": "ORGANIZATION"}
+        ]
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "ext-003",
+      "category": "extraction",
+      "subcategory": "claim_extraction",
+      "input_text": "İşçi, iş akdinin haksız fesih nedeniyle sona erdirildiğini iddia ederek kıdem tazminatı, ihbar tazminatı ve fazla mesai ücreti alacağı taleplerinde bulunmuştur. Ayrıca yıllık izin ücretinin de ödenmediğini ileri sürmüştür.",
+      "expected": {
+        "claims": [
+          {"description_contains": "kıdem tazminatı", "type": "severance_pay"},
+          {"description_contains": "ihbar tazminatı", "type": "notice_pay"},
+          {"description_contains": "fazla mesai", "type": "overtime_pay"},
+          {"description_contains": "yıllık izin ücreti", "type": "annual_leave_pay"}
+        ]
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "ext-004",
+      "category": "extraction",
+      "subcategory": "claim_extraction",
+      "input_text": "Sözleşmeye aykırı davranış nedeniyle müvekkilimizin uğradığı 500.000 TL maddi zarar ile 100.000 TL manevi tazminat talep edilmektedir.",
+      "expected": {
+        "claims": [
+          {"description_contains": "maddi zarar", "type": "material_damage"},
+          {"description_contains": "manevi tazminat", "type": "moral_damage"}
+        ]
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "ext-005",
+      "category": "extraction",
+      "subcategory": "event_extraction",
+      "input_text": "Karar 15.03.2026 tarihinde taraflara tebliğ edilmiştir. HMK 345. madde uyarınca istinaf kanun yoluna başvuru süresi tebliğ tarihinden itibaren iki haftadır.",
+      "expected": {
+        "events": [
+          {"trigger_event": "tebliğ", "date": "2026-03-15", "rule_reference": "HMK 345"}
+        ]
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "ext-006",
+      "category": "extraction",
+      "subcategory": "event_extraction",
+      "input_text": "İcra emri borçluya 22.06.2026 tarihinde tebliğ olunmuştur. İİK 33. madde gereğince icranın geri bırakılması için yedi günlük süre içinde tetkik merciine başvurulması gerekmektedir.",
+      "expected": {
+        "events": [
+          {"trigger_event": "icra emri tebliği", "date": "2026-06-22", "rule_reference": "İİK 33"}
+        ]
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "ext-007",
+      "category": "extraction",
+      "subcategory": "evidence_extraction",
+      "input_text": "Ek-1: İş sözleşmesi sureti\nEk-2: Banka dekontları (Ocak 2025 - Haziran 2025)\nEk-3: SGK hizmet dökümü\nDelil: Tutanak tarihi 10.01.2026 olan işyeri devamsızlık tutanağı",
+      "expected": {
+        "evidence": [
+          {"description_contains": "iş sözleşmesi"},
+          {"description_contains": "dekont"},
+          {"description_contains": "tutanak"}
+        ]
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "qa-001",
+      "category": "qa",
+      "subcategory": "factual_retrieval",
+      "question": "Davacı kimdir ve ne talep etmektedir?",
+      "context_documents": [
+        "Davacı Fatma Öztürk, davalı Güneş Holding A.Ş. aleyhine iş mahkemesinde açtığı davada, 5 yıllık çalışma süresine istinaden kıdem tazminatı ve fazla mesai ücreti alacağı talebinde bulunmuştur."
+      ],
+      "expected": {
+        "answer_must_contain": ["Fatma Öztürk", "kıdem tazminatı", "fazla mesai"],
+        "answer_must_not_contain": ["bilgi bulunamadı"],
+        "min_citations": 1,
+        "fabricated_citation_allowed": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "qa-002",
+      "category": "qa",
+      "subcategory": "factual_retrieval",
+      "question": "İstinaf başvuru süresi ne kadardır?",
+      "context_documents": [
+        "HMK madde 345 uyarınca, istinaf yoluna başvuru süresi, ilamın taraflarına tebliğinden itibaren iki haftadır. Bu süre hak düşürücü süre niteliğindedir."
+      ],
+      "expected": {
+        "answer_must_contain": ["iki hafta", "HMK", "345"],
+        "answer_must_not_contain": [],
+        "min_citations": 1,
+        "fabricated_citation_allowed": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "qa-003",
+      "category": "qa",
+      "subcategory": "multi_document_reasoning",
+      "question": "İşveren feshi haklı mıdır? Gerekçeleri nelerdir?",
+      "context_documents": [
+        "İşveren, işçinin art arda 3 iş günü devamsızlık yaptığını ileri sürerek iş akdini İş Kanunu 25/II-g maddesi uyarınca haklı nedenle feshetmiştir.",
+        "Ancak tanık beyanlarından işçinin söz konusu günlerde hastanede tedavi gördüğü ve durumu işverene telefon ile bildirdiği anlaşılmaktadır.",
+        "SGK kayıtlarına göre işçi 3 günlük istirahat raporu almış olup rapor tarihleri devamsızlık yapıldığı iddia edilen günlerle örtüşmektedir."
+      ],
+      "expected": {
+        "answer_must_contain": ["devamsızlık", "istirahat raporu", "haklı neden"],
+        "answer_must_not_contain": [],
+        "min_citations": 2,
+        "fabricated_citation_allowed": false
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "qa-004",
+      "category": "qa",
+      "subcategory": "negative_test",
+      "question": "Bu dosyadaki trafik kazası raporu nerede?",
+      "context_documents": [
+        "İş uyuşmazlığına ilişkin belgeler incelenmiştir. Davacı işçi, fazla mesai alacağı talebinde bulunmuştur."
+      ],
+      "expected": {
+        "answer_must_contain": ["bulunamadı"],
+        "answer_must_not_contain": ["trafik kazası raporu şu sayfada"],
+        "min_citations": 0,
+        "fabricated_citation_allowed": false,
+        "expected_state": "NO_EVIDENCE_RETRIEVED"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "qa-005",
+      "category": "qa",
+      "subcategory": "citation_integrity",
+      "question": "Mahkeme kararının tarihi nedir?",
+      "context_documents": [
+        "İstanbul 5. İş Mahkemesi'nin 2025/1234 E., 2026/567 K. sayılı ve 01.02.2026 tarihli kararı."
+      ],
+      "expected": {
+        "answer_must_contain": ["01.02.2026"],
+        "min_citations": 1,
+        "citation_must_reference_source": true,
+        "fabricated_citation_allowed": false
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "dl-001",
+      "category": "deadline",
+      "subcategory": "basic_calculation",
+      "trigger_date": "2026-03-15",
+      "offset_days": 14,
+      "jurisdiction": "TR_HMK",
+      "business_days_only": false,
+      "expected": {
+        "due_date": "2026-03-30",
+        "notes": "15 Mart + 14 gün = 29 Mart (Pazar) → 30 Mart (Pazartesi). Ramazan Bayramı 20-22 Mart 2026'da olsa bile 30 Mart'a etkisi yok."
+      },
+      "difficulty": "easy"
+    },
+    {
+      "id": "dl-002",
+      "category": "deadline",
+      "subcategory": "holiday_rollover",
+      "trigger_date": "2026-04-16",
+      "offset_days": 7,
+      "jurisdiction": "TR_HMK",
+      "business_days_only": false,
+      "expected": {
+        "due_date": "2026-04-24",
+        "notes": "16 Nisan + 7 gün = 23 Nisan (Ulusal Egemenlik Bayramı) → 24 Nisan (Cuma, iş günü)"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "dl-003",
+      "category": "deadline",
+      "subcategory": "adli_tatil_extension",
+      "trigger_date": "2026-07-10",
+      "offset_days": 15,
+      "jurisdiction": "TR_HMK",
+      "business_days_only": false,
+      "expected": {
+        "due_date": "2026-09-07",
+        "notes": "10 Temmuz + 15 gün = 25 Temmuz (Adli tatil içinde, 20 Temmuz-31 Ağustos). HMK 104 gereği 7 Eylül'e uzar."
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "dl-004",
+      "category": "deadline",
+      "subcategory": "iik_no_adli_tatil",
+      "trigger_date": "2026-07-25",
+      "offset_days": 7,
+      "jurisdiction": "TR_IIK",
+      "business_days_only": false,
+      "expected": {
+        "due_date": "2026-08-03",
+        "notes": "İİK'da adli tatil uygulanmaz. 25 Temmuz + 7 gün = 1 Ağustos (Cumartesi) → 3 Ağustos (Pazartesi)"
+      },
+      "difficulty": "medium"
+    },
+    {
+      "id": "dl-005",
+      "category": "deadline",
+      "subcategory": "business_days_calculation",
+      "trigger_date": "2026-05-25",
+      "offset_days": 5,
+      "jurisdiction": "TR_HMK",
+      "business_days_only": true,
+      "expected": {
+        "due_date": "2026-06-02",
+        "notes": "25 Mayıs'tan 5 iş günü: 26 (Salı), 27-28 Mayıs Ramazan Bayramı skip, 29-30 Mayıs (Cuma,Cumartesi) - 29 Cuma Bayramın 3.günü skip. 1 Haziran Pazar skip. Sonuç hesaplanmalı."
+      },
+      "difficulty": "hard"
+    },
+    {
+      "id": "ci-001",
+      "category": "citation_integrity",
+      "subcategory": "cross_matter_contamination",
+      "description": "Bir dosyaya ait belge bilgisi başka dosyanın cevabında kullanılmamalıdır",
+      "matter_a_documents": ["Dosya A'ya ait iş sözleşmesi, çalışan Ali Veli için düzenlenmiştir."],
+      "matter_b_documents": ["Dosya B'ye ait kira sözleşmesi, kiracı Hasan Hüseyin ile ev sahibi Fatma Hanım arasında."],
+      "query_on_matter_b": "Dosyadaki çalışanın adı nedir?",
+      "expected": {
+        "must_not_contain": ["Ali Veli"],
+        "expected_state": "NO_EVIDENCE_RETRIEVED",
+        "cross_contamination_allowed": false
+      },
+      "difficulty": "critical"
+    },
+    {
+      "id": "ci-002",
+      "category": "citation_integrity",
+      "subcategory": "fabrication_detection",
+      "description": "Var olmayan bir belge veya sayfa numarasına atıf yapılmamalıdır",
+      "available_documents": [
+        {"id": "doc-001", "total_pages": 3, "content": "Üç sayfalık basit bir iş sözleşmesi"}
+      ],
+      "query": "Sözleşmenin 15. sayfasındaki madde ne diyor?",
+      "expected": {
+        "fabricated_citation_allowed": false,
+        "must_not_reference_page": 15,
+        "expected_state": "NO_EVIDENCE_RETRIEVED"
+      },
+      "difficulty": "critical"
+    }
+  ]
+}

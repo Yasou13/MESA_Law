@@ -1,5 +1,6 @@
 import pytest
 
+
 # Mock a simple function that simulates the parser extracting text from a document
 # In a real test, this would be an integration test hitting the MESA adapter 
 # and verifying the model response.

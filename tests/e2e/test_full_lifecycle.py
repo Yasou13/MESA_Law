@@ -24,7 +24,7 @@ async def test_pilot_mega_flow():
             health = await client.get("http://localhost:8001/health/ready")
             assert health.status_code == 200, "API is not ready"
         except httpx.ConnectError:
-            pytest.skip("E2E server not running on localhost:8001, skipping.")
+            pytest.fail("E2E server not running on localhost:8001")
 
         # 1. Create a Matter (with Idempotency)
         matter_payload = {
@@ -56,7 +56,7 @@ async def test_pilot_mega_flow():
         resp = await client.post(f"{API_BASE}/documents/upload-intent", json=doc_payload, headers=HEADERS)
         assert resp.status_code in [200, 201]
         doc_data = resp.json()
-        doc_id = doc_data["document_id"]
+        assert "document_id" in doc_data
         
         # 3. Trigger QA / Intelligence (Wait for workers to process if it was real, but we can hit endpoints)
         qa_payload = {

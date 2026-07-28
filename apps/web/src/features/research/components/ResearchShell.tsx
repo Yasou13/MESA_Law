@@ -20,7 +20,7 @@ export function ResearchShell({ matterId = "1" }: { matterId?: string }) {
       { data: { matter_id: matterId, query } },
       {
         onSuccess: (res: any) => {
-          setJobId(res.data.job_id);
+          setJobId(res.job_id);
         },
         onError: (error) => {
           console.error("Research search failed:", error);

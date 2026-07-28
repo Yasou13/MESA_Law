@@ -32,7 +32,7 @@ function LoginContent() {
 
   const handleSignIn = async () => {
     setAuthState('SIGNING_IN')
-    await signIn('credentials', { callbackUrl: '/dashboard' })
+    await signIn('keycloak', { callbackUrl: '/dashboard' })
   }
 
   return (
@@ -98,7 +98,7 @@ function LoginContent() {
               ) : (
                 <>
                   <Shield className="w-5 h-5 opacity-90" />
-                  Sign in (Dev Mode)
+                  Sign in with Keycloak
                 </>
               )}
             </button>

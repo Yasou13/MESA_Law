@@ -9,20 +9,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/ui/status-badge'
 
 
-// UI Stub for Phase 22
-const mockDrafts = [
-  { id: '1', title: 'Motion for Summary Judgment', matter: 'Smith v. Jones (IP Dispute)', type: 'Motion', lastModified: '2026-07-28T09:30:00Z', status: 'in-progress' },
-  { id: '2', title: 'Response to Interrogatories', matter: 'TechCorp Merger', type: 'Discovery', lastModified: '2026-07-27T14:15:00Z', status: 'review-required' },
-  { id: '3', title: 'Initial Disclosures', matter: 'Smith v. Jones (IP Dispute)', type: 'Filing', lastModified: '2026-07-26T11:00:00Z', status: 'approved' },
-]
+import { useListAllDraftsApiV1DraftStudioDraftsGet } from '@/api/endpoints/draft-studio/draft-studio'
 
 export default function DraftsPage() {
   const [search, setSearch] = useState('')
-  const [drafts] = useState(mockDrafts)
+  const { data: res, isLoading, isError } = useListAllDraftsApiV1DraftStudioDraftsGet()
+  const drafts = (res as unknown as any[]) || []
   
-  const filteredDrafts = drafts.filter(d => 
-    d.title.toLowerCase().includes(search.toLowerCase()) || 
-    d.matter.toLowerCase().includes(search.toLowerCase())
+  const filteredDrafts = drafts.filter((d: any) => 
+    d.title?.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -32,9 +27,11 @@ export default function DraftsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Drafts Studio</h1>
           <p className="text-[var(--color-anthracite-500)] mt-1">Manage AI-assisted document drafts and templates.</p>
         </div>
-        <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-          <Plus className="w-4 h-4" /> New Draft
-        </Button>
+        <Link href="/matters">
+          <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
+            <Plus className="w-4 h-4" /> New Draft
+          </Button>
+        </Link>
       </div>
 
       <div className="flex items-center gap-4">
@@ -85,22 +82,22 @@ export default function DraftsPage() {
                       <span className="font-medium text-[var(--foreground)] group-hover:text-[var(--color-lila-400)] transition-colors">{draft.title}</span>
                     </Link>
                   </TableCell>
-                  <TableCell className="text-[var(--color-anthracite-400)]">
-                    {draft.matter}
+                  <TableCell className="text-[var(--color-anthracite-400)] font-mono text-xs">
+                    {draft.matter_id}
                   </TableCell>
                   <TableCell>
                     <span className="px-2 py-1 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded text-xs font-medium text-[var(--color-anthracite-300)]">
-                      {draft.type}
+                      Document
                     </span>
                   </TableCell>
                   <TableCell>
                     <StatusBadge 
-                      status={draft.status === 'approved' ? 'success' : draft.status === 'in-progress' ? 'processing' : 'review-required'} 
-                      label={draft.status.replace('-', ' ').toUpperCase()} 
+                      status={draft.status === 'APPROVED_FOR_EXTERNAL_USE' ? 'success' : draft.status === 'IN_PROGRESS' ? 'processing' : 'review-required'} 
+                      label={draft.status?.replace(/_/g, ' ') || 'UNKNOWN'} 
                     />
                   </TableCell>
                   <TableCell className="text-sm text-[var(--color-anthracite-500)]">
-                    {new Date(draft.lastModified).toLocaleDateString()}
+                    {draft.updated_at ? new Date(draft.updated_at).toLocaleDateString() : ''}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">

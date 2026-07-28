@@ -1,9 +1,10 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from apps.api.main import app
 from apps.api.core.models import RequestContext
 from apps.api.dependencies.auth import setup_tenant_context
+from apps.api.main import app
 from fastapi import Request
+from httpx import ASGITransport, AsyncClient
+
 
 # Mock setup_tenant_context to represent Tenant A
 @pytest.fixture
@@ -60,7 +61,7 @@ async def test_cross_tenant_document_download(override_tenant_a, monkeypatch):
     from apps.api.models.document import Document
     
     async def mock_get(*args, **kwargs):
-        d = Document(tenant_id="tenant_B", matter_id="mat_B", filename="test.pdf", s3_key="tenant_B/test.pdf", size_bytes=100)
+        d = Document(tenant_id="tenant_B", matter_id="mat_B", title="test.pdf")
         d.id = "doc_tenant_B"
         return d
         

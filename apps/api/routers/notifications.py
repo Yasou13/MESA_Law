@@ -3,7 +3,7 @@ import json
 
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context, get_current_user
+from apps.api.dependencies.auth import get_current_user, setup_tenant_context
 from apps.api.models.audit import Notification
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
@@ -33,9 +33,10 @@ async def sse_endpoint(
             # Query for new notifications (simplified polling)
             stmt = select(Notification).where(
                 Notification.tenant_id == context.tenant_id,
-                Notification.user_id == user["id"],
+                Notification.user_id == context.principal_id,
                 Notification.status == "CREATED"
             )
+            result = await db.execute(stmt)
             new_notifs = result.scalars().all()
             
             for notif in new_notifs:
@@ -76,7 +77,7 @@ async def get_notifications(
     """
     stmt = select(Notification).where(
         Notification.tenant_id == context.tenant_id,
-        Notification.user_id == user["id"]
+        Notification.user_id == context.principal_id
     ).order_by(Notification.timestamp.desc())
     
     result = await db.execute(stmt)

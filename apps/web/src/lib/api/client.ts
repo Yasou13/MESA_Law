@@ -94,7 +94,7 @@ export const customInstance = <T>(
   }
 
   const promise = AXIOS_INSTANCE(mappedConfig).then((response) => {
-    return { data: response.data, status: response.status, headers: response.headers } as unknown as T;
+    return response.data as unknown as T;
   });
 
   // @ts-expect-error adding cancel to promise

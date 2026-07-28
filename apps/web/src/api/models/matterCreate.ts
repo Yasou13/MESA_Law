@@ -12,8 +12,16 @@ export interface MatterCreate {
      * @maxLength 255
      */
   title: string;
+  /** Internal reference ID */
+  internal_reference?: string | null;
+  /** Client name */
+  client_name?: string | null;
   /** The jurisdiction of the matter */
   jurisdiction?: string | null;
+  /** Type of case */
+  case_type?: string | null;
   /** Confidentiality level */
   confidentiality_level?: string;
+  /** AI processing policy */
+  ai_processing_policy?: string;
 }

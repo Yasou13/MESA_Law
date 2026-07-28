@@ -1,6 +1,5 @@
 import NextAuth from "next-auth"
 import KeycloakProvider from "next-auth/providers/keycloak"
-import CredentialsProvider from "next-auth/providers/credentials"
 import type { Provider } from "next-auth/providers/index"
 
 const providers: Provider[] = [
@@ -23,21 +22,14 @@ const handler = NextAuth({
   },
   providers,
   callbacks: {
-    async jwt({ token, account, trigger, session, user }) {
+    async jwt({ token, account }) {
       if (account?.access_token) {
         token.accessToken = account.access_token;
-      }
-      if (user && 'activeFirmId' in user) {
-        token.activeFirmId = (user as { activeFirmId?: string }).activeFirmId;
-      }
-      if (trigger === "update" && session?.activeFirmId) {
-        token.activeFirmId = session.activeFirmId;
       }
       return token
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string | undefined;
-      session.activeFirmId = token.activeFirmId as string | undefined;
       return session;
     }
   }

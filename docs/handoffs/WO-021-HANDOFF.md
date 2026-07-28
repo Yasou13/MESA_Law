@@ -1,1 +1,0 @@
-# Hukuk verilerini MESA’ya yükleme (Golden Dataset) - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** Hukuk verilerini MESA’ya yükleme (Golden Dataset) skeleton built.\n

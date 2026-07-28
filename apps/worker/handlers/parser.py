@@ -5,7 +5,7 @@ import tempfile
 
 from apps.api.core.config import settings
 from apps.api.core.storage import storage_service
-from apps.api.models.document import Document
+from apps.api.models.document import Document, DocumentState
 from apps.api.models.parser import ParsedDocument, ParsedPage
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,8 +16,8 @@ except ImportError:
     HAS_LLAMA_PARSE = False
 
 try:
-    import fitz
-    HAS_FITZ = True
+    import importlib.util
+    HAS_FITZ = importlib.util.find_spec("fitz") is not None
 except ImportError:
     HAS_FITZ = False
     
@@ -130,7 +130,7 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             from apps.api.models.document import DocumentRevision
             rev = await session.get(DocumentRevision, revision_id)
             if rev:
-                rev.scan_status = "READY"
+                rev.scan_status = DocumentState.READY
                 
             await session.flush()
             
@@ -194,6 +194,7 @@ async def handle_parse_document(payload: dict, session: AsyncSession):
             # Trigger extraction job
             job = Job(
                 type="EXTRACT_LEGAL_DATA",
+                tenant_id=payload["tenant_id"],
                 payload={
                     "parsed_document_id": parsed_doc.id,
                     "matter_id": doc.matter_id

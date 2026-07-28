@@ -3,6 +3,7 @@ import logging
 import signal
 import sys
 
+from apps.api.core.observability import setup_observability
 from apps.worker.core.queue import Worker
 from apps.worker.handlers.document import handle_scan_document
 from apps.worker.handlers.export import handle_export_draft
@@ -19,13 +20,14 @@ from apps.worker.handlers.sync import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger("worker")
 
-from apps.api.core.observability import setup_observability
-
 
 async def main():
     setup_observability(service_name="mesa-law-worker")
     logger.info("Starting MESA Law Worker...")
-    worker = Worker(batch_size=10, lease_minutes=5)
+    import os
+    concurrency = int(os.getenv("MESA_LAW_WORKER_CONCURRENCY", "10"))
+    worker = Worker(batch_size=concurrency, lease_minutes=5)
+    logger.info(f"Worker concurrency set to {concurrency}")
     
     # Register real handlers for all supported pipeline jobs
     worker.register("SCAN_DOCUMENT", handle_scan_document)

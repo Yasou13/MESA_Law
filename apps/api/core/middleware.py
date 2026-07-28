@@ -1,10 +1,9 @@
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
+from .observability import trace_id_cv
 from .utils import generate_uuid
 
-
-from .observability import trace_id_cv
 
 class TraceMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -30,12 +29,20 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 from starlette.responses import JSONResponse
+import redis.asyncio as redis
+from .config import settings
 
-_idempotency_locks = set()
+_redis_client = None
+
+def get_redis_client():
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = redis.from_url(settings.redis_url)
+    return _redis_client
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):
     """
-    In-memory idempotency middleware to prevent concurrent double-clicks.
+    Redis-backed idempotency middleware to prevent concurrent double-clicks.
     For full DB persistence, use `check_idempotency` in the route.
     """
     async def dispatch(self, request: Request, call_next):
@@ -46,17 +53,21 @@ class IdempotencyMiddleware(BaseHTTPMiddleware):
         if not idem_key:
             return await call_next(request)
             
-        if idem_key in _idempotency_locks:
+        client = get_redis_client()
+        lock_key = f"idempotency_lock:{idem_key}"
+        
+        # Try to acquire lock with 10 min TTL (setnx)
+        acquired = await client.set(lock_key, "1", nx=True, ex=600)
+        if not acquired:
             return JSONResponse(
                 status_code=409, 
                 content={"title": "Conflict", "detail": "Request already in progress"}
             )
             
-        _idempotency_locks.add(idem_key)
         try:
             response = await call_next(request)
             return response
         finally:
             # Allow key to be used again for retries, but DB idempotency will handle the cache
-            _idempotency_locks.discard(idem_key)
+            await client.delete(lock_key)
 

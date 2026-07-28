@@ -1,1 +1,0 @@
-# CI, security ve release - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** CI, security ve release skeleton built.\n

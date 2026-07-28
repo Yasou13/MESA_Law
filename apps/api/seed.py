@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
 # We can use the hardcoded DEV_DATABASE_URL or from env
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law")
+DATABASE_URL = os.getenv("MESA_LAW_DATABASE_URL", "postgresql+psycopg://mesa:mesa@localhost:5432/mesa_law")
 
 async def seed():
     engine = create_async_engine(DATABASE_URL)

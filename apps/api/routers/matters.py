@@ -3,7 +3,7 @@ from apps.api.core.factory import get_intelligence_adapter
 from apps.api.core.models import RequestContext
 from apps.api.core.policies import AdminAccessPolicy, MatterAccessPolicy
 from apps.api.core.ratelimit import limiter
-from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
+from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
 from apps.api.models.domain import Matter
 from apps.api.schemas.api import MatterCreate, MatterResponse
 from apps.api.services.mesa_sync import MesaSyncService
@@ -28,10 +28,16 @@ async def list_matters(
     user_roles = {r.value if hasattr(r, 'value') else r for r in context.roles}
     is_admin = Role.FIRM_ADMIN.value in user_roles
     
-    stmt = select(Matter, MatterMember.access_scope).outerjoin(
-        MatterMember, 
-        (Matter.id == MatterMember.matter_id) & (MatterMember.user_id == context.principal_id)
-    ).where(Matter.tenant_id == context.tenant_id).order_by(Matter.created_at.desc())
+    if is_admin:
+        stmt = select(Matter, MatterMember.access_scope).outerjoin(
+            MatterMember, 
+            (Matter.id == MatterMember.matter_id) & (MatterMember.user_id == context.principal_id)
+        ).where(Matter.tenant_id == context.tenant_id).order_by(Matter.created_at.desc())
+    else:
+        stmt = select(Matter, MatterMember.access_scope).join(
+            MatterMember, 
+            (Matter.id == MatterMember.matter_id) & (MatterMember.user_id == context.principal_id)
+        ).where(Matter.tenant_id == context.tenant_id).order_by(Matter.created_at.desc())
     
     result = await db.execute(stmt)
     rows = result.all()
@@ -56,6 +62,51 @@ async def list_matters(
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
 from fastapi import Header
 
+
+@router.get("/{matter_id}", response_model=MatterResponse, operation_id="getMatter")
+@limiter.limit("100/minute")
+async def get_matter(
+    request: Request,
+    matter_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    await MatterAccessPolicy.can_read(context, db, matter_id)
+    
+    matter = await db.get(Matter, matter_id)
+    if not matter or matter.tenant_id != context.tenant_id:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Matter not found")
+        
+    # Get user's scope
+    from apps.api.models.domain import MatterMember, Role
+    user_roles = {r.value if hasattr(r, 'value') else r for r in context.roles}
+    is_admin = Role.FIRM_ADMIN.value in user_roles
+    
+    scope = "admin"
+    if not is_admin:
+        stmt = select(MatterMember.access_scope).where(
+            MatterMember.matter_id == matter_id,
+            MatterMember.user_id == context.principal_id,
+            MatterMember.tenant_id == context.tenant_id
+        )
+        res = await db.execute(stmt)
+        scope = res.scalar() or "read"
+        
+    return {
+        "id": matter.id, 
+        "title": matter.title, 
+        "internal_reference": matter.internal_reference,
+        "status": matter.status, 
+        "client_name": matter.client_name,
+        "jurisdiction": matter.jurisdiction,
+        "case_type": matter.case_type,
+        "confidentiality_level": matter.confidentiality_level,
+        "ai_processing_policy": matter.ai_processing_policy,
+        "opened_at": matter.opened_at.isoformat() if matter.opened_at else None,
+        "closed_at": matter.closed_at.isoformat() if matter.closed_at else None,
+        "access_scope": scope
+    }
 
 @router.post("", response_model=MatterResponse, operation_id="createMatter", status_code=201)
 @limiter.limit("30/minute")
@@ -157,8 +208,29 @@ async def matter_qa_endpoint(
         
     return await ask_matter_question(db, context.tenant_id, matter_id, None, question)
 
+class MatterPartyResponse(BaseModel):
+    id: str
+    name: str
+    role: str
+    type: str
+
+@router.get("/{matter_id}/parties", response_model=list[MatterPartyResponse], operation_id="listMatterParties")
+async def list_matter_parties(
+    matter_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    await MatterAccessPolicy.can_read(context, db, matter_id)
+    from apps.api.models.domain import MatterParty
+    result = await db.execute(select(MatterParty).where(MatterParty.matter_id == matter_id))
+    return result.scalars().all()
+
 class ConflictCheckRequest(BaseModel):
     party_names: list[str]
+
+
+
+
 
 class ConflictResult(BaseModel):
     searched_name: str
@@ -169,6 +241,7 @@ class ConflictResult(BaseModel):
     status: str
 
 class ConflictCheckResponse(BaseModel):
+    id: str
     has_conflicts: bool
     conflicts: list[ConflictResult]
 
@@ -203,7 +276,20 @@ async def check_conflicts(
                 status=m.status
             ))
             
-    return ConflictCheckResponse(conflicts=results, has_conflicts=len(results) > 0)
+    from apps.api.models.domain import ConflictCheckResult
+    
+    check_record = ConflictCheckResult(
+        tenant_id=context.tenant_id,
+        requested_by=context.principal_id,
+        party_names=payload.party_names,
+        has_conflicts=len(results) > 0,
+        results=[r.model_dump() for r in results]
+    )
+    db.add(check_record)
+    await db.commit()
+    await db.refresh(check_record)
+            
+    return ConflictCheckResponse(id=check_record.id, conflicts=results, has_conflicts=len(results) > 0)
 
 class OverrideConflictRequest(BaseModel):
     reason: str

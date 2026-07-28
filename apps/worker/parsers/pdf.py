@@ -4,9 +4,8 @@ from collections.abc import AsyncGenerator
 import fitz  # PyMuPDF
 
 try:
-    import pytesseract
-    from PIL import Image
-    HAS_TESSERACT = True
+    import importlib.util
+    HAS_TESSERACT = importlib.util.find_spec("pytesseract") is not None and importlib.util.find_spec("PIL") is not None
 except ImportError:
     HAS_TESSERACT = False
 
@@ -53,9 +52,30 @@ class PyMuPDFParser(DocumentParser):
                         "type": "block"
                     })
                 
+                # Text coverage heuristic
+                page_area = page.rect.width * page.rect.height if page.rect else 0
+                text_area = 0
+                for b in text_blocks:
+                    r = b.get("bbox")
+                    if r:
+                        text_area += (r[2] - r[0]) * (r[3] - r[1])
+                
+                text_coverage = (text_area / page_area) if page_area > 0 else 0
+                
                 ocr_used = False
                 ocr_confidence = None
-                if not text.strip() and HAS_TESSERACT:
+                
+                # If text is extremely short or covers less than 2% of the page but there are images
+                image_list = page.get_images(full=True)
+                needs_ocr = False
+                if not text.strip():
+                    needs_ocr = True
+                elif len(text.strip()) < 50 and len(image_list) > 0:
+                    needs_ocr = True
+                elif text_coverage < 0.02 and len(image_list) > 0:
+                    needs_ocr = True
+
+                if needs_ocr and HAS_TESSERACT:
                     try:
                         # Extract OCR logic to a standalone function for ProcessPoolExecutor isolation
                         pix = page.get_pixmap()
@@ -64,10 +84,13 @@ class PyMuPDFParser(DocumentParser):
                         import concurrent.futures
                         with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
                             future = executor.submit(_run_ocr_isolated, img_bytes)
-                            text = future.result(timeout=60)
+                            ocr_text = future.result(timeout=60)
                             
-                        ocr_used = True
-                        ocr_confidence = 0.85
+                        # Combine or replace
+                        if len(ocr_text.strip()) > len(text.strip()):
+                            text = ocr_text
+                            ocr_used = True
+                            ocr_confidence = 0.85
                     except Exception:
                         pass
                 

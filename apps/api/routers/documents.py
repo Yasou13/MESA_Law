@@ -61,7 +61,7 @@ async def create_upload_intent(
         s3_key=f"temp/{uuid6.uuid7()}",
         size_bytes=payload.size_bytes,
         mime_type=payload.mime_type,
-        scan_status=DocumentState.UPLOADING.value
+        scan_status=DocumentState.UPLOADING
     )
     db.add(rev)
     await db.flush() # get rev.id
@@ -168,7 +168,7 @@ async def complete_upload(
     if not rev:
         raise HTTPException(status_code=404, detail="Revision not found")
         
-    if rev.scan_status == DocumentState.UPLOADING.value:
+    if rev.scan_status == DocumentState.UPLOADING:
         meta = await storage_service.get_object_metadata(rev.s3_key)
         if not meta or meta["size"] == 0:
             raise HTTPException(status_code=400, detail="Uploaded file not found in storage or is empty")
@@ -200,7 +200,7 @@ async def complete_upload(
                 pass
             
         if actual_mime != rev.mime_type:
-            rev.scan_status = DocumentState.QUARANTINED.value
+            rev.scan_status = DocumentState.QUARANTINED
             await db.commit()
             raise HTTPException(status_code=400, detail=f"MIME type mismatch: declared {rev.mime_type}, detected {actual_mime}")
 
@@ -211,18 +211,18 @@ async def complete_upload(
                     total_uncompressed = 0
                     for info in z.infolist():
                         if info.filename.lower().endswith(('.zip', '.rar', '.7z', '.exe', '.bat', '.cmd', '.js', '.vbs')):
-                            rev.scan_status = DocumentState.QUARANTINED.value
+                            rev.scan_status = DocumentState.QUARANTINED
                             await db.commit()
                             raise HTTPException(status_code=400, detail="Nested archives or executable scripts found in DOCX")
                         total_uncompressed += info.file_size
                     
                     compression_ratio = total_uncompressed / max(len(file_bytes), 1)
                     if compression_ratio > 100:  # arbitrary threshold for zip bomb
-                        rev.scan_status = DocumentState.QUARANTINED.value
+                        rev.scan_status = DocumentState.QUARANTINED
                         await db.commit()
                         raise HTTPException(status_code=400, detail="Potential ZIP bomb detected")
             except zipfile.BadZipFile:
-                rev.scan_status = DocumentState.QUARANTINED.value
+                rev.scan_status = DocumentState.QUARANTINED
                 await db.commit()
                 raise HTTPException(status_code=400, detail="Invalid ZIP/DOCX format")
 
@@ -235,13 +235,13 @@ async def complete_upload(
                 for i in range(1, pdf_doc.xref_length()):
                     xref_str = pdf_doc.xref_object(i)
                     if "/JS " in xref_str or "/JavaScript" in xref_str or "/OpenAction" in xref_str:
-                        rev.scan_status = DocumentState.QUARANTINED.value
+                        rev.scan_status = DocumentState.QUARANTINED
                         await db.commit()
                         raise HTTPException(status_code=400, detail="Active content (JavaScript/OpenAction) detected in PDF")
             except Exception as e:
                 if isinstance(e, HTTPException):
                     raise
-                rev.scan_status = DocumentState.QUARANTINED.value
+                rev.scan_status = DocumentState.QUARANTINED
                 await db.commit()
                 raise HTTPException(status_code=400, detail="Failed to parse PDF for security check")
 
@@ -263,11 +263,12 @@ async def complete_upload(
             
         rev.file_hash = sha256_hash
         rev.size_bytes = meta["size"]
-        rev.scan_status = DocumentState.SCANNING.value
+        rev.scan_status = DocumentState.SCANNING
         
         # 11. ClamAV scan job
         job = Job(
             type="SCAN_DOCUMENT",
+            tenant_id=context.tenant_id,
             payload={"document_id": doc.id, "revision_id": rev.id, "s3_key": rev.s3_key}
         )
         db.add(job)
@@ -276,7 +277,7 @@ async def complete_upload(
         from apps.api.models.review import AuditLog
         op_log = AuditLog(
             tenant_id=context.tenant_id,
-            principal_id=context.principal_id,
+            user_id=context.principal_id,
             action="UPLOAD_DOCUMENT",
             entity_type="document_revision",
             entity_id=rev.id,
@@ -316,9 +317,9 @@ async def download_document(
     if not rev:
         raise HTTPException(status_code=404, detail="Revision not found")
         
-    if rev.scan_status == DocumentState.INFECTED.value:
+    if rev.scan_status == DocumentState.INFECTED:
         raise HTTPException(status_code=403, detail="Document is infected and cannot be downloaded")
-    elif rev.scan_status != DocumentState.CLEAN.value:
+    elif rev.scan_status != DocumentState.CLEAN:
         # For development flexibility, we might allow downloading un-scanned docs, 
         # but strict policy: wait for scan
         raise HTTPException(status_code=425, detail="Document is still being scanned")

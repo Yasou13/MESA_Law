@@ -46,7 +46,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
 
   // Fetch all matters and find current to pass to MatterContextHeader
   const { data: mattersResponse, isLoading: isLoadingMatters } = useListMatters()
-  const matters = Array.isArray(mattersResponse?.data) ? mattersResponse.data : ((mattersResponse?.data as any)?.items || [])
+  const matters = Array.isArray(mattersResponse) ? mattersResponse : ((mattersResponse as any)?.items || [])
   const currentMatter = matters.find((m: any) => m.id === matterId) || {
     name: 'Loading...',
     status: '...',
@@ -61,7 +61,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   const { data: documentsResponse, isLoading: isLoadingDocs } = useListMatterDocuments(matterId, {
     query: {
       refetchInterval: (query: any) => {
-        const docs = query.state?.data?.data
+        const docs = query.state?.data
         if (docs?.some((d: any) => d.status === 'uploading' || d.status === 'scanning' || d.status === 'processing')) {
           return 3000
         }
@@ -69,19 +69,19 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
       }
     }
   })
-  const documents = Array.isArray(documentsResponse?.data) ? documentsResponse.data : []
+  const documents = Array.isArray(documentsResponse) ? documentsResponse : []
 
   const { data: claimsResponse, isLoading: isLoadingClaims } = useListClaims(matterId)
-  const claims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : []
+  const claims = Array.isArray(claimsResponse) ? claimsResponse : []
 
   const { data: partiesResponse, isLoading: isLoadingParties } = useListMatterParties(matterId)
-  const parties = Array.isArray(partiesResponse?.data) ? partiesResponse.data : []
+  const parties = Array.isArray(partiesResponse) ? partiesResponse : []
 
   const { data: deadlinesResponse, isLoading: isLoadingDeadlines } = useListDeadlines({ matter_id: matterId })
-  const deadlines = Array.isArray(deadlinesResponse?.data) ? deadlinesResponse.data : []
+  const deadlines = Array.isArray(deadlinesResponse) ? deadlinesResponse : []
 
   const { data: draftsResponse, isLoading: isLoadingDrafts } = useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet(matterId)
-  const drafts = Array.isArray(draftsResponse?.data) ? draftsResponse.data : []
+  const drafts = Array.isArray(draftsResponse) ? draftsResponse : []
 
   const uploadIntent = useCreateUploadIntent()
   const completeUpload = useCompleteUpload()
@@ -141,7 +141,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
         }
       })
       toast.success('Draft created')
-      router.push(`/drafts/${(res.data as any).id}`)
+      router.push(`/drafts/${(res as any).id}`)
     } catch (err) {
       toast.error('Failed to create draft')
     }
@@ -150,7 +150,7 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
   const handleRebuildMesa = async () => {
     try {
       const res = await rebuildMesa({ matterId })
-      toast.success(`Successfully synced ${(res.data as any).synced_pages} pages to MESA Core`)
+      toast.success(`Successfully synced ${(res as any).synced_pages} pages to MESA Core`)
     } catch (err: any) {
       toast.error(err.response?.data?.detail || 'Failed to sync with MESA Core')
     }

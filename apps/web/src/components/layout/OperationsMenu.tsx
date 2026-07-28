@@ -9,7 +9,7 @@ export function OperationsMenu() {
   const { data: depsRes } = useSystemDependenciesApiV1SystemDependenciesGet(
     { query: { enabled: isOpen } }
   )
-  const deps = depsRes?.data || {}
+  const deps = depsRes || {}
   const allOk = Object.values(deps).every(v => v === 'ok' || v === 'degraded')
 
   // CMD+Shift+K shortcut (CMD+K is used by CommandMenu)

@@ -11,6 +11,7 @@ import {
   useRejectReviewApiV1ReviewsReviewIdRejectPost,
   useCorrectReviewApiV1ReviewsReviewIdCorrectPost
 } from '@/api/endpoints/reviews/reviews'
+import { useListMatterParties } from '@/api/endpoints/default/default'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { StatusBadge } from '@/components/ui/status-badge'
@@ -22,12 +23,17 @@ export default function GlobalReviewsPage() {
   const queryClient = useQueryClient()
   const [editingReview, setEditingReview] = useState<any | null>(null)
   const [editData, setEditData] = useState<any>({})
-  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [activeTab, setActiveTab] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING')
 
   const { data: reviewsResponse, isLoading, refetch } = useListDraftReviewsApiV1ReviewsGet()
-  const reviews = Array.isArray(reviewsResponse?.data) ? reviewsResponse.data : []
+  const reviews = Array.isArray(reviewsResponse) ? reviewsResponse : []
 
-  const filteredReviews = reviews.filter(r => r.status.toLowerCase() === activeTab)
+  const filteredReviews = reviews.filter(r => {
+    if (activeTab === 'PENDING') return r.status === 'PENDING' || r.status === 'IN_REVIEW'
+    if (activeTab === 'APPROVED') return r.status === 'APPROVED_PENDING_PUBLICATION' || r.status === 'PUBLISHED'
+    if (activeTab === 'REJECTED') return r.status === 'REJECTED' || r.status === 'DUPLICATE'
+    return false
+  })
 
   const approveMutation = useApproveReviewApiV1ReviewsReviewIdApprovePost({
     mutation: {
@@ -82,14 +88,14 @@ export default function GlobalReviewsPage() {
 
       <Tabs value={activeTab} onValueChange={(val: any) => setActiveTab(val)} className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="pending" className="relative">
+          <TabsTrigger value="PENDING" className="relative">
             Pending
-            {reviews.filter(r => r.status.toLowerCase() === 'pending').length > 0 && (
+            {reviews.filter(r => r.status === 'PENDING' || r.status === 'IN_REVIEW').length > 0 && (
               <span className="ml-2 w-2 h-2 rounded-full bg-[var(--color-semantic-info)]"></span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="approved">Approved</TabsTrigger>
-          <TabsTrigger value="rejected">Rejected</TabsTrigger>
+          <TabsTrigger value="APPROVED">Approved</TabsTrigger>
+          <TabsTrigger value="REJECTED">Rejected</TabsTrigger>
         </TabsList>
         
         <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
@@ -230,36 +236,11 @@ export default function GlobalReviewsPage() {
             )}
 
             {editingReview?.entity_type === 'claim' && (
-              <>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Description</label>
-                  <textarea
-                    className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)] min-h-[100px]"
-                    value={editData.description || ''}
-                    onChange={(e) => setEditData({...editData, description: e.target.value})}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Claimant Party ID</label>
-                    <input
-                      type="text"
-                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
-                      value={editData.claimant_party_id || ''}
-                      onChange={(e) => setEditData({...editData, claimant_party_id: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Defendant Party ID</label>
-                    <input
-                      type="text"
-                      className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
-                      value={editData.defendant_party_id || ''}
-                      onChange={(e) => setEditData({...editData, defendant_party_id: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </>
+              <ClaimEditForm 
+                matterId={editingReview.matter_id} 
+                editData={editData} 
+                setEditData={setEditData} 
+              />
             )}
 
             {editingReview?.entity_type === 'deadline' && (
@@ -317,5 +298,57 @@ export default function GlobalReviewsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function ClaimEditForm({ matterId, editData, setEditData }: { matterId: string, editData: any, setEditData: any }) {
+  const { data: partiesResponse, isLoading } = useListMatterParties(matterId, { query: { enabled: !!matterId } })
+  const parties = Array.isArray(partiesResponse) ? partiesResponse : []
+
+  return (
+    <>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Description</label>
+        <textarea
+          className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)] min-h-[100px]"
+          value={editData.description || ''}
+          onChange={(e) => setEditData({...editData, description: e.target.value})}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center justify-between">
+            Claimant Party 
+            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-[var(--color-anthracite-500)]" />}
+          </label>
+          <select
+            className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+            value={editData.claimant_party_id || ''}
+            onChange={(e) => setEditData({...editData, claimant_party_id: e.target.value})}
+          >
+            <option value="" disabled>Select Party</option>
+            {parties.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium flex items-center justify-between">
+            Defendant Party 
+            {isLoading && <Loader2 className="w-3 h-3 animate-spin text-[var(--color-anthracite-500)]" />}
+          </label>
+          <select
+            className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-md px-3 py-2 text-[var(--foreground)]"
+            value={editData.defendant_party_id || ''}
+            onChange={(e) => setEditData({...editData, defendant_party_id: e.target.value})}
+          >
+            <option value="" disabled>Select Party</option>
+            {parties.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name} ({p.role})</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </>
   )
 }

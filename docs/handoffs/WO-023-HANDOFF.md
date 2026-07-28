@@ -1,1 +1,0 @@
-# Source-grounded Q&A ve research - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** Source-grounded Q&A ve research skeleton built.\n

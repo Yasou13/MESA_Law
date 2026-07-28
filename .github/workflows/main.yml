@@ -40,7 +40,7 @@ jobs:
       - name: Run Pytest
         env:
           MESA_LAW_ENVIRONMENT: test
-        run: uv run pytest apps tests -v
+        run: uv run pytest apps tests --ignore=tests/e2e -v
 
   frontend-quality:
     name: Frontend Checks
@@ -72,12 +72,6 @@ jobs:
 
       - name: Unit Tests
         run: pnpm test:unit
-
-      - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps
-
-      - name: E2E Tests
-        run: pnpm test
 
       - name: Build
         run: pnpm build
@@ -150,6 +144,46 @@ jobs:
         
       - name: Check container statuses
         run: docker compose --profile core ps
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run Backend E2E Tests
+        env:
+          MESA_LAW_ENVIRONMENT: test
+        run: uv run pytest tests/e2e -v
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install Frontend Dependencies
+        working-directory: apps/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        working-directory: apps/web
+        run: pnpm exec playwright install --with-deps
+
+      - name: Run Playwright E2E Tests
+        working-directory: apps/web
+        run: pnpm test
 
   security-scan:
     name: Security Scans

@@ -14,7 +14,7 @@ export default function MatterEvidencePage({ params }: { params: Promise<{ id: s
   const matterId = resolvedParams.id
   
   const { data: evidenceResponse, isLoading: loading, isError, refetch } = useListEvidence(matterId)
-  const evidences = Array.isArray(evidenceResponse?.data) ? evidenceResponse.data : []
+  const evidences = Array.isArray(evidenceResponse) ? evidenceResponse : []
   
   const [search, setSearch] = useState('')
 

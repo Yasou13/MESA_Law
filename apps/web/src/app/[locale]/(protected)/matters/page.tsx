@@ -7,7 +7,7 @@ import { Plus, FolderOpen, Loader2, Search, ArrowRight, Activity, Clock, LayoutG
 import { toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
-import { useListMatters, useCreateMatter } from '@/api/endpoints/default/default'
+import { useListMatters, useCreateMatter, useConflictCheck } from '@/api/endpoints/default/default'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -23,6 +23,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 const matterSchema = z.object({
   title: z.string().min(3, 'Matter name must be at least 3 characters'),
   description: z.string().optional(),
+  partyNames: z.string().min(1, 'Please enter at least one party name for conflict checking'),
 })
 
 type MatterFormValues = z.infer<typeof matterSchema>
@@ -32,14 +33,18 @@ export default function MattersPage() {
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [conflicts, setConflicts] = useState<any[] | null>(null)
+  const [conflictCheckId, setConflictCheckId] = useState<string | null>(null)
 
   const { data: mattersResponse, isLoading } = useListMatters()
-  const allMatters: any[] = (mattersResponse?.data as any)?.items || (mattersResponse?.data as any) || []
+  const allMatters: any[] = (mattersResponse as unknown as any[]) || []
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MatterFormValues>({
     resolver: zodResolver(matterSchema),
-    defaultValues: { title: '', description: '' }
+    defaultValues: { title: '', description: '', partyNames: '' }
   })
+
+  const conflictCheck = useConflictCheck()
 
   const createMatter = useCreateMatter({
     mutation: {
@@ -47,6 +52,8 @@ export default function MattersPage() {
         queryClient.invalidateQueries({ queryKey: ['/api/v1/matters'] })
         reset()
         setIsCreateOpen(false)
+        setConflicts(null)
+        setConflictCheckId(null)
         toast.success('Matter workspace created successfully')
       },
       onError: () => {
@@ -56,7 +63,29 @@ export default function MattersPage() {
   })
 
   const onSubmit = (data: MatterFormValues) => {
-    createMatter.mutate({ data: { title: data.title } as any })
+    if (conflicts !== null) {
+      // User has already run conflict check and is overriding/proceeding
+      createMatter.mutate({ data: { title: data.title } as any })
+      return
+    }
+    
+    // First run conflict check
+    const parties = data.partyNames.split(',').map(p => p.trim()).filter(Boolean)
+    conflictCheck.mutate({ data: { party_names: parties } }, {
+      onSuccess: (res) => {
+        if ((res as any).has_conflicts) {
+          setConflicts((res as any).conflicts as unknown as any[])
+          setConflictCheckId((res as any).id || null)
+          toast.error('Conflicts found! Please review.')
+        } else {
+          // No conflicts, create directly
+          createMatter.mutate({ data: { title: data.title } as any })
+        }
+      },
+      onError: () => {
+        toast.error('Failed to run conflict check')
+      }
+    })
   }
 
   const filteredMatters = allMatters.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.title?.toLowerCase().includes(search.toLowerCase()))
@@ -191,21 +220,54 @@ export default function MattersPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-6">
-                <div className="space-y-2">
-                  <label htmlFor="title" className="text-sm font-medium">Matter Name</label>
-                  <Input id="title" placeholder="e.g. Acme Corp Acquisition" {...register('title')} />
-                  {errors.title && <p className="text-sm text-[var(--color-semantic-error)]">{errors.title.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium">Description (Optional)</label>
-                  <Input id="description" placeholder="Brief context about this matter..." {...register('description')} />
-                </div>
+                {!conflicts ? (
+                  <>
+                    <div className="space-y-2">
+                      <label htmlFor="title" className="text-sm font-medium">Matter Name</label>
+                      <Input id="title" placeholder="e.g. Acme Corp Acquisition" {...register('title')} />
+                      {errors.title && <p className="text-sm text-[var(--color-semantic-error)]">{errors.title.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="partyNames" className="text-sm font-medium">Parties (comma separated)</label>
+                      <Input id="partyNames" placeholder="e.g. Acme Corp, Globex" {...register('partyNames')} />
+                      {errors.partyNames && <p className="text-sm text-[var(--color-semantic-error)]">{errors.partyNames.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <label htmlFor="description" className="text-sm font-medium">Description (Optional)</label>
+                      <Input id="description" placeholder="Brief context about this matter..." {...register('description')} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-[var(--color-semantic-error)]/10 text-[var(--color-semantic-error)] rounded-lg border border-[var(--color-semantic-error)]/20">
+                      <h4 className="font-bold mb-2">Potential Conflicts Detected</h4>
+                      <ul className="list-disc pl-4 text-sm space-y-1">
+                        {conflicts.map((c, i) => (
+                          <li key={i}>
+                            <strong>{c.matched_name}</strong> in matter <em>{c.matter_title}</em> (Role: {c.role})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <p className="text-sm text-[var(--color-anthracite-400)]">
+                      Do you want to override these conflicts and create the matter anyway?
+                    </p>
+                  </div>
+                )}
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={createMatter.isPending}>
-                  {createMatter.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                  Create Workspace
+                <Button type="button" variant="outline" onClick={() => {
+                  if (conflicts) {
+                    setConflicts(null)
+                  } else {
+                    setIsCreateOpen(false)
+                  }
+                }}>
+                  {conflicts ? 'Back' : 'Cancel'}
+                </Button>
+                <Button type="submit" disabled={createMatter.isPending || conflictCheck.isPending}>
+                  {createMatter.isPending || conflictCheck.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {conflicts ? 'Override & Create' : 'Check Conflicts & Create'}
                 </Button>
               </DialogFooter>
             </form>

@@ -49,6 +49,7 @@ class DocumentRevision(Base, AuditMixin, TenantAwareMixin):
     mime_type: Mapped[str] = mapped_column(String, nullable=False)
     
     # Full Phase 4 Quarantine State Machine
-    scan_status: Mapped[str] = mapped_column(String, default=DocumentState.UPLOAD_INTENT_CREATED.value, nullable=False) 
+    from sqlalchemy import Enum as SQLEnum
+    scan_status: Mapped[DocumentState] = mapped_column(SQLEnum(DocumentState, native_enum=False, length=50), default=DocumentState.UPLOAD_INTENT_CREATED, nullable=False) 
     
     document = relationship("Document", back_populates="revisions")

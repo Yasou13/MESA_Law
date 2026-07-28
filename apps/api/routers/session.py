@@ -1,7 +1,7 @@
 from apps.api.core.config import settings
 from apps.api.core.database import get_db
-from apps.api.dependencies.auth import get_current_user, setup_tenant_context
 from apps.api.core.models import RequestContext
+from apps.api.dependencies.auth import get_current_user, setup_tenant_context
 from apps.api.models.domain import Membership, User
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select

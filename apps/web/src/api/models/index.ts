@@ -6,6 +6,8 @@
  */
 
 export * from './approveDraftParams';
+export * from './auditEventResponse';
+export * from './auditEventResponseChanges';
 export * from './conflictCheckRequest';
 export * from './conflictCheckResponse';
 export * from './conflictResult';
@@ -19,10 +21,15 @@ export * from './firmCreateRequest';
 export * from './firmResponse';
 export * from './generateDraftRequest';
 export * from './hTTPValidationError';
+export * from './jobResponse';
+export * from './jobResponsePayload';
 export * from './legalSourceResponse';
+export * from './listAuditEventsParams';
 export * from './listDeadlinesParams';
 export * from './listDraftReviewsApiV1ReviewsGetParams';
+export * from './listJobsParams';
 export * from './matterCreate';
+export * from './matterPartyResponse';
 export * from './matterQABody';
 export * from './matterResponse';
 export * from './overrideConflictParams';

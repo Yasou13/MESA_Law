@@ -1,12 +1,10 @@
 
 from apps.api.core.errors import ProblemException
 from apps.api.core.models import RequestContext
-from apps.api.models.domain import Role
-
-
-from sqlalchemy.ext.asyncio import AsyncSession
+from apps.api.models.domain import MatterMember, Role
 from sqlalchemy import select
-from apps.api.models.domain import MatterMember
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 class BasePolicy:
     @staticmethod

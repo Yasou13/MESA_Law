@@ -3,8 +3,11 @@ import socket
 
 from apps.api.core.database import get_db
 from fastapi import APIRouter, Depends, Response
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from apps.api.core.models import RequestContext
+from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
+from apps.api.core.policies import AdminAccessPolicy
 
 router = APIRouter(tags=["System"])
 
@@ -32,11 +35,18 @@ async def ready(response: Response, db: AsyncSession = Depends(get_db)):
     return {"status": "ok", "components": deps}
 
 @router.get("/api/v1/system/dependencies")
-async def system_dependencies(db: AsyncSession = Depends(get_db)):
+async def system_dependencies(
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db)
+):
+    AdminAccessPolicy.can_admin_firm(context)
     return await get_dependencies(db)
 
 @router.get("/api/v1/system/settings", operation_id="getSystemSettings")
-async def get_system_settings():
+async def get_system_settings(
+    context: RequestContext = Depends(setup_tenant_context)
+):
+    # Any authenticated user can read settings (auth enforced by setup_tenant_context)
     return {
         "features": {
             "advanced_search_enabled": True,
@@ -54,11 +64,16 @@ async def get_system_settings():
     }
 
 @router.put("/api/v1/system/settings", operation_id="updateSystemSettings")
-async def update_system_settings(payload: dict):
+async def update_system_settings(
+    payload: dict,
+    context: RequestContext = Depends(setup_tenant_context)
+):
+    AdminAccessPolicy.can_admin_firm(context)
     # Mock update endpoint
     return {"status": "success", "settings": payload}
 
 from pydantic import BaseModel
+
 
 class SyncMesaCoreRequest(BaseModel):
     tenant_id: str
@@ -68,9 +83,10 @@ async def sync_mesa_core(
     payload: SyncMesaCoreRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    from apps.api.models.document import Document
-    import uuid
     import logging
+    import uuid
+
+    from apps.api.models.document import Document
     logger = logging.getLogger(__name__)
 
     # Create dummy document to simulate sync from MESA Core

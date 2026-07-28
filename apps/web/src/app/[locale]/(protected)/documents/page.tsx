@@ -16,7 +16,7 @@ export default function GlobalDocumentsPage() {
   const [search, setSearch] = useState('')
   const [activeDoc, setActiveDoc] = useState<{url: string, title: string, documentId: string, matterId: string} | null>(null)
   
-  const documents = (res?.data as any[]) || []
+  const documents = (res as unknown as any[]) || []
   const filteredDocuments = documents.filter((doc) => 
     doc.title?.toLowerCase().includes(search.toLowerCase()) || 
     doc.id?.toLowerCase().includes(search.toLowerCase())
@@ -99,7 +99,7 @@ export default function GlobalDocumentsPage() {
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          setActiveDoc({ url: (res.data as any).presigned_url, title: doc.title, documentId: doc.id, matterId: doc.matter_id || 'unknown' })
+                          setActiveDoc({ url: (res as any).presigned_url, title: doc.title, documentId: doc.id, matterId: doc.matter_id || 'unknown' })
                         } catch (e: any) {
                           toast.error('Cannot view document yet')
                         }
@@ -109,7 +109,7 @@ export default function GlobalDocumentsPage() {
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          window.open((res.data as any).presigned_url, '_blank')
+                          window.open((res as any).presigned_url, '_blank')
                         } catch (e: any) {
                           toast.error('Cannot download document yet')
                         }

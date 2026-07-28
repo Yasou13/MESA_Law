@@ -1,1 +1,0 @@
-# Legal extraction ve gerçek intelligence - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** Legal extraction ve gerçek intelligence skeleton built.\n

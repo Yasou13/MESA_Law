@@ -4,7 +4,7 @@ import { Loader2, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
 
 export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
   const { data: claimsResponse, isLoading: loading } = useListClaimsWithEvidence(matterId);
-  const claims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : [];
+  const claims = Array.isArray(claimsResponse) ? claimsResponse : [];
 
   if (loading) {
     return (

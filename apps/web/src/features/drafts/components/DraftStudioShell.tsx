@@ -24,17 +24,17 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
   const [isDirty, setIsDirty] = useState(false);
 
   const { data: draftsResponse, isLoading: isLoadingList } = useListMatterDrafts(matterId);
-  const drafts: any = draftsResponse?.data || [];
+  const drafts: any = draftsResponse || [];
 
   const { data: activeDraftResponse, isLoading: isLoadingDetail } = useGetDraft(activeDraftId as string, {
     query: { enabled: !!activeDraftId }
   });
-  const activeDraft: any = activeDraftResponse?.data;
+  const activeDraft: any = activeDraftResponse;
 
   const { data: citationsResponse } = useGetDraftCitations(activeDraftId as string, {
     query: { enabled: !!activeDraftId }
   });
-  const citations: any[] = (citationsResponse?.data as any[]) || [];
+  const citations: any[] = (citationsResponse as unknown as any[]) || [];
 
   useEffect(() => {
     if (activeDraft) {
@@ -51,7 +51,7 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
       onSuccess: (res: any) => {
         toast.success('New draft created');
         queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
-        setActiveDraftId(res.data.id);
+        setActiveDraftId(res.id);
       },
       onError: () => toast.error('Failed to create draft')
     }
@@ -60,8 +60,8 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
   const saveMutation = useUpdateDraft({
     mutation: {
       onSuccess: (res: any) => {
-        toast.success(`Draft saved (v${res.data.version})`);
-        setCurrentVersion(res.data.version);
+        toast.success(`Draft saved (v${res.version})`);
+        setCurrentVersion(res.version);
         setIsDirty(false);
         queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
         queryClient.invalidateQueries({ queryKey: ['useGetDraft', activeDraftId] });

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 
 export default function NotificationsPage() {
   const { data: res, isLoading } = useGetNotificationsApiV1NotificationsGet()
-  const notifications: any[] = (res?.data as any) || []
+  const notifications: any[] = (res as unknown as any) || []
 
   const getIcon = (category: string) => {
     switch (category) {

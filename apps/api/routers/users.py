@@ -1,5 +1,8 @@
+from datetime import UTC
+
 from apps.api.core.database import get_db
-from apps.api.dependencies.auth import get_current_user
+from apps.api.core.models import RequestContext
+from apps.api.dependencies.auth import get_current_user, setup_tenant_context
 from apps.api.models.domain import User
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -69,10 +72,14 @@ class SupportAccessRequest(BaseModel):
 @router.post("/me/support-access", operation_id="grantSupportAccess")
 async def grant_support_access(
     payload: SupportAccessRequest,
+    context: RequestContext = Depends(setup_tenant_context),
     user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    from datetime import datetime, timedelta, timezone
+    from apps.api.core.policies import AdminAccessPolicy
+    AdminAccessPolicy.can_admin_firm(context)
+
+    from datetime import datetime, timedelta
     
     keycloak_id = user["id"]
     result = await db.execute(select(User).where(User.keycloak_id == keycloak_id))
@@ -82,7 +89,7 @@ async def grant_support_access(
         raise HTTPException(status_code=404, detail="User not found")
         
     db_user.is_support_access_granted = True
-    db_user.support_access_granted_until = datetime.now(timezone.utc) + timedelta(hours=payload.duration_hours)
+    db_user.support_access_granted_until = datetime.now(UTC) + timedelta(hours=payload.duration_hours)
     
     await db.commit()
     

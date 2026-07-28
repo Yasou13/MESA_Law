@@ -13,4 +13,5 @@ export interface ReviewItemResponse {
   entity_id: string;
   proposed_content: ReviewItemResponseProposedContent;
   status: string;
+  suggestion_id?: string | null;
 }

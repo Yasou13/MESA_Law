@@ -1,9 +1,0 @@
-{
-  "tests_run": true,
-  "core_modified": false,
-  "handoff_created": true,
-  "mock_tenant_exists": false,
-  "frontend_auth_mocked": false,
-  "backend_auth_mocked": false,
-  "overall_pass": true
-}

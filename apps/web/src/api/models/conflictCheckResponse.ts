@@ -7,6 +7,7 @@
 import type { ConflictResult } from './conflictResult';
 
 export interface ConflictCheckResponse {
+  id: string;
   has_conflicts: boolean;
   conflicts: ConflictResult[];
 }

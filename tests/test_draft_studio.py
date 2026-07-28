@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import setup_tenant_context, require_recent_auth
+from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
 from apps.api.main import app
 from httpx import ASGITransport, AsyncClient
 
@@ -34,6 +34,8 @@ def override_draft_deps():
         if getattr(obj, "__tablename__", "") == "drafts":
             if not getattr(obj, "id", None):
                 obj.id = "draft_123"
+            if getattr(obj, "status", None) is None:
+                obj.status = "DRAFT"
             drafts_db[obj.id] = obj
             
     async def mock_refresh(obj):
@@ -41,6 +43,12 @@ def override_draft_deps():
             obj.id = "draft_123"
             
     async def mock_execute(stmt):
+        stmt_str = str(stmt).lower()
+        if "draft_citations" in stmt_str:
+            return MockResult([])
+        elif "matter_members" in stmt_str:
+            member = MagicMock(access_scope="admin")
+            return MockResult([member])
         return MockResult(list(drafts_db.values()))
         
     mock_session.get.side_effect = mock_get
@@ -89,6 +97,10 @@ async def test_draft_studio_crud_and_export(override_draft_deps):
         assert put_data["version"] == 2
         assert put_data["title"] == "Updated Title"
         assert put_data["content"] == "Updated content"
+
+        # Submit for review
+        submit_res = await ac.post(f"/api/v1/draft-studio/drafts/{draft_id}/submit-review")
+        assert submit_res.status_code == 200
 
         # Approve draft
         approve_res = await ac.post(f"/api/v1/draft-studio/drafts/{draft_id}/approve")

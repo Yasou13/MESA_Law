@@ -95,7 +95,7 @@ class Worker:
             duration_histogram = meter.create_histogram("job_processing_duration", description="Time spent processing a job")
             
             job_id_cv.set(job.id)
-            tenant_id_cv.set(job.payload.get("tenant_id"))
+            tenant_id_cv.set(job.tenant_id)
             
             tracer = trace.get_tracer(__name__)
             start_time = time.time()
@@ -104,10 +104,23 @@ class Worker:
                 with tracer.start_as_current_span(f"process_job_{job.type}") as span:
                     span.set_attribute("job.id", job.id)
                     span.set_attribute("job.type", job.type)
-                    if "tenant_id" in job.payload:
-                        span.set_attribute("tenant.id", job.payload["tenant_id"])
+                    span.set_attribute("tenant.id", job.tenant_id)
                         
-                    await handler(job.payload, session)
+                    job_payload = dict(job.payload)
+                    job_payload["tenant_id"] = job.tenant_id
+                    
+                    from apps.api.core.rls import set_tenant_id
+                    from sqlalchemy import text
+                    
+                    # Phase 5: RLS Tenant Context Switch for Worker
+                    if job.tenant_id:
+                        set_tenant_id(job.tenant_id)
+                        await session.execute(text("SELECT set_config('app.current_tenant', :tenant, true)"), {"tenant": str(job.tenant_id)})
+                        
+                    try:
+                        await handler(job_payload, session)
+                    finally:
+                        set_tenant_id(None)
                     
                     # Refresh job since handler might have modified session state
                     job = await session.get(Job, job_id)
@@ -123,11 +136,15 @@ class Worker:
             except Exception as e:  # noqa: BLE001 — handlers may raise any exception
                 duration_histogram.record(time.time() - start_time, {"job.type": job.type, "status": "failed"})
                 
+                job_id = job.id
+                attempt_id = attempt.id if attempt else None
+                
                 await session.rollback()
                 # Use a fresh session for failure update if needed, but since we rolled back, we can just use the same one
                 # but we need to re-fetch the objects.
                 job = await session.get(Job, job_id)
-                attempt = await session.get(JobAttempt, attempt.id)
+                if attempt_id:
+                    attempt = await session.get(JobAttempt, attempt_id)
                 await self._fail_job(session, job, str(e), attempt)
 
     async def _fail_job(self, session: AsyncSession, job: Job, error_msg: str, attempt: JobAttempt = None):

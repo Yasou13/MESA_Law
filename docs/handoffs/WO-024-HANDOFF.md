@@ -1,1 +1,0 @@
-# Deadline rule packs - HANDOFF\n\n- **Status:** COMPLETED\n- **Details:** Deadline rule packs skeleton built.\n

@@ -22,14 +22,22 @@ async def get_dashboard_metrics(
 ):
     tenant_id = context.tenant_id
 
+    from apps.api.models.review import ReviewState
+    
     # Active Matters
     matters_count = await db.scalar(
-        select(func.count(Matter.id)).where(Matter.tenant_id == tenant_id, Matter.status == "open")
+        select(func.count(Matter.id)).where(
+            Matter.tenant_id == tenant_id, 
+            Matter.status.in_(["open", "OPEN"])
+        )
     )
 
     # Pending Reviews
     reviews_count = await db.scalar(
-        select(func.count(ReviewItem.id)).where(ReviewItem.status == "pending")
+        select(func.count(ReviewItem.id)).where(
+            ReviewItem.tenant_id == tenant_id,
+            ReviewItem.status == ReviewState.PENDING
+        )
     )
 
     # Upcoming Deadlines
@@ -45,7 +53,7 @@ async def get_dashboard_metrics(
     notifs_count = await db.scalar(
         select(func.count(Notification.id)).where(
             Notification.tenant_id == tenant_id,
-            Notification.status == "CREATED"
+            Notification.status.in_(["CREATED", "created", "UNREAD", "unread"])
         )
     )
     

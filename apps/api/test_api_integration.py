@@ -52,10 +52,32 @@ async def test_api_integration_e2e_flow():
     mock_session.add = mock_add
     
     try:
-        # Patch settings to enable dev-mode bypass
-        with patch("apps.api.dependencies.auth.settings.test_auth_enabled", True), \
+        # Phase 6: Removed test_auth_enabled bypass, using actual jwt.decode mock
+        with patch("apps.api.dependencies.auth.jwt.decode") as mock_jwt_decode, \
+             patch("apps.api.dependencies.auth.get_jwks") as mock_get_jwks, \
+             patch("apps.api.dependencies.auth.jwt.get_unverified_header") as mock_header, \
              patch("apps.api.dependencies.auth.settings.env", "test"), \
              patch("apps.api.routers.documents.storage_service.generate_presigned_upload_url", new_callable=AsyncMock) as mock_presigned:
+            
+            mock_get_jwks.return_value = {"keys": [{"kid": "test-kid"}]}
+            mock_header.return_value = {"kid": "test-kid"}
+            mock_jwt_decode.return_value = {
+                "sub": "test-user-id",
+                "email": "test@example.com",
+                "roles": [],
+                "auth_time": 1700000000
+            }
+            
+            # Setup dependency override for tenant context
+            from apps.api.dependencies.auth import setup_tenant_context
+            from apps.api.core.models import RequestContext
+            async def override_tenant_context():
+                return RequestContext(
+                    tenant_id="dev-tenant-default",
+                    principal_id="test-user-id",
+                    roles={"FIRM_ADMIN"}
+                )
+            app.dependency_overrides[setup_tenant_context] = override_tenant_context
             
             mock_presigned.return_value = "http://mock-presigned-url"
             

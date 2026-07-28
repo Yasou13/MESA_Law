@@ -40,10 +40,8 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         
     import hashlib
 
-    import hashlib
-
-    from apps.api.models.review import ExtractionSuggestion, ReviewItem, ReviewState
     from apps.api.models.domain import SourceLocator
+    from apps.api.models.review import ExtractionSuggestion, ReviewItem, ReviewState
 
     adapter = get_extraction_adapter()
     matter_id = parsed_doc.document.matter_id if parsed_doc.document else payload.get("matter_id")
@@ -170,58 +168,115 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         )
         session.add(review_item)
             
-    # 3. Simple Regex / Keyword Fallback for Deadlines (Phase 10)
-    import re
-    if re.search(r'\btebliğ\b', full_text, re.IGNORECASE):
-        ik = generate_idempotency_key(parsed_doc.revision_id, "1.0.0", "DEADLINE_TRIGGER_SUGGESTION", "teblig_regex")
+    # 3. Extract Events (Deadlines)
+    events_data = await adapter.extract_events(full_text)
+    
+    for ed in events_data:
+        ik = generate_idempotency_key(parsed_doc.revision_id, "1.0.0", "DEADLINE_TRIGGER_SUGGESTION", ed.get("provenance", "unknown_event"))
         existing_sugg = await session.execute(select(ExtractionSuggestion).where(ExtractionSuggestion.idempotency_key == ik))
-        if not existing_sugg.scalars().first():
-            locator = SourceLocator(
-                tenant_id=parsed_doc.tenant_id,
-                matter_id=matter_id,
-                document_id=parsed_doc.document_id,
-                document_revision_id=parsed_doc.revision_id,
-                parsed_document_id=parsed_document_id,
-                page_number=1, # Default/Fallback
-                text_snippet="tebliğ",
-                text_hash=hashlib.sha256(b"teblig").hexdigest(),
-                parser_version=parsed_doc.parser_used
-            )
-            session.add(locator)
-            await session.flush()
+        if existing_sugg.scalars().first():
+            continue
             
-            suggestion = ExtractionSuggestion(
-                tenant_id=parsed_doc.tenant_id,
-                matter_id=matter_id,
-                document_id=parsed_doc.document_id,
-                document_revision_id=parsed_doc.revision_id,
-                source_locator_id=locator.id,
-                suggestion_type="DEADLINE_TRIGGER_SUGGESTION",
-                payload={
-                    "trigger_event": "tebliğ",
-                    "rule_name": "İstinaf - 14 Gün",
-                    "offset_days": 14,
-                    "description": "Karar tebliği tespit edildi. 14 günlük istinaf süresi başlıyor."
-                },
-                extractor_name="regex_fallback",
-                extractor_version="1.0.0",
-                prompt_version="1.0",
-                parser_version=parsed_doc.parser_used,
-                idempotency_key=ik
-            )
-            session.add(suggestion)
-            await session.flush()
+        locator = SourceLocator(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            parsed_document_id=parsed_document_id,
+            page_number=1,
+            text_snippet=ed.get("provenance", "Snippet not available"),
+            text_hash=hashlib.sha256(str(ed.get("provenance", "")).encode()).hexdigest(),
+            parser_version=parsed_doc.parser_used
+        )
+        session.add(locator)
+        await session.flush()
+        
+        suggestion = ExtractionSuggestion(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            source_locator_id=locator.id,
+            suggestion_type="DEADLINE_TRIGGER_SUGGESTION",
+            payload={
+                "trigger_event": ed["trigger_event"],
+                "rule_name": ed["rule_name"],
+                "offset_days": ed["offset_days"],
+                "description": ed["description"]
+            },
+            extractor_name="adapter",
+            extractor_version="1.0.0",
+            prompt_version="1.0",
+            parser_version=parsed_doc.parser_used,
+            idempotency_key=ik
+        )
+        session.add(suggestion)
+        await session.flush()
+        
+        review_item = ReviewItem(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            entity_type="deadline",
+            entity_id=f"draft_deadline_{uuid6.uuid7()}",
+            suggestion_id=suggestion.id,
+            proposed_content=suggestion.payload,
+            status=ReviewState.PENDING
+        )
+        session.add(review_item)
+        
+    # 4. Extract Evidence
+    evidence_data = await adapter.extract_evidence(full_text)
+    
+    for ev in evidence_data:
+        ik = generate_idempotency_key(parsed_doc.revision_id, "1.0.0", "EVIDENCE_SUGGESTION", ev.get("provenance", "unknown_evidence"))
+        existing_sugg = await session.execute(select(ExtractionSuggestion).where(ExtractionSuggestion.idempotency_key == ik))
+        if existing_sugg.scalars().first():
+            continue
             
-            review_item = ReviewItem(
-                tenant_id=parsed_doc.tenant_id,
-                matter_id=matter_id,
-                entity_type="deadline",
-                entity_id=f"draft_deadline_{uuid6.uuid7()}",
-                suggestion_id=suggestion.id,
-                proposed_content=suggestion.payload,
-                status=ReviewState.PENDING
-            )
-            session.add(review_item)
+        locator = SourceLocator(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            parsed_document_id=parsed_document_id,
+            page_number=1,
+            text_snippet=ev.get("provenance", "Snippet not available"),
+            text_hash=hashlib.sha256(str(ev.get("provenance", "")).encode()).hexdigest(),
+            parser_version=parsed_doc.parser_used
+        )
+        session.add(locator)
+        await session.flush()
+        
+        suggestion = ExtractionSuggestion(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            document_id=parsed_doc.document_id,
+            document_revision_id=parsed_doc.revision_id,
+            source_locator_id=locator.id,
+            suggestion_type="EVIDENCE_SUGGESTION",
+            payload={
+                "description": ev["description"],
+                "relevance": ev["relevance"]
+            },
+            extractor_name="adapter",
+            extractor_version="1.0.0",
+            prompt_version="1.0",
+            parser_version=parsed_doc.parser_used,
+            idempotency_key=ik
+        )
+        session.add(suggestion)
+        await session.flush()
+        
+        review_item = ReviewItem(
+            tenant_id=parsed_doc.tenant_id,
+            matter_id=matter_id,
+            entity_type="evidence",
+            entity_id=f"draft_evidence_{uuid6.uuid7()}",
+            suggestion_id=suggestion.id,
+            proposed_content=suggestion.payload,
+            status=ReviewState.PENDING
+        )
+        session.add(review_item)
 
     from apps.api.models.audit import AuditEvent, Notification
     
@@ -231,7 +286,7 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession):
         action="EXTRACTION_COMPLETED",
         entity_type="parsed_document",
         entity_id=parsed_document_id,
-        changes={"parties": len(parties_data), "claims": len(claims_data)}
+        changes={"parties": len(parties_data), "claims": len(claims_data), "events": len(events_data), "evidence": len(evidence_data)}
     )
     session.add(audit)
     

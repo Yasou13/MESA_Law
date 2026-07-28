@@ -4,7 +4,7 @@ import { Send, Loader2, BookOpen, AlertCircle } from 'lucide-react';
 
 export function QAShell({ matterId = "1" }: { matterId?: string }) {
   const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[], review_warning?: boolean, source_coverage?: string}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[], review_warning?: boolean, source_coverage?: string, degraded_mode?: boolean}[]>([]);
   
   const qaMutation = useAskQuestion();
 
@@ -20,7 +20,7 @@ export function QAShell({ matterId = "1" }: { matterId?: string }) {
       { data: { matter_id: matterId, question: newQuery } },
       {
         onSuccess: (res: any) => {
-          const data = res.data;
+          const data = res;
           const formattedCitations = data.citations?.map((c: any) => `Doc ID: ${c.document_id.substring(0,8)} (Page ${c.page_number})`) || [];
           
           setMessages(prev => [...prev, { 
@@ -28,7 +28,8 @@ export function QAShell({ matterId = "1" }: { matterId?: string }) {
             content: data.answer || 'No relevant answer found.', 
             citations: formattedCitations,
             review_warning: data.review_warning,
-            source_coverage: data.source_coverage
+            source_coverage: data.source_coverage,
+            degraded_mode: data.degraded_mode
           }]);
         },
         onError: (error: any) => {
@@ -64,12 +65,20 @@ export function QAShell({ matterId = "1" }: { matterId?: string }) {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-sm ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.review_warning ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
-              {msg.review_warning && (
-                <div className="flex items-center gap-1.5 mb-1 font-semibold text-xs uppercase tracking-wider">
-                  <AlertCircle className="w-4 h-4" />
-                  Verification Warning
+                <div className="flex gap-2 mb-2 items-center">
+                  {msg.review_warning && (
+                    <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2 py-1 rounded text-xs font-medium border border-amber-200">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Requires Review
+                    </div>
+                  )}
+                  {msg.degraded_mode && (
+                    <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-medium border border-red-200">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      Degraded Mode (MESA Offline)
+                    </div>
+                  )}
                 </div>
-              )}
               {msg.source_coverage === 'INVALID' && (
                 <div className="text-red-500 font-medium mb-1">
                   Response blocked due to unverified citations.

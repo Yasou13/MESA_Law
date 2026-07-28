@@ -12,6 +12,8 @@ class Job(Base, AuditMixin):
     type: Mapped[str] = mapped_column(String, index=True, nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String, index=True, default="pending") # pending, processing, completed, failed, dead
+    tenant_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    matter_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     
     # Retry and Leasing
     max_retries: Mapped[int] = mapped_column(Integer, default=3)

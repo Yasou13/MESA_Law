@@ -8,22 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
 
-// UI Stub for Phase 28
-const mockAuditLogs = [
-  { id: 'al_091', user: 'Jane Doe', action: 'EXPORT_DRAFT', matter: 'Smith v. Jones (IP Dispute)', target: 'Motion for Summary Judgment', ip: '192.168.1.104', timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString() },
-  { id: 'al_090', user: 'John Smith', action: 'DELETE_DOCUMENT', matter: 'TechCorp Merger', target: 'Draft_Agreement_v1.pdf', ip: '10.0.0.52', timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString() },
-  { id: 'al_089', user: 'System', action: 'RUN_AI_EXTRACTION', matter: 'Smith v. Jones (IP Dispute)', target: 'All Uploaded Exhibits', ip: 'internal', timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString() },
-  { id: 'al_088', user: 'Jane Doe', action: 'INVITE_USER', matter: 'Global', target: 'robert.lawyer@mesalaw.com', ip: '192.168.1.104', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-]
+import { useListAuditEvents } from '@/api/endpoints/audit/audit'
 
 export default function AuditPage() {
   const [search, setSearch] = useState('')
-  const [logs] = useState(mockAuditLogs)
+  const { data: res, isLoading } = useListAuditEvents()
+  const logs = (res as unknown as any[]) || []
   
-  const filteredLogs = logs.filter(l => 
-    l.user.toLowerCase().includes(search.toLowerCase()) || 
+  const filteredLogs = logs.filter((l: any) => 
+    (l.user_id && l.user_id.toLowerCase().includes(search.toLowerCase())) || 
     l.action.toLowerCase().includes(search.toLowerCase()) ||
-    l.matter.toLowerCase().includes(search.toLowerCase())
+    l.entity_type.toLowerCase().includes(search.toLowerCase())
   )
 
   const getActionColor = (action: string) => {
@@ -88,9 +83,9 @@ export default function AuditPage() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <div className="w-6 h-6 rounded-full bg-[var(--color-anthracite-800)] flex items-center justify-center text-white shrink-0">
-                        {log.user === 'System' ? <Activity className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                        {log.user_id ? <User className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                       </div>
-                      <span className="font-medium text-[var(--foreground)]">{log.user}</span>
+                      <span className="font-medium text-[var(--foreground)] font-mono text-xs max-w-[150px] truncate">{log.user_id || 'System'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -98,11 +93,11 @@ export default function AuditPage() {
                       {log.action.replace(/_/g, ' ')}
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm text-[var(--color-anthracite-400)]">
-                    {log.matter}
+                  <TableCell className="text-sm text-[var(--color-anthracite-400)] uppercase font-semibold text-xs">
+                    {log.entity_type}
                   </TableCell>
-                  <TableCell className="text-sm font-medium text-[var(--foreground)] truncate max-w-[200px]">
-                    {log.target}
+                  <TableCell className="text-xs font-mono text-[var(--foreground)] truncate max-w-[200px]">
+                    {log.entity_id}
                   </TableCell>
                   <TableCell className="text-sm text-[var(--color-anthracite-500)]">
                     <div title={new Date(log.timestamp).toLocaleString()}>

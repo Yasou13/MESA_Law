@@ -8,6 +8,9 @@ from .config import settings
 async_engine = create_async_engine(
     settings.effective_database_url,
     pool_pre_ping=True,
+    pool_size=5 if settings.env == "development" else 20,
+    max_overflow=10 if settings.env == "development" else 20,
+    pool_timeout=30,
     echo=settings.env == "development",
 )
 
@@ -27,6 +30,9 @@ AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False, cla
 engine = create_engine(
     settings.effective_database_url,
     pool_pre_ping=True,
+    pool_size=5 if settings.env == "development" else 20,
+    max_overflow=10 if settings.env == "development" else 20,
+    pool_timeout=30,
     echo=settings.env == "development",
 )
 SessionLocal = sessionmaker(engine, expire_on_commit=False, class_=Session)

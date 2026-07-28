@@ -4,7 +4,7 @@ import os
 import struct
 
 from apps.api.core.storage import storage_service
-from apps.api.models.document import DocumentRevision
+from apps.api.models.document import DocumentRevision, DocumentState
 from apps.api.models.queue import Job
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,13 +70,14 @@ async def handle_scan_document(payload: dict, session: AsyncSession):
             
             rev = await session.get(DocumentRevision, revision_id)
             if rev:
-                rev.scan_status = "clean" if is_clean else "infected"
+                rev.scan_status = DocumentState.CLEAN if is_clean else DocumentState.INFECTED
                 
                 if is_clean:
                     doc_id = document_id or rev.document_id
                     # Queue the parsing job
                     job = Job(
                         type="PARSE_DOCUMENT",
+                        tenant_id=payload["tenant_id"],
                         payload={"document_id": doc_id, "revision_id": revision_id, "s3_key": s3_key}
                     )
                     session.add(job)

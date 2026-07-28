@@ -1,7 +1,11 @@
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.ratelimit import limiter
-from apps.api.dependencies.auth import get_current_user, setup_tenant_context, require_recent_auth
+from apps.api.dependencies.auth import (
+    get_current_user,
+    require_recent_auth,
+    setup_tenant_context,
+)
 from apps.api.models.domain import Firm, Membership, User
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field

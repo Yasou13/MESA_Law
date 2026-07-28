@@ -21,7 +21,7 @@ export default function MatterReviewsPage({ params }: { params: Promise<{ id: st
   const [editContent, setEditContent] = useState<string>("")
 
   const { data: reviewsResponse, isLoading } = useListDraftReviewsApiV1ReviewsGet({ matter_id: matterId })
-  const reviews = Array.isArray(reviewsResponse?.data) ? reviewsResponse.data : []
+  const reviews = Array.isArray(reviewsResponse) ? reviewsResponse : []
 
   const approveMutation = useApproveReviewApiV1ReviewsReviewIdApprovePost({
     mutation: {

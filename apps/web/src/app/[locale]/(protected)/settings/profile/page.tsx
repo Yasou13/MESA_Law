@@ -10,7 +10,7 @@ import { useGetCurrentUserProfileApiV1UsersMeGet, useUpdateCurrentUserProfile } 
 export default function ProfilePage() {
   const { data: profileResponse, refetch, isLoading } = useGetCurrentUserProfileApiV1UsersMeGet()
   const { mutateAsync: updateProfile, isPending: isUpdating } = useUpdateCurrentUserProfile()
-  const profile: any = profileResponse?.data
+  const profile: any = profileResponse
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [email, setEmail] = useState(profile?.email || '')

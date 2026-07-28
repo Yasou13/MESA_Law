@@ -20,6 +20,7 @@ class ReviewItemResponse(BaseModel):
     entity_id: str
     proposed_content: dict
     status: str
+    suggestion_id: str | None = None
 
 class CorrectReviewRequest(BaseModel):
     corrected_content: dict
@@ -35,15 +36,23 @@ async def list_draft_reviews(
     await MatterAccessPolicy.can_read(context, db, matter_id)
     
     query = select(ReviewItem).where(
-        ReviewItem.tenant_id == context.tenant_id,
-        ReviewItem.status.in_([ReviewState.PENDING, ReviewState.IN_REVIEW])
+        ReviewItem.tenant_id == context.tenant_id
     )
     
     if matter_id:
         query = query.where(ReviewItem.matter_id == matter_id)
-        
-    if status and status in (ReviewState.PENDING.value, ReviewState.IN_REVIEW.value):
-        query = query.where(ReviewItem.status == status)
+    else:
+        # If no matter_id is provided, limit to matters the user is a member of (unless they are FIRM_ADMIN)
+        from apps.api.models.domain import MatterMember, Role
+        user_roles = {r.value if hasattr(r, 'value') else r for r in context.roles}
+        if Role.FIRM_ADMIN.value not in user_roles:
+            query = query.join(MatterMember, ReviewItem.matter_id == MatterMember.matter_id).where(
+                MatterMember.user_id == context.principal_id,
+                MatterMember.tenant_id == context.tenant_id
+            )
+            
+    if status:
+        query = query.where(ReviewItem.status == ReviewState(status))
         
     if entity_type:
         query = query.where(ReviewItem.entity_type == entity_type)
@@ -78,6 +87,7 @@ async def approve_review(
     from apps.api.models.queue import Job
     job = Job(
         type="PUBLISH_REVIEW",
+        tenant_id=context.tenant_id,
         payload={
             "review_id": review_id,
             "tenant_id": context.tenant_id
@@ -162,6 +172,7 @@ async def correct_review(
     from apps.api.models.queue import Job
     job = Job(
         type="PUBLISH_REVIEW",
+        tenant_id=context.tenant_id,
         payload={
             "review_id": review_id,
             "tenant_id": context.tenant_id

@@ -23,7 +23,7 @@ export default function AdminSettingsPage() {
 
   const { data: settingsResponse, isLoading } = useGetSystemSettings()
   const { mutateAsync: updateSettings, isPending: isUpdating } = useUpdateSystemSettings()
-  const settings: any = settingsResponse?.data || {}
+  const settings: any = settingsResponse || {}
 
   const [localSettings, setLocalSettings] = useState<any>(null)
 

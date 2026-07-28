@@ -12,7 +12,7 @@ export default function MatterClaimsPage({ params }: { params: Promise<{ id: str
   const matterId = resolvedParams.id
   
   const { data: claimsResponse, isLoading: loading, isError, refetch } = useListClaimsWithEvidence(matterId)
-  const claims = Array.isArray(claimsResponse?.data) ? claimsResponse.data : []
+  const claims = Array.isArray(claimsResponse) ? claimsResponse : []
   
   const [expandedClaim, setExpandedClaim] = useState<string | null>(null)
 

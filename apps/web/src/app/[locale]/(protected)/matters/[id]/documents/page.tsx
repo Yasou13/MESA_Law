@@ -20,7 +20,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
   const { data: res, isLoading, isError, refetch } = useListMatterDocuments(matterId, {
     query: {
       refetchInterval: (query: any) => {
-        const docs = query.state?.data?.data
+        const docs = query.state?.data
         if (docs?.some((d: any) => d.status === 'uploading' || d.status === 'scanning' || d.status === 'processing')) {
           return 3000
         }
@@ -38,7 +38,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
   const uploadIntent = useCreateUploadIntent()
   const completeUpload = useCompleteUpload()
 
-  const documents = (res?.data as any[]) || []
+  const documents = (res as unknown as any[]) || []
   const filteredDocuments = documents.filter((doc) => 
     doc.title?.toLowerCase().includes(search.toLowerCase()) || 
     doc.id?.toLowerCase().includes(search.toLowerCase())
@@ -184,7 +184,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          setActiveDoc({ url: (res.data as any).presigned_url, title: doc.title, documentId: doc.id, matterId: matterId })
+                          setActiveDoc({ url: (res as any).presigned_url, title: doc.title, documentId: doc.id, matterId: matterId })
                         } catch (e: any) {
                           toast.error('Cannot view document yet')
                         }
@@ -194,7 +194,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          window.open((res.data as any).presigned_url, '_blank')
+                          window.open((res as any).presigned_url, '_blank')
                         } catch (e: any) {
                           toast.error('Cannot download document yet')
                         }

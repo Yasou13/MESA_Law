@@ -4,11 +4,11 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { FolderOpen, Search, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, Clock, FileEdit, ChevronDown, Check, Menu, X, FileCheck } from 'lucide-react'
 import { clsx } from 'clsx'
-import { signOut, useSession } from 'next-auth/react'
+import { signOut } from 'next-auth/react'
 import { CommandMenu } from './CommandMenu'
 import { useGetNotificationsApiV1NotificationsGet } from '@/api/endpoints/notifications/notifications'
 import { useListUserFirms } from '@/api/endpoints/default/default'
-import { useSetActiveFirmApiV1SessionActiveFirmPost } from '@/api/endpoints/session/session'
+import { useSetActiveFirmApiV1SessionActiveFirmPost, useGetSessionContextApiV1SessionContextGet } from '@/api/endpoints/session/session'
 import { useState, useEffect } from 'react'
 import { toast } from 'react-hot-toast'
 import { useTranslations } from 'next-intl'
@@ -40,27 +40,27 @@ export function Sidebar() {
   const router = useRouter()
   const queryClient = useQueryClient()
   const { data: notifRes } = useGetNotificationsApiV1NotificationsGet()
-  const unreadCount = Array.isArray(notifRes?.data)
-    ? notifRes.data.filter((n: { status?: string }) => n.status !== 'READ').length
+  const unreadCount = Array.isArray(notifRes)
+    ? notifRes.filter((n: { status?: string }) => n.status !== 'READ').length
     : 0
 
   const { data: firmsRes } = useListUserFirms()
-  const firms = firmsRes?.data || []
+  const firms = (firmsRes as unknown as any[]) || []
   const { mutate: setActiveFirm, isPending: isSwitching } = useSetActiveFirmApiV1SessionActiveFirmPost()
 
-  const { data: session, update: updateSession } = useSession()
-  const [activeFirmId, setActiveFirmId] = useState<string | null>(null)
+  const { data: contextRes, refetch: refetchContext } = useGetSessionContextApiV1SessionContextGet()
+  const activeFirmId = (contextRes as any)?.tenant_id || null
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
   useEffect(() => {
-    if (session?.activeFirmId) {
-      setActiveFirmId(session.activeFirmId as string)
-    } else if (firms.length > 0) {
-      setActiveFirmId(firms[0].id)
-      updateSession({ activeFirmId: firms[0].id })
+    if (!activeFirmId && firms.length > 0) {
+      // API currently has no active firm, but user has firms, set the first one automatically
+      // Note: We don't automatically trigger a mutation here if we don't want to infinite-loop,
+      // but usually the backend defaults to the user's firm if they only have one.
     }
-  }, [firms, session?.activeFirmId, updateSession])
+  }, [activeFirmId, firms])
 
   const handleSwitchFirm = (firmId: string) => {
     setIsDropdownOpen(false)
@@ -68,8 +68,7 @@ export function Sidebar() {
 
     setActiveFirm({ params: { firm_id: firmId } }, {
       onSuccess: async () => {
-        await updateSession({ activeFirmId: firmId })
-        setActiveFirmId(firmId)
+        await refetchContext()
         queryClient.clear() // Phase 2: Clear TanStack Query cache
         toast.success('Switched active firm')
         router.push('/dashboard') // Phase 2: Navigate to dashboard without reload

@@ -2,11 +2,8 @@
 
 import { useParams } from 'next/navigation'
 import { useGetDocument, useDownloadDocument } from '@/api/endpoints/default/default'
-import { FileText, Download, AlertTriangle, ArrowLeft, Clock, Send, Bot, User } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Clock, FileText, Download } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 
 export default function DocumentViewerPage() {
   const params = useParams()
@@ -15,34 +12,14 @@ export default function DocumentViewerPage() {
   const { data: docRes, isLoading: loadingDoc } = useGetDocument(documentId)
   const { data: dlRes, isLoading: loadingDl, isError: dlError } = useDownloadDocument(documentId, {
     query: {
-      enabled: (docRes?.data as any)?.status === 'clean'
+      enabled: (docRes as any)?.status === 'clean'
     }
   })
 
-  const doc = docRes?.data as any
-  const presignedUrl = (dlRes?.data as any)?.presigned_url
+  const doc = docRes as any
+  const presignedUrl = (dlRes as any)?.presigned_url
 
-  // Chat UI Stub state
-  const [messages, setMessages] = useState<{ role: 'user' | 'ai', content: string }[]>([
-    { role: 'ai', content: 'Hello! I have analyzed this document. What would you like to know about it?' }
-  ])
-  const [chatInput, setChatInput] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!chatInput.trim()) return
-    
-    setMessages(prev => [...prev, { role: 'user', content: chatInput }])
-    setChatInput('')
-    setIsTyping(true)
-
-    // Simulate AI response
-    setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'ai', content: 'This is a simulated response. The document chat API is not connected yet, but the interface is ready.' }])
-      setIsTyping(false)
-    }, 1500)
-  }
 
   if (loadingDoc) {
     return (
@@ -134,75 +111,6 @@ export default function DocumentViewerPage() {
               </div>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Right Panel: Chat Interface */}
-      <div className="w-full md:w-[400px] flex flex-col bg-[var(--bg-surface)] shrink-0 border-t md:border-t-0">
-        <div className="p-4 border-b border-[var(--border-surface)]">
-          <h2 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-            <Bot className="w-4 h-4 text-[var(--color-lila-500)]" />
-            Chat with Document
-          </h2>
-          <p className="text-xs text-[var(--color-anthracite-400)] mt-1">Ask questions about this specific document.</p>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {messages.map((msg, idx) => (
-            <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              {msg.role === 'ai' && (
-                <div className="w-8 h-8 rounded-full bg-[var(--color-lila-500)]/10 border border-[var(--color-lila-500)]/20 flex items-center justify-center shrink-0">
-                  <Bot className="w-4 h-4 text-[var(--color-lila-500)]" />
-                </div>
-              )}
-              <div className={`p-3 rounded-xl max-w-[85%] text-sm ${
-                msg.role === 'user' 
-                  ? 'bg-[var(--color-lila-500)] text-white' 
-                  : 'bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] text-[var(--foreground)]'
-              }`}>
-                {msg.content}
-              </div>
-              {msg.role === 'user' && (
-                <div className="w-8 h-8 rounded-full bg-[var(--color-anthracite-700)] flex items-center justify-center shrink-0">
-                  <User className="w-4 h-4 text-white" />
-                </div>
-              )}
-            </div>
-          ))}
-          {isTyping && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-[var(--color-lila-500)]/10 border border-[var(--color-lila-500)]/20 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 text-[var(--color-lila-500)]" />
-              </div>
-              <div className="p-3 rounded-xl bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] text-[var(--color-anthracite-400)] text-sm flex gap-1 items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-[var(--border-surface)] bg-[var(--bg-surface)]">
-          <form onSubmit={handleSendChat} className="relative flex items-center">
-            <Input 
-              type="text"
-              placeholder="Ask a question..."
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              className="pr-12 w-full bg-[var(--background)]"
-              disabled={isTyping}
-            />
-            <Button 
-              type="submit" 
-              size="icon-sm"
-              variant="ghost" 
-              className="absolute right-1 text-[var(--color-lila-500)] hover:text-[var(--color-lila-600)]"
-              disabled={!chatInput.trim() || isTyping}
-            >
-              <Send className="w-4 h-4" />
-            </Button>
-          </form>
         </div>
       </div>
     </div>

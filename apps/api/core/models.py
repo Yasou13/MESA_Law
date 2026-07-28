@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from pydantic import BaseModel
-from sqlalchemy import DateTime, Integer, String, Boolean
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
 from .utils import generate_uuid, utc_now

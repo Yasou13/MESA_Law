@@ -3,15 +3,38 @@ import { test, expect } from '@playwright/test';
 test('Golden Matter E2E: Full Lifecycle User Journey', async ({ page }) => {
   page.on('console', msg => console.log('BROWSER LOG:', msg.text()));
 
-  // 1. Login
+  // 1. Login via Keycloak
   await page.goto('/login');
-  await page.fill('input[type="text"]', 'e2e-tenant-123');
-  await page.click('button:has-text("Sign In")');
+  
+  // Wait for redirect to Keycloak if automatic, or click button if manual
+  // The login page might redirect automatically or have a button. Let's handle both.
+  if (page.url().includes('/login')) {
+      const signInBtn = page.getByRole('button', { name: /sign in/i });
+      if (await signInBtn.isVisible()) {
+          await signInBtn.click();
+      }
+  }
+
+  // We should now be on the Keycloak login page
+  await expect(page).toHaveURL(/keycloak/);
+  await page.fill('input[name="username"]', 'admin');
+  await page.fill('input[name="password"]', 'admin');
+  await page.click('input[type="submit"], button[type="submit"]');
+  
+  // Wait for redirect back to app
   await expect(page).toHaveURL(/\/matters/);
 
   // 2. Matter List & Create
+  await page.goto('/matters');
+  await page.waitForLoadState('networkidle');
+
+  // In the real app, we go to /matters to list. Then create.
   const matterTitle = `Golden Matter ${Date.now()}`;
-  await page.fill('input[placeholder="New matter title..."]', matterTitle);
+  
+  // Wait for "New Matter" button
+  await page.click('button:has-text("New Matter"), a:has-text("New Matter")');
+  // Fill form in the dialog or page
+  await page.fill('input[name="title"], input[placeholder*="title" i]', matterTitle);
   await page.click('button:has-text("Create")');
   
   // Wait for the new matter to appear and click it

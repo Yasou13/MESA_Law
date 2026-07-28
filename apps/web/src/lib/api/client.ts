@@ -1,6 +1,7 @@
 import Axios, { AxiosRequestConfig, AxiosError } from 'axios';
 import { getSession, signOut } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import type { Session } from 'next-auth';
 
 // Base URL empty string so it resolves to current origin, preventing double /api/v1
 const baseURL = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL || '';
@@ -9,13 +10,14 @@ export const AXIOS_INSTANCE = Axios.create({ baseURL });
 // Request Interceptor
 AXIOS_INSTANCE.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined') {
-    const session = await getSession();
-    if (session && (session as any).accessToken) {
-      config.headers['Authorization'] = `Bearer ${(session as any).accessToken}`;
-    }
-    const tenantId = localStorage.getItem('mesa_tenant_id');
-    if (tenantId) {
-      config.headers['x-tenant-id'] = tenantId;
+    const session = await getSession() as Session | null;
+    if (session) {
+      if (session.accessToken) {
+        config.headers['Authorization'] = `Bearer ${session.accessToken}`;
+      }
+      if (session.activeFirmId) {
+        config.headers['x-tenant-id'] = session.activeFirmId;
+      }
     }
   }
   return config;

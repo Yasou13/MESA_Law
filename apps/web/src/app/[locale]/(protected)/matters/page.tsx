@@ -1,0 +1,274 @@
+'use client'
+
+import { useQueryClient } from '@tanstack/react-query'
+import Link from 'next/link'
+import { useState } from 'react'
+import { Plus, FolderOpen, Loader2, Search, ArrowRight, Activity, Clock, LayoutGrid, List } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
+import { clsx } from 'clsx'
+import { useListMatters, useCreateMatter } from '@/api/endpoints/default/default'
+
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { StatusBadge } from '@/components/ui/status-badge'
+
+const matterSchema = z.object({
+  title: z.string().min(3, 'Matter name must be at least 3 characters'),
+  description: z.string().optional(),
+})
+
+type MatterFormValues = z.infer<typeof matterSchema>
+
+export default function MattersPage() {
+  const queryClient = useQueryClient()
+  const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+
+  const { data: mattersResponse, isLoading } = useListMatters()
+  const allMatters: any[] = (mattersResponse?.data as any)?.items || (mattersResponse?.data as any) || []
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<MatterFormValues>({
+    resolver: zodResolver(matterSchema),
+    defaultValues: { title: '', description: '' }
+  })
+
+  const createMatter = useCreateMatter({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/v1/matters'] })
+        reset()
+        setIsCreateOpen(false)
+        toast.success('Matter workspace created successfully')
+      },
+      onError: () => {
+        toast.error('Failed to create workspace')
+      }
+    }
+  })
+
+  const onSubmit = (data: MatterFormValues) => {
+    createMatter.mutate({ data: { title: data.title } as any })
+  }
+
+  const filteredMatters = allMatters.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.title?.toLowerCase().includes(search.toLowerCase()))
+
+  const getMattersByStatus = (statusGroup: string) => {
+    if (statusGroup === 'active') return filteredMatters.filter(m => m.status?.toLowerCase() === 'open' || m.status === 'ACTIVE')
+    if (statusGroup === 'pending') return filteredMatters.filter(m => m.status?.toLowerCase() === 'pending')
+    if (statusGroup === 'closed') return filteredMatters.filter(m => m.status?.toLowerCase() === 'closed')
+    return filteredMatters
+  }
+
+  const renderCardView = (mattersList: any[]) => {
+    if (mattersList.length === 0) return <EmptyState />
+    return (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+      >
+        {mattersList.map((matter, i) => (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+            key={matter.id}
+          >
+            <Link 
+              href={`/matters/${matter.id}`}
+              className="block p-6 glass-card rounded-2xl hover:border-[var(--color-lila-500)]/30 transition-all duration-300 group relative overflow-hidden h-full"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-lila-500)]/5 to-[var(--color-anthracite-500)]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="flex items-start justify-between relative z-10">
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-lila-500)]/10 border border-[var(--color-lila-500)]/20 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <FolderOpen className="w-6 h-6 text-[var(--color-lila-600)] dark:text-[var(--color-lila-500)]" />
+                </div>
+                <StatusBadge status={matter.status === 'open' ? 'success' : 'neutral'} label={(matter.status || 'ACTIVE').toUpperCase()} />
+              </div>
+              
+              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--color-lila-600)] dark:group-hover:text-[var(--color-lila-500)] transition-colors relative z-10 mb-2 truncate">
+                {matter.name || matter.title}
+              </h3>
+              
+              <div className="flex items-center gap-4 mt-6 text-sm text-[var(--color-anthracite-400)] relative z-10">
+                <div className="flex items-center gap-1.5">
+                  <Activity className="w-4 h-4" />
+                  <span>0 Docs</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span className="font-mono">{matter.id.substring(0, 6)}</span>
+                </div>
+              </div>
+
+              <div className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all text-[var(--color-lila-600)] dark:text-[var(--color-lila-500)]">
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </Link>
+          </motion.div>
+        ))}
+      </motion.div>
+    )
+  }
+
+  const renderTableView = (mattersList: any[]) => {
+    if (mattersList.length === 0) return <EmptyState />
+    return (
+      <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Matter Name</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Reference ID</TableHead>
+              <TableHead className="text-right">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {mattersList.map(m => (
+              <TableRow key={m.id}>
+                <TableCell className="font-medium">
+                  <Link href={`/matters/${m.id}`} className="hover:underline flex items-center gap-2">
+                    <FolderOpen className="w-4 h-4 text-[var(--color-anthracite-400)]" />
+                    {m.name || m.title}
+                  </Link>
+                </TableCell>
+                <TableCell><StatusBadge status={m.status === 'open' ? 'success' : 'neutral'} label={(m.status || 'ACTIVE').toUpperCase()} /></TableCell>
+                <TableCell className="font-mono text-sm text-[var(--color-anthracite-500)]">{m.id.substring(0, 8)}</TableCell>
+                <TableCell className="text-right">
+                  <Link href={`/matters/${m.id}`} className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+                    Open
+                  </Link>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
+
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center py-24 glass-card rounded-3xl border-dashed border-2 border-[var(--border-surface)]">
+      <div className="w-16 h-16 rounded-full bg-[var(--bg-surface-hover)] flex items-center justify-center mb-4">
+        <FolderOpen className="w-8 h-8 text-[var(--color-anthracite-400)]" />
+      </div>
+      <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">No workspaces found</h3>
+      <p className="text-[var(--color-anthracite-500)] text-center max-w-sm">
+        No matters match your current filters. Get started by creating a new one.
+      </p>
+    </div>
+  )
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] mb-2">Matter Workspaces</h1>
+          <p className="text-[var(--color-anthracite-500)]">Manage and analyze your legal cases with AI intelligence.</p>
+        </div>
+        
+        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+          <DialogTrigger render={<Button className="gap-2" size="lg" />}>
+            <Plus className="w-4 h-4" /> New Matter
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <DialogHeader>
+                <DialogTitle>Create New Matter</DialogTitle>
+                <DialogDescription>
+                  Initialize a new secure workspace for legal research, draft review, and QA.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-6">
+                <div className="space-y-2">
+                  <label htmlFor="title" className="text-sm font-medium">Matter Name</label>
+                  <Input id="title" placeholder="e.g. Acme Corp Acquisition" {...register('title')} />
+                  {errors.title && <p className="text-sm text-[var(--color-semantic-error)]">{errors.title.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="description" className="text-sm font-medium">Description (Optional)</label>
+                  <Input id="description" placeholder="Brief context about this matter..." {...register('description')} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={createMatter.isPending}>
+                  {createMatter.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  Create Workspace
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-anthracite-400)]" />
+          <Input 
+            type="text" 
+            placeholder="Search matters by name..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 w-full"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2 bg-[var(--bg-surface-hover)] p-1 rounded-lg border border-[var(--border-surface)] self-end">
+          <button 
+            onClick={() => setViewMode('card')}
+            className={clsx("p-1.5 rounded-md transition-colors", viewMode === 'card' ? "bg-[var(--bg-surface)] shadow-sm text-[var(--foreground)]" : "text-[var(--color-anthracite-400)] hover:text-[var(--foreground)]")}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => setViewMode('table')}
+            className={clsx("p-1.5 rounded-md transition-colors", viewMode === 'table' ? "bg-[var(--bg-surface)] shadow-sm text-[var(--foreground)]" : "text-[var(--color-anthracite-400)] hover:text-[var(--foreground)]")}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-[var(--color-lila-500)]" />
+          <p className="text-[var(--color-anthracite-500)] animate-pulse">Loading workspaces...</p>
+        </div>
+      ) : (
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="pending">Pending</TabsTrigger>
+            <TabsTrigger value="closed">Closed</TabsTrigger>
+            <TabsTrigger value="all">All Matters</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="active" className="mt-0">
+            {viewMode === 'card' ? renderCardView(getMattersByStatus('active')) : renderTableView(getMattersByStatus('active'))}
+          </TabsContent>
+          <TabsContent value="pending" className="mt-0">
+            {viewMode === 'card' ? renderCardView(getMattersByStatus('pending')) : renderTableView(getMattersByStatus('pending'))}
+          </TabsContent>
+          <TabsContent value="closed" className="mt-0">
+            {viewMode === 'card' ? renderCardView(getMattersByStatus('closed')) : renderTableView(getMattersByStatus('closed'))}
+          </TabsContent>
+          <TabsContent value="all" className="mt-0">
+            {viewMode === 'card' ? renderCardView(filteredMatters) : renderTableView(filteredMatters)}
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  )
+}

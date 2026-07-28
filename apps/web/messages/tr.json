@@ -1,0 +1,25 @@
+{
+  "Navigation": {
+    "dashboard": "Gösterge Paneli",
+    "matters": "Dosyalar",
+    "documents": "Belgeler",
+    "review_center": "İnceleme Merkezi",
+    "legal_research": "Hukuki Araştırma",
+    "deadlines": "Tarihler",
+    "drafts": "Taslaklar",
+    "notifications": "Bildirimler",
+    "operations": "İşlemler"
+  },
+  "Administration": {
+    "title": "Yönetim",
+    "members": "Üyeler",
+    "support_access": "Destek Erişimi",
+    "audit": "Denetim",
+    "retention": "Veri Saklama",
+    "settings": "Ayarlar"
+  },
+  "Sidebar": {
+    "sign_out": "Çıkış Yap",
+    "switching": "Değiştiriliyor..."
+  }
+}

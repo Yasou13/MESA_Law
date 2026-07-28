@@ -70,7 +70,10 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Test
+      - name: Unit Tests
+        run: pnpm test:unit
+
+      - name: E2E Tests
         run: pnpm test
 
       - name: Build

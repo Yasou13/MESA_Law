@@ -1,0 +1,25 @@
+{
+  "Navigation": {
+    "dashboard": "Dashboard",
+    "matters": "Matters",
+    "documents": "Documents",
+    "review_center": "Review Center",
+    "legal_research": "Legal Research",
+    "deadlines": "Deadlines",
+    "drafts": "Drafts",
+    "notifications": "Notifications",
+    "operations": "Operations"
+  },
+  "Administration": {
+    "title": "Administration",
+    "members": "Members",
+    "support_access": "Support Access",
+    "audit": "Audit",
+    "retention": "Retention",
+    "settings": "Settings"
+  },
+  "Sidebar": {
+    "sign_out": "Sign out",
+    "switching": "Switching..."
+  }
+}

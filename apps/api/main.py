@@ -58,6 +58,10 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
 # Include all routers under /api/v1
+@app.get("/")
+async def root():
+    return {"status": "ok", "message": "MESA Law API is running"}
+
 app.include_router(firms.router, prefix="/api/v1")
 app.include_router(session.router, prefix="/api/v1")
 app.include_router(matters.router, prefix="/api/v1/matters")

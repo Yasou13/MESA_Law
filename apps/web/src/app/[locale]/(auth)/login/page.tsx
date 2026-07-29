@@ -102,6 +102,15 @@ function LoginContent() {
                 </>
               )}
             </button>
+
+            {/* Developer Backdoor Button */}
+            <button
+              onClick={() => signIn('credentials', { username: 'dev', password: 'dev', callbackUrl: '/dashboard' })}
+              disabled={authState === 'SIGNING_IN' || authState === 'REDIRECTING' || status === 'loading'}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-transparent hover:bg-[var(--color-anthracite-800)]/10 text-[var(--color-anthracite-400)] border border-[var(--border-surface)] border-dashed rounded-xl font-medium transition-all hover:text-[var(--foreground)] active:scale-95 shadow-sm disabled:opacity-50 disabled:pointer-events-none disabled:scale-100 mt-4"
+            >
+              Developer Access (Bypass Keycloak)
+            </button>
           </div>
         </div>
       </motion.div>

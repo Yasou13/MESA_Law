@@ -40,7 +40,7 @@ async def seed_legal_data():
             db.add(doc)
             await db.flush()
             
-            rev = DocumentRevision(document_id=doc.id, s3_key=f"mock/{uuid6.uuid7()}.pdf", mime_type="application/pdf", scan_status="clean")
+            rev = DocumentRevision(document_id=doc.id, s3_key=f"mock/{uuid6.uuid7()}.pdf", mime_type="application/pdf", scan_status="clean", tenant_id=tenant_id)
             db.add(rev)
             await db.flush()
             

@@ -1,9 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { ZoomIn, ZoomOut, Download, Send, Loader2, Bot, User, MessageSquare, AlertCircle } from 'lucide-react'
+import { ZoomIn, ZoomOut, Download, Send, Loader2, MessageSquare, AlertCircle } from 'lucide-react'
 import { useAskQuestion } from '@/api/endpoints/qa/qa'
 import { toast } from 'react-hot-toast'
+import type { QACitation } from '@/api/models'
+import { ApiError } from '@/lib/api/client'
+
+interface ChatMessage {
+  role: 'user' | 'ai'
+  content: string
+  citations?: QACitation[]
+  status?: string
+  degradedReason?: string | null
+}
 
 interface DocumentViewerProps {
   documentId: string
@@ -18,7 +28,7 @@ export function DocumentViewer({ documentId, matterId, url, title, onClose }: Do
   
   // Chat state
   const [chatInput, setChatInput] = useState('')
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: any[], review_warning?: boolean, source_coverage?: string}[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'ai', content: 'Ask me anything about this document.' }
   ])
   const askMutation = useAskQuestion()
@@ -35,18 +45,15 @@ export function DocumentViewer({ documentId, matterId, url, title, onClose }: Do
       const response = await askMutation.mutateAsync({ 
         data: { matter_id: matterId, document_id: documentId, question: newQuery } 
       })
-      const data = response.data as any
-      const formattedCitations = data.citations?.map((c: any) => `Page ${c.page_number}`) || []
-      
       setMessages(prev => [...prev, { 
         role: 'ai', 
-        content: data.answer || 'No relevant answer found in this document.',
-        citations: formattedCitations,
-        review_warning: data.review_warning,
-        source_coverage: data.source_coverage
+        content: response.answer || 'No sufficiently verified answer was found in this document.',
+        citations: response.citations,
+        status: response.status,
+        degradedReason: response.degraded_reason,
       }])
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || "Failed to retrieve answer")
+    } catch (error: unknown) {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to retrieve answer')
       setMessages(prev => [...prev, { role: 'ai', content: "An error occurred while answering." }])
     }
   }
@@ -101,18 +108,14 @@ export function DocumentViewer({ documentId, matterId, url, title, onClose }: Do
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.map((msg, i) => (
               <div key={i} className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`max-w-[90%] rounded-2xl p-3 text-sm shadow-sm flex flex-col gap-2 ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.review_warning ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
-                  {msg.review_warning && (
+                <div className={`max-w-[90%] rounded-2xl p-3 text-sm shadow-sm flex flex-col gap-2 ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.status === 'DEGRADED' || msg.status === 'ABSTAIN' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
+                  {(msg.status === 'DEGRADED' || msg.status === 'ABSTAIN') && (
                     <div className="flex items-center gap-1.5 mb-0.5 font-semibold text-xs uppercase tracking-wider">
                       <AlertCircle className="w-3.5 h-3.5" />
-                      Verification Warning
+                      {msg.status}
                     </div>
                   )}
-                  {msg.source_coverage === 'INVALID' && (
-                    <div className="text-red-500 font-medium mb-0.5 text-xs">
-                      Response blocked due to unverified citations.
-                    </div>
-                  )}
+                  {msg.degradedReason && <div className="mb-0.5 text-xs">{msg.degradedReason}</div>}
                   <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   {msg.citations && msg.citations.length > 0 && (
                     <div className="mt-2 pt-2 border-t border-[var(--border-surface)]/20">
@@ -120,7 +123,11 @@ export function DocumentViewer({ documentId, matterId, url, title, onClose }: Do
                         {msg.citations.map((cit, cIdx) => (
                           <li key={cIdx} className="text-[var(--color-lila-400)] flex items-start gap-1">
                             <span className="mt-0.5">•</span>
-                            <span>{cit}</span>
+                            <span>
+                              Document {cit.document_id.slice(0, 8)} · revision {cit.revision_id.slice(0, 8)} ·{' '}
+                              {cit.low_provenance ? 'LOW_PROVENANCE' : `page ${cit.page_number}`} · chunk {cit.chunk_id.slice(0, 8)} · chars {cit.text_start}–{cit.text_end}
+                              <span className="mt-1 block text-[var(--color-anthracite-400)]">“{cit.evidence_excerpt}”</span>
+                            </span>
                           </li>
                         ))}
                       </ul>

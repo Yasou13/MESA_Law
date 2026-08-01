@@ -33,8 +33,9 @@ const handler = NextAuth({
       if (account?.access_token) {
         token.accessToken = account.access_token;
       }
-      if (user && (user as any).access_token) {
-        token.accessToken = (user as any).access_token;
+      const userAccessToken = user && 'access_token' in user ? user.access_token : undefined
+      if (typeof userAccessToken === 'string') {
+        token.accessToken = userAccessToken
       }
       return token
     },

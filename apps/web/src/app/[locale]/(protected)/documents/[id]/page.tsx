@@ -12,12 +12,12 @@ export default function DocumentViewerPage() {
   const { data: docRes, isLoading: loadingDoc } = useGetDocument(documentId)
   const { data: dlRes, isLoading: loadingDl, isError: dlError } = useDownloadDocument(documentId, {
     query: {
-      enabled: (docRes as any)?.status === 'clean'
+      enabled: ['CLEAN', 'PARSED', 'READY'].includes(docRes?.status.toUpperCase() ?? '')
     }
   })
 
-  const doc = docRes as any
-  const presignedUrl = (dlRes as any)?.presigned_url
+  const doc = docRes
+  const presignedUrl = dlRes?.presigned_url
 
 
 
@@ -57,8 +57,8 @@ export default function DocumentViewerPage() {
           
           <div className="flex items-center gap-3 shrink-0">
             <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
-              doc.status === 'clean' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-              doc.status === 'processing' ? 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' : 
+              ['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
+              ['PROCESSING', 'SCANNING', 'PARSING'].includes(doc.status.toUpperCase()) ? 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' :
               'bg-red-500/10 text-red-400 border-red-500/20'
             }`}>
               {doc.status?.toUpperCase()}
@@ -77,7 +77,7 @@ export default function DocumentViewerPage() {
         </div>
 
         <div className="flex-1 bg-zinc-950 relative overflow-hidden">
-          {doc?.status === 'clean' && presignedUrl ? (
+          {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && presignedUrl ? (
             <iframe 
               src={`${presignedUrl}#toolbar=0`} 
               className="w-full h-full border-none bg-white rounded-none"
@@ -85,28 +85,28 @@ export default function DocumentViewerPage() {
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-surface)] p-6">
-              <div className={`text-center max-w-md p-8 rounded-2xl border shadow-sm ${doc?.status === 'quarantined' || doc?.status === 'infected' ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--bg-surface-hover)] border-[var(--border-surface)]'}`}>
-                {doc?.status === 'clean' && loadingDl && (
+              <div className={`text-center max-w-md p-8 rounded-2xl border shadow-sm ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--bg-surface-hover)] border-[var(--border-surface)]'}`}>
+                {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && loadingDl && (
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-lila-500)] mx-auto mb-4"></div>
                 )}
-                {(doc?.status === 'quarantined' || doc?.status === 'infected') && (
+                {['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) && (
                   <div className="bg-red-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
                     <AlertTriangle className="w-8 h-8 text-red-500" />
                   </div>
                 )}
-                {(doc?.status === 'processing' || doc?.status === 'scanning') && (
+                {['UPLOADING', 'VERIFYING', 'SCANNING', 'PARSING', 'PROCESSING'].includes(doc.status.toUpperCase()) && (
                   <Clock className="w-12 h-12 text-[var(--color-anthracite-400)] mx-auto mb-4 animate-pulse" />
                 )}
-                <h3 className={`text-xl font-bold mb-2 ${doc?.status === 'quarantined' || doc?.status === 'infected' ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
-                  {doc?.status === 'clean' && dlError ? 'Failed to load preview' : 
-                   (doc?.status === 'quarantined' || doc?.status === 'infected') ? 'SECURITY ALERT' : 'Preview Unavailable'}
+                <h3 className={`text-xl font-bold mb-2 ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
+                  {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && dlError ? 'Failed to load preview' :
+                   ['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'SECURITY ALERT' : 'Preview Unavailable'}
                 </h3>
-                <p className={`text-sm ${doc?.status === 'quarantined' || doc?.status === 'infected' ? 'text-red-400' : 'text-[var(--color-anthracite-400)]'}`}>
-                  {doc?.status === 'clean' 
+                <p className={`text-sm ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'text-red-400' : 'text-[var(--color-anthracite-400)]'}`}>
+                  {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase())
                     ? 'We could not generate a secure preview URL for this document.' 
-                    : (doc?.status === 'quarantined' || doc?.status === 'infected') 
-                      ? 'This document has failed security checks (virus/malware detected). Access is strictly prohibited.'
-                      : 'This document is currently being processed. Preview will be available once processing completes.'}
+                    : ['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase())
+                      ? doc.failure_reason ?? 'This document failed a security or validation check and cannot be accessed.'
+                      : `Current state: ${doc.status}. Preview is available only after successful processing.`}
                 </p>
               </div>
             </div>

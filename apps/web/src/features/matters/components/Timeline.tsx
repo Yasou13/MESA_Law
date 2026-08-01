@@ -1,10 +1,9 @@
-import React from 'react';
 import { useListTimelineEvents } from '@/api/endpoints/default/default';
 import { Loader2, AlertCircle, Clock } from 'lucide-react';
 
 export function Timeline({ matterId = "1" }: { matterId?: string }) {
   const { data: timelineResponse, isLoading: loading, error, refetch } = useListTimelineEvents(matterId);
-  const events = Array.isArray(timelineResponse) ? timelineResponse : [];
+  const events = timelineResponse ?? [];
 
   if (loading) {
     return (
@@ -46,7 +45,7 @@ export function Timeline({ matterId = "1" }: { matterId?: string }) {
       </div>
       
       <div className="relative border-l-2 border-[var(--border-surface)] ml-3 space-y-10">
-        {events.map((evt: any) => (
+        {events.map((evt) => (
           <div key={evt.id} className="pl-8 relative group">
             <div className="absolute w-4 h-4 bg-[var(--color-lila-500)] rounded-full -left-[9px] top-1.5 ring-4 ring-[var(--background)] group-hover:scale-125 transition-transform"></div>
             
@@ -54,16 +53,16 @@ export function Timeline({ matterId = "1" }: { matterId?: string }) {
               {/* Arrow */}
               <div className="absolute w-3 h-3 bg-[var(--bg-surface)] border-l border-b border-[var(--border-surface)] rotate-45 -left-[7px] top-2"></div>
               
-              <div className="text-sm font-medium text-[var(--color-lila-400)] mb-2">{evt.date || new Date(evt.event_date).toLocaleDateString()}</div>
-              <div className="text-[var(--foreground)] font-medium text-lg mb-3">{evt.title || evt.description}</div>
+              <div className="text-sm font-medium text-[var(--color-lila-400)] mb-2">{new Date(evt.date).toLocaleDateString()}</div>
+              <div className="text-[var(--foreground)] font-medium text-lg mb-3">{evt.title}</div>
               
               <div className="flex items-center gap-3">
                 <span className="text-xs px-2.5 py-1 bg-[var(--bg-surface-hover)] text-[var(--color-anthracite-300)] rounded-md border border-[var(--border-surface)] flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-anthracite-400)]"></span>
-                  Source: {evt.source_document_id || 'System'}
+                  Source: {evt.source}
                 </span>
                 <span className={`text-xs px-2.5 py-1 rounded-md border font-medium ${evt.confidence === 'high' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                  Confidence: {evt.confidence || 'Medium'}
+                  Confidence: {evt.confidence}
                 </span>
               </div>
             </div>
@@ -78,4 +77,3 @@ export function Timeline({ matterId = "1" }: { matterId?: string }) {
     </div>
   );
 }
-

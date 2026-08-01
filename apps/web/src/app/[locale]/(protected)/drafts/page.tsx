@@ -9,14 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatusBadge } from '@/components/ui/status-badge'
 
 
-import { useListAllDraftsApiV1DraftStudioDraftsGet } from '@/api/endpoints/draft-studio/draft-studio'
+import { useListAllDrafts } from '@/api/endpoints/draft-studio/draft-studio'
 
 export default function DraftsPage() {
   const [search, setSearch] = useState('')
-  const { data: res, isLoading, isError } = useListAllDraftsApiV1DraftStudioDraftsGet()
-  const drafts = (res as unknown as any[]) || []
+  const { data: res } = useListAllDrafts()
+  const drafts = res ?? []
   
-  const filteredDrafts = drafts.filter((d: any) => 
+  const filteredDrafts = drafts.filter((d) =>
     d.title?.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -25,7 +25,7 @@ export default function DraftsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Drafts Studio</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Manage AI-assisted document drafts and templates.</p>
+          <p className="text-[var(--color-anthracite-500)] mt-1">Manage human-authored drafts and their review status.</p>
         </div>
         <Link href="/matters">
           <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">

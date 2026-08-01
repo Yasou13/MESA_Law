@@ -1,135 +1,145 @@
-import React, { useState } from 'react';
-import { useAskQuestion } from '@/api/endpoints/qa/qa';
-import { Send, Loader2, BookOpen, AlertCircle } from 'lucide-react';
+'use client'
 
-export function QAShell({ matterId = "1" }: { matterId?: string }) {
-  const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[], review_warning?: boolean, source_coverage?: string, degraded_mode?: boolean}[]>([]);
-  
-  const qaMutation = useAskQuestion();
+import { useState } from 'react'
+import { AlertCircle, BookOpen, Loader2, Send } from 'lucide-react'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+import { useAskQuestion } from '@/api/endpoints/qa/qa'
+import type { QACitation } from '@/api/models'
+import { ApiError } from '@/lib/api/client'
 
-    const newQuery = query;
-    setMessages(prev => [...prev, { role: 'user', content: newQuery }]);
-    setQuery('');
+interface QAMessage {
+  role: 'user' | 'assistant'
+  content: string
+  citations?: QACitation[]
+  status?: string
+  degradedReason?: string | null
+}
 
+export function QAShell({ matterId }: { matterId: string }) {
+  const [query, setQuery] = useState('')
+  const [messages, setMessages] = useState<QAMessage[]>([])
+  const qaMutation = useAskQuestion<ApiError>()
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    const question = query.trim()
+    if (!question) return
+    setMessages((current) => [...current, { role: 'user', content: question }])
+    setQuery('')
     qaMutation.mutate(
-      { data: { matter_id: matterId, question: newQuery } },
+      { data: { matter_id: matterId, question } },
       {
-        onSuccess: (res: any) => {
-          const data = res;
-          const formattedCitations = data.citations?.map((c: any) => `Doc ID: ${c.document_id.substring(0,8)} (Page ${c.page_number})`) || [];
-          
-          setMessages(prev => [...prev, { 
-            role: 'ai', 
-            content: data.answer || 'No relevant answer found.', 
-            citations: formattedCitations,
-            review_warning: data.review_warning,
-            source_coverage: data.source_coverage,
-            degraded_mode: data.degraded_mode
-          }]);
+        onSuccess: (response) => {
+          setMessages((current) => [
+            ...current,
+            {
+              role: 'assistant',
+              content: response.answer,
+              citations: response.citations,
+              status: response.status,
+              degradedReason: response.degraded_reason,
+            },
+          ])
         },
-        onError: (error: any) => {
-          const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.toLowerCase().includes('timeout');
-          setMessages(prev => [...prev, { 
-            role: 'ai', 
-            content: isTimeout 
-              ? 'Request timed out. The legal retrieval engine took too long to respond. Please try again.' 
-              : `Error: ${error.response?.data?.detail || 'Failed to retrieve answer from Q&A service.'}`
-          }]);
-        }
-      }
-    );
-  };
+        onError: (error) => {
+          const reference = error.referenceId ? ` Reference: ${error.referenceId}.` : ''
+          setMessages((current) => [
+            ...current,
+            { role: 'assistant', status: 'ERROR', content: `${error.message}.${reference}` },
+          ])
+        },
+      },
+    )
+  }
 
   return (
-    <div className="flex flex-col h-[500px] border border-[var(--border-surface)] rounded-xl overflow-hidden bg-[var(--bg-surface)] shadow-sm">
-      <div className="bg-[var(--bg-surface-hover)] p-4 border-b border-[var(--border-surface)] flex justify-between items-center">
+    <div className="flex h-[600px] flex-col overflow-hidden rounded-xl border border-[var(--border-surface)] bg-[var(--bg-surface)] shadow-sm">
+      <div className="flex items-center justify-between border-b border-[var(--border-surface)] bg-[var(--bg-surface-hover)] p-4">
         <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-[var(--color-lila-500)]" />
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">Matter Q&A Assistant</h2>
+          <BookOpen className="h-5 w-5 text-[var(--color-lila-500)]" />
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">Sourced matter Q&A</h2>
         </div>
-        <span className="text-xs bg-[var(--color-lila-500)]/10 text-[var(--color-lila-400)] px-2.5 py-1 rounded-full border border-[var(--color-lila-500)]/20 font-medium">MESA Legal Review Profile</span>
+        <span className="rounded-full border border-[var(--color-lila-500)]/20 bg-[var(--color-lila-500)]/10 px-2.5 py-1 text-xs font-medium text-[var(--color-lila-400)]">
+          Verified local provenance only
+        </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.length === 0 && (
-          <div className="text-center text-[var(--color-anthracite-400)] mt-10 text-sm max-w-sm mx-auto">
-            Ask any question about this matter. Responses are grounded in uploaded documents and verified legal sources.
+          <div className="mx-auto mt-10 max-w-md text-center text-sm text-[var(--color-anthracite-400)]">
+            Answers are restricted to this matter&apos;s active dataset/session. If evidence cannot be verified against the canonical document revision, page, chunk and text span, the service abstains.
           </div>
         )}
-        
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-sm ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.review_warning ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
-                <div className="flex gap-2 mb-2 items-center">
-                  {msg.review_warning && (
-                    <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2 py-1 rounded text-xs font-medium border border-amber-200">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Requires Review
-                    </div>
-                  )}
-                  {msg.degraded_mode && (
-                    <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-medium border border-red-200">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Degraded Mode (MESA Offline)
-                    </div>
-                  )}
-                </div>
-              {msg.source_coverage === 'INVALID' && (
-                <div className="text-red-500 font-medium mb-1">
-                  Response blocked due to unverified citations.
+        {messages.map((message, index) => (
+          <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[88%] rounded-2xl border p-4 text-sm shadow-sm ${
+                message.role === 'user'
+                  ? 'rounded-tr-sm border-[var(--color-anthracite-700)] bg-[var(--color-anthracite-800)] text-white'
+                  : message.status === 'ANSWERED'
+                    ? 'rounded-tl-sm border-[var(--border-surface)] bg-[var(--bg-surface-hover)] text-[var(--foreground)]'
+                    : 'rounded-tl-sm border-amber-500/20 bg-amber-500/10 text-amber-500'
+              }`}
+            >
+              {message.role === 'assistant' && message.status && message.status !== 'ANSWERED' && (
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider">
+                  <AlertCircle className="h-3.5 w-3.5" /> {message.status}
                 </div>
               )}
-              <p className="leading-relaxed">{msg.content}</p>
-              {msg.citations && msg.citations.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-[var(--border-surface)]">
-                  <span className="text-xs font-semibold text-[var(--color-anthracite-400)] block mb-2 uppercase tracking-wider">Citations</span>
-                  <ul className="text-xs space-y-1.5">
-                    {msg.citations.map((cit, cIdx) => (
-                      <li key={cIdx} className="text-[var(--color-lila-400)] flex items-start gap-1.5">
-                        <span className="mt-0.5">•</span>
-                        <span>{cit}</span>
+              {message.degradedReason && <p className="mb-2 text-xs">{message.degradedReason}</p>}
+              <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+              {message.citations && message.citations.length > 0 && (
+                <div className="mt-4 border-t border-[var(--border-surface)] pt-3">
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-wider">Citations</span>
+                  <ol className="space-y-3 text-xs">
+                    {message.citations.map((citation) => (
+                      <li key={`${citation.revision_id}:${citation.chunk_id}:${citation.text_start}`}>
+                        <div className="font-medium text-[var(--color-lila-400)]">
+                          Document {citation.document_id.slice(0, 8)} · revision {citation.revision_id.slice(0, 8)} ·{' '}
+                          {citation.low_provenance
+                            ? 'LOW_PROVENANCE (no verified page)'
+                            : `page ${citation.page_number}`}
+                        </div>
+                        <div className="mt-1 text-[var(--color-anthracite-400)]">
+                          Chunk {citation.chunk_id.slice(0, 8)} · chars {citation.text_start}–{citation.text_end} · SHA-256 {citation.evidence_sha256.slice(0, 12)}…
+                        </div>
+                        <blockquote className="mt-1 border-l-2 border-[var(--color-lila-500)] pl-2 text-[var(--color-anthracite-300)]">
+                          {citation.evidence_excerpt}
+                        </blockquote>
                       </li>
                     ))}
-                  </ul>
+                  </ol>
                 </div>
               )}
             </div>
           </div>
         ))}
-        
         {qaMutation.isPending && (
           <div className="flex justify-start">
-            <div className="bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-2xl rounded-tl-sm p-4 flex gap-2 items-center">
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce"></div>
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce delay-75"></div>
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce delay-150"></div>
+            <div className="rounded-2xl border border-[var(--border-surface)] bg-[var(--bg-surface-hover)] p-4">
+              <Loader2 className="h-4 w-4 animate-spin text-[var(--color-lila-500)]" />
             </div>
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="p-3 bg-[var(--bg-surface)] border-t border-[var(--border-surface)] flex gap-2">
-        <input 
-          type="text" 
+      <form onSubmit={handleSubmit} className="flex gap-2 border-t border-[var(--border-surface)] bg-[var(--bg-surface)] p-3">
+        <input
+          type="text"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Ask a question..." 
-          className="flex-1 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-xl px-4 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--color-lila-500)] transition-colors placeholder:text-[var(--color-anthracite-500)]"
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Ask a question about verified matter evidence…"
+          className="flex-1 rounded-xl border border-[var(--border-surface)] bg-[var(--bg-surface-hover)] px-4 py-2 text-sm text-[var(--foreground)] focus:border-[var(--color-lila-500)] focus:outline-none"
           disabled={qaMutation.isPending}
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={qaMutation.isPending || !query.trim()}
-          className="bg-[var(--color-lila-600)] hover:bg-[var(--color-lila-500)] disabled:opacity-50 disabled:hover:bg-[var(--color-lila-600)] text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[3rem]"
+          className="flex min-w-12 items-center justify-center rounded-xl bg-[var(--color-lila-600)] px-4 py-2 text-white transition-colors hover:bg-[var(--color-lila-500)] disabled:opacity-50"
         >
-          {qaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          {qaMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </button>
       </form>
     </div>
-  );
+  )
 }

@@ -1,13 +1,12 @@
 'use client'
 
-import { useGetNotificationsApiV1NotificationsGet } from '@/api/endpoints/notifications/notifications'
+import { useListNotifications } from '@/api/endpoints/notifications/notifications'
 import { Bell, Info, AlertCircle, CheckCircle, Check, Settings } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { Button } from '@/components/ui/button'
 
 export default function NotificationsPage() {
-  const { data: res, isLoading } = useGetNotificationsApiV1NotificationsGet()
-  const notifications: any[] = (res as unknown as any) || []
+  const { data: notifications = [], isLoading } = useListNotifications()
 
   const getIcon = (category: string) => {
     switch (category) {
@@ -56,7 +55,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <div className="divide-y divide-[var(--border-surface)]">
-            {notifications.map((notif: any) => (
+            {notifications.map((notif) => (
               <div key={notif.id} className="p-5 hover:bg-[var(--bg-surface-hover)] transition-colors flex gap-4 group">
                 <div className="flex-shrink-0">
                   {getIcon(notif.category)}

@@ -6,11 +6,15 @@
  */
 
 export interface UploadIntentRequest {
-  matter_id: string;
   /** @maxLength 255 */
   filename: string;
+  matter_id: string;
   /** @maxLength 100 */
   mime_type: string;
-  /** File size in bytes */
+  /**
+     * File size in bytes
+     * @maximum 104857600
+     * @exclusiveMinimum 0
+     */
   size_bytes: number;
 }

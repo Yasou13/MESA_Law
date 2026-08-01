@@ -24,12 +24,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  GetSystemDependencies200,
   HTTPValidationError,
-  SyncMesaCoreRequest,
-  UpdateSystemSettingsBody
+  SyncMesaCoreParams,
+  SystemSettingsResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -51,331 +53,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type liveHealthLiveGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type liveHealthLiveGetResponseSuccess = (liveHealthLiveGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type liveHealthLiveGetResponse = (liveHealthLiveGetResponseSuccess)
-
-export const getLiveHealthLiveGetUrl = () => {
-
-
-
-
-  return `/health/live`
-}
-
-/**
- * @summary Live
- */
-export const liveHealthLiveGet = async ( options?: RequestInit): Promise<liveHealthLiveGetResponse> => {
-
-  return customInstance<liveHealthLiveGetResponse>(getLiveHealthLiveGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getLiveHealthLiveGetQueryKey = () => {
-    return [
-    `/health/live`
-    ] as const;
-    }
-
-
-export const getLiveHealthLiveGetQueryOptions = <TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>> = ({ signal }) => liveHealthLiveGet({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type LiveHealthLiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
-export type LiveHealthLiveGetQueryError = unknown
-
-
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof liveHealthLiveGet>>,
-          TError,
-          Awaited<ReturnType<typeof liveHealthLiveGet>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof liveHealthLiveGet>>,
-          TError,
-          Awaited<ReturnType<typeof liveHealthLiveGet>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Live
- */
-
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getLiveHealthLiveGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type readyHealthReadyGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type readyHealthReadyGetResponseSuccess = (readyHealthReadyGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type readyHealthReadyGetResponse = (readyHealthReadyGetResponseSuccess)
-
-export const getReadyHealthReadyGetUrl = () => {
-
-
-
-
-  return `/health/ready`
-}
-
-/**
- * @summary Ready
- */
-export const readyHealthReadyGet = async ( options?: RequestInit): Promise<readyHealthReadyGetResponse> => {
-
-  return customInstance<readyHealthReadyGetResponse>(getReadyHealthReadyGetUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getReadyHealthReadyGetQueryKey = () => {
-    return [
-    `/health/ready`
-    ] as const;
-    }
-
-
-export const getReadyHealthReadyGetQueryOptions = <TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>> = ({ signal }) => readyHealthReadyGet({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ReadyHealthReadyGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
-export type ReadyHealthReadyGetQueryError = unknown
-
-
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof readyHealthReadyGet>>,
-          TError,
-          Awaited<ReturnType<typeof readyHealthReadyGet>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof readyHealthReadyGet>>,
-          TError,
-          Awaited<ReturnType<typeof readyHealthReadyGet>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Ready
- */
-
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getReadyHealthReadyGetQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type systemDependenciesApiV1SystemDependenciesGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type systemDependenciesApiV1SystemDependenciesGetResponseSuccess = (systemDependenciesApiV1SystemDependenciesGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type systemDependenciesApiV1SystemDependenciesGetResponse = (systemDependenciesApiV1SystemDependenciesGetResponseSuccess)
-
-export const getSystemDependenciesApiV1SystemDependenciesGetUrl = () => {
-
-
-
-
-  return `/api/v1/system/dependencies`
-}
-
 /**
  * @summary System Dependencies
  */
-export const systemDependenciesApiV1SystemDependenciesGet = async ( options?: RequestInit): Promise<systemDependenciesApiV1SystemDependenciesGetResponse> => {
+export const getSystemDependencies = (
 
-  return customInstance<systemDependenciesApiV1SystemDependenciesGetResponse>(getSystemDependenciesApiV1SystemDependenciesGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<GetSystemDependencies200>(
+      {url: `/api/v1/system/dependencies`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getSystemDependenciesApiV1SystemDependenciesGetQueryKey = () => {
+export const getGetSystemDependenciesQueryKey = () => {
     return [
     `/api/v1/system/dependencies`
     ] as const;
     }
 
 
-export const getSystemDependenciesApiV1SystemDependenciesGetQueryOptions = <TData = Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetSystemDependenciesQueryOptions = <TData = Awaited<ReturnType<typeof getSystemDependencies>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSystemDependenciesApiV1SystemDependenciesGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetSystemDependenciesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>> = ({ signal }) => systemDependenciesApiV1SystemDependenciesGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemDependencies>>> = ({ signal }) => getSystemDependencies(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type SystemDependenciesApiV1SystemDependenciesGetQueryResult = NonNullable<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>>
-export type SystemDependenciesApiV1SystemDependenciesGetQueryError = unknown
+export type GetSystemDependenciesQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemDependencies>>>
+export type GetSystemDependenciesQueryError = ErrorType<unknown>
 
 
-export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData>> & Pick<
+export function useGetSystemDependencies<TData = Awaited<ReturnType<typeof getSystemDependencies>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>,
+          Awaited<ReturnType<typeof getSystemDependencies>>,
           TError,
-          Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>
+          Awaited<ReturnType<typeof getSystemDependencies>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData>> & Pick<
+export function useGetSystemDependencies<TData = Awaited<ReturnType<typeof getSystemDependencies>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>,
+          Awaited<ReturnType<typeof getSystemDependencies>>,
           TError,
-          Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>
+          Awaited<ReturnType<typeof getSystemDependencies>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetSystemDependencies<TData = Awaited<ReturnType<typeof getSystemDependencies>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary System Dependencies
  */
 
-export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof systemDependenciesApiV1SystemDependenciesGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetSystemDependencies<TData = Awaited<ReturnType<typeof getSystemDependencies>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemDependencies>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getSystemDependenciesApiV1SystemDependenciesGetQueryOptions(options)
+  const queryOptions = getGetSystemDependenciesQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -387,40 +145,20 @@ export function useSystemDependenciesApiV1SystemDependenciesGet<TData = Awaited<
 
 
 
-export type getSystemSettingsResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getSystemSettingsResponseSuccess = (getSystemSettingsResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getSystemSettingsResponse = (getSystemSettingsResponseSuccess)
-
-export const getGetSystemSettingsUrl = () => {
-
-
-
-
-  return `/api/v1/system/settings`
-}
-
 /**
  * @summary Get System Settings
  */
-export const getSystemSettings = async ( options?: RequestInit): Promise<getSystemSettingsResponse> => {
+export const getSystemSettings = (
 
-  return customInstance<getSystemSettingsResponse>(getGetSystemSettingsUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<SystemSettingsResponse>(
+      {url: `/api/v1/system/settings`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -432,7 +170,7 @@ export const getGetSystemSettingsQueryKey = () => {
     }
 
 
-export const getGetSystemSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetSystemSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -441,7 +179,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemSettings>>> = ({ signal }) => getSystemSettings({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemSettings>>> = ({ signal }) => getSystemSettings(requestOptions, signal);
 
 
 
@@ -451,10 +189,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetSystemSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSystemSettings>>>
-export type GetSystemSettingsQueryError = unknown
+export type GetSystemSettingsQueryError = ErrorType<unknown>
 
 
-export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = ErrorType<unknown>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getSystemSettings>>,
@@ -464,7 +202,7 @@ export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystem
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getSystemSettings>>,
@@ -474,7 +212,7 @@ export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystem
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -482,7 +220,7 @@ export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystem
  * @summary Get System Settings
  */
 
-export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = unknown>(
+export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystemSettings>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemSettings>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -499,54 +237,29 @@ export function useGetSystemSettings<TData = Awaited<ReturnType<typeof getSystem
 
 
 
-export type updateSystemSettingsResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type updateSystemSettingsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type updateSystemSettingsResponseSuccess = (updateSystemSettingsResponse200) & {
-  headers: Headers;
-};
-export type updateSystemSettingsResponseError = (updateSystemSettingsResponse422) & {
-  headers: Headers;
-};
-
-export type updateSystemSettingsResponse = (updateSystemSettingsResponseSuccess | updateSystemSettingsResponseError)
-
-export const getUpdateSystemSettingsUrl = () => {
-
-
-
-
-  return `/api/v1/system/settings`
-}
-
 /**
  * @summary Update System Settings
  */
-export const updateSystemSettings = async (updateSystemSettingsBody: UpdateSystemSettingsBody, options?: RequestInit): Promise<updateSystemSettingsResponse> => {
-
-  return customInstance<updateSystemSettingsResponse>(getUpdateSystemSettingsUrl(),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateSystemSettingsBody)
-  }
-);}
+export const updateSystemSettings = (
+    systemSettingsResponse: BodyType<SystemSettingsResponse>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
+      return customInstance<unknown>(
+      {url: `/api/v1/system/settings`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: systemSettingsResponse, signal
+    },
+      options);
+    }
 
 
 
-export const getUpdateSystemSettingsMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext> => {
+
+export const getUpdateSystemSettingsMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: BodyType<SystemSettingsResponse>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: BodyType<SystemSettingsResponse>}, TContext> => {
 
 const mutationKey = ['updateSystemSettings'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -558,7 +271,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystemSettings>>, {data: UpdateSystemSettingsBody}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSystemSettings>>, {data: BodyType<SystemSettingsResponse>}> = (props) => {
           const {data} = props ?? {};
 
           return  updateSystemSettings(data,requestOptions)
@@ -572,70 +285,44 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateSystemSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSystemSettings>>>
-    export type UpdateSystemSettingsMutationBody = UpdateSystemSettingsBody
-    export type UpdateSystemSettingsMutationError = HTTPValidationError
+    export type UpdateSystemSettingsMutationBody = BodyType<SystemSettingsResponse>
+    export type UpdateSystemSettingsMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Update System Settings
  */
-export const useUpdateSystemSettings = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: UpdateSystemSettingsBody}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useUpdateSystemSettings = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSystemSettings>>, TError,{data: BodyType<SystemSettingsResponse>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateSystemSettings>>,
         TError,
-        {data: UpdateSystemSettingsBody},
+        {data: BodyType<SystemSettingsResponse>},
         TContext
       > => {
       return useMutation(getUpdateSystemSettingsMutationOptions(options), queryClient);
     }
-    export type syncMesaCoreResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type syncMesaCoreResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type syncMesaCoreResponseSuccess = (syncMesaCoreResponse200) & {
-  headers: Headers;
-};
-export type syncMesaCoreResponseError = (syncMesaCoreResponse422) & {
-  headers: Headers;
-};
-
-export type syncMesaCoreResponse = (syncMesaCoreResponseSuccess | syncMesaCoreResponseError)
-
-export const getSyncMesaCoreUrl = () => {
-
-
-
-
-  return `/api/v1/system/sync-mesa-core`
-}
-
-/**
+    /**
  * @summary Sync Mesa Core
  */
-export const syncMesaCore = async (syncMesaCoreRequest: SyncMesaCoreRequest, options?: RequestInit): Promise<syncMesaCoreResponse> => {
-
-  return customInstance<syncMesaCoreResponse>(getSyncMesaCoreUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(syncMesaCoreRequest)
-  }
-);}
+export const syncMesaCore = (
+    params?: SyncMesaCoreParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
+      return customInstance<unknown>(
+      {url: `/api/v1/system/sync-mesa-core`, method: 'POST',
+        params, signal
+    },
+      options);
+    }
 
 
 
-export const getSyncMesaCoreMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext> => {
+
+export const getSyncMesaCoreMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{params?: SyncMesaCoreParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{params?: SyncMesaCoreParams}, TContext> => {
 
 const mutationKey = ['syncMesaCore'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -647,10 +334,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncMesaCore>>, {data: SyncMesaCoreRequest}> = (props) => {
-          const {data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncMesaCore>>, {params?: SyncMesaCoreParams}> = (props) => {
+          const {params} = props ?? {};
 
-          return  syncMesaCore(data,requestOptions)
+          return  syncMesaCore(params,requestOptions)
         }
 
 
@@ -661,19 +348,203 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type SyncMesaCoreMutationResult = NonNullable<Awaited<ReturnType<typeof syncMesaCore>>>
-    export type SyncMesaCoreMutationBody = SyncMesaCoreRequest
-    export type SyncMesaCoreMutationError = HTTPValidationError
+
+    export type SyncMesaCoreMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Sync Mesa Core
  */
-export const useSyncMesaCore = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{data: SyncMesaCoreRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useSyncMesaCore = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncMesaCore>>, TError,{params?: SyncMesaCoreParams}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof syncMesaCore>>,
         TError,
-        {data: SyncMesaCoreRequest},
+        {params?: SyncMesaCoreParams},
         TContext
       > => {
       return useMutation(getSyncMesaCoreMutationOptions(options), queryClient);
     }
+    /**
+ * @summary Live
+ */
+export const liveHealthLiveGet = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<unknown>(
+      {url: `/health/live`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getLiveHealthLiveGetQueryKey = () => {
+    return [
+    `/health/live`
+    ] as const;
+    }
+
+
+export const getLiveHealthLiveGetQueryOptions = <TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>> = ({ signal }) => liveHealthLiveGet(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type LiveHealthLiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
+export type LiveHealthLiveGetQueryError = ErrorType<unknown>
+
+
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof liveHealthLiveGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          TError,
+          Awaited<ReturnType<typeof liveHealthLiveGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Live
+ */
+
+export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getLiveHealthLiveGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Ready
+ */
+export const readyHealthReadyGet = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<unknown>(
+      {url: `/health/ready`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getReadyHealthReadyGetQueryKey = () => {
+    return [
+    `/health/ready`
+    ] as const;
+    }
+
+
+export const getReadyHealthReadyGetQueryOptions = <TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>> = ({ signal }) => readyHealthReadyGet(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ReadyHealthReadyGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
+export type ReadyHealthReadyGetQueryError = ErrorType<unknown>
+
+
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          TError,
+          Awaited<ReturnType<typeof readyHealthReadyGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          TError,
+          Awaited<ReturnType<typeof readyHealthReadyGet>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Ready
+ */
+
+export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getReadyHealthReadyGetQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+

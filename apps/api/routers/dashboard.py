@@ -10,13 +10,28 @@ from apps.api.models.queue import Job, JobStatus
 from apps.api.models.review import ReviewItem
 from apps.api.routers.system import get_dependencies
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Dashboard"])
 
 
-@router.get("/api/v1/dashboard/metrics")
+class DashboardMetricsResponse(BaseModel):
+    active_matters: int
+    pending_reviews: int
+    upcoming_deadlines: int
+    unread_notifications: int
+    failed_operations: int
+    degraded_capabilities: list[str]
+    system_status: str
+
+
+@router.get(
+    "/api/v1/dashboard/metrics",
+    response_model=DashboardMetricsResponse,
+    operation_id="getDashboardMetrics",
+)
 async def get_dashboard_metrics(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db),

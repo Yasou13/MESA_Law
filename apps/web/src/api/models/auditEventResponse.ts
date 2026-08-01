@@ -7,11 +7,11 @@
 import type { AuditEventResponseChanges } from './auditEventResponseChanges';
 
 export interface AuditEventResponse {
-  id: string;
-  user_id?: string | null;
   action: string;
-  entity_type: string;
-  entity_id: string;
   changes?: AuditEventResponseChanges;
+  entity_id: string;
+  entity_type: string;
+  id: string;
   timestamp: string;
+  user_id?: string | null;
 }

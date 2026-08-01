@@ -3,7 +3,7 @@ export const telemetry = {
    * Tracks an event in the application.
    * If telemetry is disabled in firm settings, this will be a no-op.
    */
-  trackEvent: (eventName: string, properties?: Record<string, any>) => {
+  trackEvent: (eventName: string, properties?: Record<string, unknown>) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Telemetry] ${eventName}`, properties)
     }
@@ -12,9 +12,9 @@ export const telemetry = {
 
   /**
    * Identifies a user for telemetry purposes.
-   * Uses anonymous/hashed ID by default for MESA SOC2 compliance.
+   * The caller must pass a non-sensitive identifier; no compliance claim is implied.
    */
-  identifyUser: (userId: string, traits?: Record<string, any>) => {
+  identifyUser: (userId: string, traits?: Record<string, unknown>) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[Telemetry] Identify User ${userId}`, traits)
     }
@@ -24,7 +24,7 @@ export const telemetry = {
   /**
    * Captures an exception for error reporting.
    */
-  captureException: (error: Error, context?: Record<string, any>) => {
+  captureException: (error: Error, context?: Record<string, unknown>) => {
     if (process.env.NODE_ENV === 'development') {
       console.error(`[Telemetry] Exception Captured:`, error, context)
     }

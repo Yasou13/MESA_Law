@@ -1,19 +1,19 @@
 'use client'
 import { Activity, Clock, FileText, Bell, AlertTriangle, ArrowRight, FolderOpen } from 'lucide-react'
 import Link from 'next/link'
-import { useGetDashboardMetricsApiV1DashboardMetricsGet } from '@/api/endpoints/dashboard/dashboard'
+import { useGetDashboardMetrics } from '@/api/endpoints/dashboard/dashboard'
 import { useListMatters } from '@/api/endpoints/default/default'
 import { useListDeadlines } from '@/api/endpoints/deadlines/deadlines'
-import { useListDraftReviewsApiV1ReviewsGet } from '@/api/endpoints/reviews/reviews'
+import { useListReviews } from '@/api/endpoints/reviews/reviews'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardPage() {
-  const { data: response, isLoading: isLoadingMetrics, isError, refetch } = useGetDashboardMetricsApiV1DashboardMetricsGet()
+  const { data: metrics, isLoading: isLoadingMetrics, isError, refetch } = useGetDashboardMetrics()
   const { data: mattersRes, isLoading: isLoadingMatters } = useListMatters()
   const { data: deadlinesRes, isLoading: isLoadingDeadlines } = useListDeadlines()
-  const { data: reviewsRes, isLoading: isLoadingReviews } = useListDraftReviewsApiV1ReviewsGet()
+  const { data: reviewsRes, isLoading: isLoadingReviews } = useListReviews({ status: 'PROPOSED' })
 
   if (isLoadingMetrics) {
     return (
@@ -33,25 +33,24 @@ export default function DashboardPage() {
     )
   }
 
-  const metrics: any = response?.data || {}
-  const recentMatters: any[] = ((mattersRes as any)?.items || (mattersRes as any) || []).slice(0, 5)
-  const upcomingDeadlines: any[] = ((deadlinesRes as any)?.items || (deadlinesRes as any) || []).slice(0, 5)
-  const pendingReviews: any[] = ((reviewsRes as any) || []).slice(0, 5)
+  const recentMatters = (mattersRes ?? []).slice(0, 5)
+  const upcomingDeadlines = (deadlinesRes ?? []).slice(0, 5)
+  const pendingReviews = (reviewsRes ?? []).slice(0, 5)
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Welcome to MESA Law Intelligence Platform.</p>
+        <p className="text-zinc-500 dark:text-zinc-400">Matter-scoped legal review and sourced Q&amp;A.</p>
       </div>
       
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { title: 'Active Matters', value: metrics.active_matters, icon: <Activity className="w-5 h-5 text-blue-400" />, href: '/matters' },
-          { title: 'Pending Reviews', value: metrics.pending_reviews, icon: <FileText className="w-5 h-5 text-purple-400" />, href: '/reviews' },
-          { title: 'Upcoming Deadlines', value: metrics.upcoming_deadlines, icon: <Clock className="w-5 h-5 text-orange-400" />, href: '/deadlines' },
-          { title: 'Unread Notifications', value: metrics.unread_notifications, icon: <Bell className="w-5 h-5 text-zinc-400" />, href: '/notifications' },
+          { title: 'Active Matters', value: metrics?.active_matters ?? 0, icon: <Activity className="w-5 h-5 text-blue-400" />, href: '/matters' },
+          { title: 'Pending Reviews', value: metrics?.pending_reviews ?? 0, icon: <FileText className="w-5 h-5 text-purple-400" />, href: '/reviews' },
+          { title: 'Upcoming Deadlines', value: metrics?.upcoming_deadlines ?? 0, icon: <Clock className="w-5 h-5 text-orange-400" />, href: '/deadlines' },
+          { title: 'Unread Notifications', value: metrics?.unread_notifications ?? 0, icon: <Bell className="w-5 h-5 text-zinc-400" />, href: '/notifications' },
         ].map((stat, i) => (
           <Link key={i} href={stat.href} className="block">
             <div className="glass-card rounded-xl p-6 transition-all hover:scale-[1.02] h-full flex flex-col justify-between group">
@@ -65,13 +64,13 @@ export default function DashboardPage() {
         ))}
       </div>
       
-      {metrics.system_status === 'degraded' && (
+      {metrics?.system_status === 'degraded' && (
         <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-4">
           <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
           <div>
             <h4 className="text-sm font-medium text-orange-600 dark:text-orange-400">System Capability Degraded</h4>
             <p className="text-sm text-orange-600/80 dark:text-orange-400/80 mt-1">
-              Some intelligence features might be limited. Degraded components: {metrics.degraded_capabilities?.join(', ')}
+              Some intelligence features might be limited. Degraded components: {metrics.degraded_capabilities.join(', ')}
             </p>
           </div>
         </div>
@@ -102,7 +101,7 @@ export default function DashboardPage() {
                   recentMatters.map(m => (
                     <TableRow key={m.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/matters/${m.id}`} className="hover:underline">{m.name}</Link>
+                        <Link href={`/matters/${m.id}`} className="hover:underline">{m.title}</Link>
                       </TableCell>
                       <TableCell><StatusBadge status={m.status === 'open' ? 'success' : 'neutral'} label={m.status.toUpperCase()} /></TableCell>
                     </TableRow>
@@ -166,10 +165,10 @@ export default function DashboardPage() {
                 ) : pendingReviews.length === 0 ? (
                   <TableRow><TableCell colSpan={3} className="text-center py-4 text-zinc-400">No pending reviews</TableCell></TableRow>
                 ) : (
-                  pendingReviews.map((r: any) => (
+                  pendingReviews.map((r) => (
                     <TableRow key={r.id}>
-                      <TableCell className="font-medium capitalize">{r.review_type}</TableCell>
-                      <TableCell className="text-zinc-500 text-sm font-mono">{r.target_id}</TableCell>
+                      <TableCell className="font-medium capitalize">{r.entity_type}</TableCell>
+                      <TableCell className="text-zinc-500 text-sm font-mono">{r.entity_id}</TableCell>
                       <TableCell><StatusBadge status="review-required" label={r.status} /></TableCell>
                     </TableRow>
                   ))

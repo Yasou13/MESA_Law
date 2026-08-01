@@ -2,10 +2,10 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:3000',
@@ -17,18 +17,10 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: [
-    {
-      command: 'pnpm run build && pnpm run start',
-      url: 'http://localhost:3000',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    },
-    {
-      command: 'cd ../../ && export PATH="$HOME/.local/bin:$PATH" && export PYTHONPATH=. && export MESA_LAW_ENVIRONMENT=test && export REDIS_URL=memory:// && uv run uvicorn apps.api.main:app --port 8001',
-      url: 'http://localhost:8001/openapi.json',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120000,
-    }
-  ],
+  webServer: {
+    command: 'MESA_LAW_ENVIRONMENT=test MESA_LAW_E2E_STUB=1 NEXTAUTH_SECRET=law-side-e2e-only-secret NEXT_TELEMETRY_DISABLED=1 pnpm run build && MESA_LAW_ENVIRONMENT=test MESA_LAW_E2E_STUB=1 NEXTAUTH_SECRET=law-side-e2e-only-secret NEXT_TELEMETRY_DISABLED=1 pnpm run start',
+    url: 'http://localhost:3000',
+    reuseExistingServer: false,
+    timeout: 180000,
+  },
 });

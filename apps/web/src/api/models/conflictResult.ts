@@ -6,10 +6,10 @@
  */
 
 export interface ConflictResult {
-  searched_name: string;
   matched_name: string;
-  role: string;
   matter_id: string;
   matter_title: string;
+  role: string;
+  searched_name: string;
   status: string;
 }

@@ -7,7 +7,7 @@ import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
   title: "MESA Law",
-  description: "AI-powered legal intelligence platform",
+  description: "Matter-scoped legal document review and sourced Q&A",
 };
 
 export default async function RootLayout({

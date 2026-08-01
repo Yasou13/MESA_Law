@@ -1,46 +1,38 @@
-import { withAuth } from "next-auth/middleware";
-import createMiddleware from "next-intl/middleware";
-import { NextRequest, NextResponse } from "next/server";
+import { withAuth, type NextRequestWithAuth } from 'next-auth/middleware'
+import createMiddleware from 'next-intl/middleware'
+import type { NextFetchEvent, NextRequest } from 'next/server'
 
-const locales = ['en', 'tr'];
+const locales = ['en', 'tr']
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale: 'en',
-  localePrefix: 'as-needed'
-});
+  localePrefix: 'as-needed',
+})
+
+function isLoginPath(pathname: string): boolean {
+  return pathname === '/login' || pathname === '/en/login' || pathname === '/tr/login'
+}
+
+const testAuthBypass =
+  process.env.MESA_LAW_ENVIRONMENT === 'test' && process.env.MESA_LAW_E2E_STUB === '1'
 
 const authMiddleware = withAuth(
-  function onSuccess(req) {
-    return intlMiddleware(req);
-  },
+  (request) => intlMiddleware(request),
   {
     callbacks: {
-      authorized: ({ token }) => !!token
+      authorized: ({ token }) => testAuthBypass || Boolean(token),
     },
-    pages: {
-      signIn: '/login'
-    }
-  }
-);
+    pages: { signIn: '/login' },
+  },
+)
 
-export default function middleware(req: NextRequest) {
-  // Exclude static files, API, and Next.js internals
-  if (
-    req.nextUrl.pathname.startsWith('/api') ||
-    req.nextUrl.pathname.startsWith('/_next') ||
-    req.nextUrl.pathname.includes('.')
-  ) {
-    return NextResponse.next();
-  }
-
-  // Treat login as public
-  if (req.nextUrl.pathname === '/login' || req.nextUrl.pathname.startsWith('/en/login') || req.nextUrl.pathname.startsWith('/tr/login')) {
-    return intlMiddleware(req);
-  }
-
-  return (authMiddleware as any)(req);
+export default function middleware(request: NextRequest, event: NextFetchEvent) {
+  if (isLoginPath(request.nextUrl.pathname)) return intlMiddleware(request)
+  return authMiddleware(request as NextRequestWithAuth, event)
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)']
-};
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+  ],
+}

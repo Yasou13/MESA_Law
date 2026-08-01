@@ -5,6 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type SetActiveFirmApiV1SessionActiveFirmPostParams = {
-firm_id: string;
-};
+export interface ActiveFirmResponse {
+  active_firm_id: string;
+  role: string;
+  status: string;
+}

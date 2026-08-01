@@ -1,26 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { User, Mail, Save, Loader2, Shield, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'react-hot-toast'
-import { useGetCurrentUserProfileApiV1UsersMeGet, useUpdateCurrentUserProfile } from '@/api/endpoints/users/users'
+import { useGetCurrentUserProfile, useUpdateCurrentUserProfile } from '@/api/endpoints/users/users'
 
 export default function ProfilePage() {
-  const { data: profileResponse, refetch, isLoading } = useGetCurrentUserProfileApiV1UsersMeGet()
-  const { mutateAsync: updateProfile, isPending: isUpdating } = useUpdateCurrentUserProfile()
-  const profile: any = profileResponse
+  const { data: profile, refetch, isLoading } = useGetCurrentUserProfile()
 
   const [fullName, setFullName] = useState(profile?.full_name || '')
   const [email, setEmail] = useState(profile?.email || '')
   const [isDirty, setIsDirty] = useState(false)
 
-  // Sync state on load
-  if (profile && !fullName && !email) {
-    setFullName(profile.full_name)
-    setEmail(profile.email)
-  }
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name)
+      setEmail(profile.email)
+    }
+  }, [profile])
 
   const updateMutation = useUpdateCurrentUserProfile({
     mutation: {
@@ -105,7 +104,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {profile?.is_support_access_granted && (
+          {profile?.is_support_access_granted && profile.support_access_granted_until && (
             <div className="mt-8 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-start gap-4">
               <Shield className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
               <div>

@@ -8,11 +8,36 @@ from apps.api.core.models import RequestContext
 from apps.api.core.policies import AdminAccessPolicy
 from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
 from fastapi import APIRouter, Depends, HTTPException, Response
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["System"])
+
+
+class FeatureSettings(BaseModel):
+    mesa_rebuild_enabled: bool
+    external_research_enabled: bool
+    document_ocr_enabled: bool
+    drafting_ai_enabled: bool
+    deadline_ai_enabled: bool
+
+
+class RetentionSettings(BaseModel):
+    audit_log_days: int
+    deleted_document_days: int
+
+
+class SecuritySettings(BaseModel):
+    require_mfa: bool
+    session_timeout_minutes: int
+
+
+class SystemSettingsResponse(BaseModel):
+    features: FeatureSettings
+    retention: RetentionSettings
+    security: SecuritySettings
 
 
 async def check_tcp(host: str, port: int, timeout: float = 1.0) -> bool:
@@ -40,7 +65,11 @@ async def ready(response: Response, db: AsyncSession = Depends(get_db)):
     return {"status": "ok", "components": dependencies}
 
 
-@router.get("/api/v1/system/dependencies")
+@router.get(
+    "/api/v1/system/dependencies",
+    response_model=dict[str, str],
+    operation_id="getSystemDependencies",
+)
 async def system_dependencies(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db),
@@ -49,7 +78,11 @@ async def system_dependencies(
     return await get_dependencies(db)
 
 
-@router.get("/api/v1/system/settings", operation_id="getSystemSettings")
+@router.get(
+    "/api/v1/system/settings",
+    operation_id="getSystemSettings",
+    response_model=SystemSettingsResponse,
+)
 async def get_system_settings(
     context: RequestContext = Depends(setup_tenant_context),
 ):
@@ -68,7 +101,7 @@ async def get_system_settings(
 
 @router.put("/api/v1/system/settings", operation_id="updateSystemSettings")
 async def update_system_settings(
-    payload: dict,
+    payload: SystemSettingsResponse,
     context: RequestContext = Depends(setup_tenant_context),
 ):
     AdminAccessPolicy.can_manage_firm(context)

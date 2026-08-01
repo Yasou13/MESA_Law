@@ -1,16 +1,17 @@
 'use client'
 
-import { useListDeadlines, useCompleteDeadline } from '@/api/endpoints/deadlines/deadlines'
+import { getListDeadlinesQueryKey, useListDeadlines, useCompleteDeadline } from '@/api/endpoints/deadlines/deadlines'
 import { Clock, CheckCircle, AlertCircle, Calendar } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
+import { ApiError } from '@/lib/api/client'
 
 export default function DeadlinesPage() {
   const queryClient = useQueryClient()
   const { data: res, isLoading, isError, refetch } = useListDeadlines()
   const { mutate: completeMutate, isPending } = useCompleteDeadline()
 
-  const deadlines = (res as unknown as any[]) || []
+  const deadlines = res ?? []
 
   if (isLoading) {
     return (
@@ -39,10 +40,10 @@ export default function DeadlinesPage() {
     completeMutate({ deadlineId: id }, {
       onSuccess: () => {
         toast.success('Deadline marked as completed')
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/deadlines'] })
+        queryClient.invalidateQueries({ queryKey: getListDeadlinesQueryKey() })
       },
-      onError: (err: any) => {
-        toast.error(`Failed to complete: ${err.response?.data?.detail || 'Unknown error'}`)
+      onError: (error: unknown) => {
+        toast.error(`Failed to complete: ${error instanceof ApiError ? error.message : 'Unknown error'}`)
       }
     })
   }
@@ -64,7 +65,7 @@ export default function DeadlinesPage() {
             <p>You&apos;re all caught up on your deadlines.</p>
           </div>
         ) : (
-          deadlines.map((deadline: any) => {
+          deadlines.map((deadline) => {
             const isOverdue = new Date(deadline.due_date) < new Date()
             return (
               <div key={deadline.id} className="glass-card rounded-xl p-6 flex items-center justify-between transition-all hover:border-[var(--color-lila-500)]/30">

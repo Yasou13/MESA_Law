@@ -6,10 +6,10 @@
  */
 
 export interface ParsedDocumentResponse {
-  id: string;
   document_id: string;
-  revision_id: string;
-  parsing_revision: number;
+  id: string;
   parser_used: string;
+  parsing_revision: number;
+  revision_id: string;
   status: string;
 }

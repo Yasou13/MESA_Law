@@ -1,129 +1,118 @@
 'use client'
 
-import { useQueryClient } from '@tanstack/react-query'
-import { useState, useRef, use } from 'react'
-import { FileText, UploadCloud, Loader2, PenTool, LayoutTemplate, Briefcase } from 'lucide-react'
-import { toast } from 'react-hot-toast'
+import { use, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { DocumentViewer } from '@/features/documents/components/DocumentViewer'
-import { Timeline } from '@/features/matters/components/Timeline'
-import { ClaimsEvidence } from '@/features/matters/components/ClaimsEvidence'
-import { ResearchShell } from '@/features/research/components/ResearchShell'
-import { QAShell } from '@/features/qa/components/QAShell'
-import { DraftStudioShell } from '@/features/drafts/components/DraftStudioShell'
+import { useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, FileCheck, FileText, Loader2, UploadCloud } from 'lucide-react'
+import { toast } from 'react-hot-toast'
+
+import {
+  downloadDocument,
+  getListMatterDocumentsQueryKey,
+  useCompleteUpload,
+  useCreateUploadIntent,
+  useGetMatter,
+  useListClaims,
+  useListMatterDocuments,
+  useListMatterParties,
+} from '@/api/endpoints/default/default'
+import { useListDeadlines } from '@/api/endpoints/deadlines/deadlines'
+import { useSaveDraft } from '@/api/endpoints/draft-studio/draft-studio'
+import {
+  getGetMesaBindingQueryKey,
+  useCreateMesaBinding,
+  useGetMesaBinding,
+} from '@/api/endpoints/mesa-bindings/mesa-bindings'
+import type { DocumentResponse, MesaBindingCreate, MesaBindingResponse } from '@/api/models'
 import { MatterContextHeader } from '@/components/layout/MatterContextHeader'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/ui/status-badge'
-import {
-  useListMatterDocuments,
-  useListClaims,
-  useListMatters,
-  useCreateUploadIntent,
-  useCompleteUpload,
-  downloadDocument,
-  useRebuildMatterMesa,
-  useListMatterParties
-} from '@/api/endpoints/default/default'
-import { useListDeadlines } from '@/api/endpoints/deadlines/deadlines'
-import { useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet, useSaveDraftApiV1DraftStudioDraftsPost } from '@/api/endpoints/draft-studio/draft-studio'
+import { DocumentViewer } from '@/features/documents/components/DocumentViewer'
+import { DraftStudioShell } from '@/features/drafts/components/DraftStudioShell'
+import { QAShell } from '@/features/qa/components/QAShell'
+import { ResearchShell } from '@/features/research/components/ResearchShell'
+import { ApiError } from '@/lib/api/client'
+
+type MatterTab = 'overview' | 'documents' | 'qa' | 'drafts' | 'research'
+
+function readableError(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    return error.referenceId ? `${error.message} (${error.referenceId})` : error.message
+  }
+  return error instanceof Error ? error.message : fallback
+}
 
 export default function MatterDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const resolvedParams = use(params)
-  const matterId = resolvedParams.id
+  const matterId = use(params).id
   const router = useRouter()
-  
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
-  
-  const { mutateAsync: saveDraft, isPending: isCreatingDraft } = useSaveDraftApiV1DraftStudioDraftsPost()
-  const { mutateAsync: rebuildMesa, isPending: isRebuilding } = useRebuildMatterMesa()
-  
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'research' | 'drafts'>('overview')
-  const [activeDoc, setActiveDoc] = useState<{id: string, url: string, title: string} | null>(null)
+  const [activeTab, setActiveTab] = useState<MatterTab>('overview')
+  const [activeDocument, setActiveDocument] = useState<{
+    id: string
+    url: string
+    title: string
+  } | null>(null)
 
-  // Fetch all matters and find current to pass to MatterContextHeader
-  const { data: mattersResponse, isLoading: isLoadingMatters } = useListMatters()
-  const matters = Array.isArray(mattersResponse) ? mattersResponse : ((mattersResponse as any)?.items || [])
-  const currentMatter = matters.find((m: any) => m.id === matterId) || {
-    name: 'Loading...',
-    status: '...',
-    confidentiality_level: '...',
-    legal_hold: false,
-    ai_processing_policy: '...',
-    access_scope: 'read'
-  }
-  
-  const canEdit = currentMatter.access_scope !== 'read'
-
-  const { data: documentsResponse, isLoading: isLoadingDocs } = useListMatterDocuments(matterId, {
-    query: {
-      refetchInterval: (query: any) => {
-        const docs = query.state?.data
-        if (docs?.some((d: any) => d.status === 'uploading' || d.status === 'scanning' || d.status === 'processing')) {
-          return 3000
-        }
-        return false
-      }
-    }
+  const { data: matter, isLoading: isLoadingMatter } = useGetMatter(matterId)
+  const canEdit = matter?.access_scope !== 'read'
+  const { data: documents = [], isLoading: isLoadingDocuments } = useListMatterDocuments(
+    matterId,
+    {
+      query: {
+        refetchInterval: (query) =>
+          query.state.data?.some((document) =>
+            ['UPLOADING', 'SCANNING', 'PROCESSING'].includes(document.status.toUpperCase()),
+          )
+            ? 3000
+            : false,
+      },
+    },
+  )
+  const { data: claims = [], isLoading: isLoadingClaims } = useListClaims(matterId)
+  const { data: parties = [], isLoading: isLoadingParties } = useListMatterParties(matterId)
+  const { data: deadlines = [], isLoading: isLoadingDeadlines } = useListDeadlines({
+    matter_id: matterId,
   })
-  const documents = Array.isArray(documentsResponse) ? documentsResponse : []
+  const uploadIntent = useCreateUploadIntent<ApiError>()
+  const completeUpload = useCompleteUpload<ApiError>()
+  const saveDraft = useSaveDraft<ApiError>()
 
-  const { data: claimsResponse, isLoading: isLoadingClaims } = useListClaims(matterId)
-  const claims = Array.isArray(claimsResponse) ? claimsResponse : []
-
-  const { data: partiesResponse, isLoading: isLoadingParties } = useListMatterParties(matterId)
-  const parties = Array.isArray(partiesResponse) ? partiesResponse : []
-
-  const { data: deadlinesResponse, isLoading: isLoadingDeadlines } = useListDeadlines({ matter_id: matterId })
-  const deadlines = Array.isArray(deadlinesResponse) ? deadlinesResponse : []
-
-  const { data: draftsResponse, isLoading: isLoadingDrafts } = useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet(matterId)
-  const drafts = Array.isArray(draftsResponse) ? draftsResponse : []
-
-  const uploadIntent = useCreateUploadIntent()
-  const completeUpload = useCompleteUpload()
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (!file) return
-
     setIsUploading(true)
     setUploadProgress(0)
-
     try {
-      const intentRes = await uploadIntent.mutateAsync({
+      const intent = await uploadIntent.mutateAsync({
         data: {
           matter_id: matterId,
           filename: file.name,
           mime_type: file.type || 'application/pdf',
-          size_bytes: file.size
-        }
+          size_bytes: file.size,
+        },
       })
-      const intentData = intentRes.data as any
-      const { document_id, presigned_url } = intentData
-      
       setUploadProgress(50)
-      await fetch(presigned_url, {
+      const uploadResponse = await fetch(intent.presigned_url, {
         method: 'PUT',
         body: file,
-        headers: {
-          'Content-Type': file.type || 'application/pdf'
-        }
+        headers: { 'Content-Type': file.type || 'application/pdf' },
       })
+      if (!uploadResponse.ok) {
+        throw new Error(`Object storage rejected the upload (${uploadResponse.status})`)
+      }
       setUploadProgress(90)
-
-      await completeUpload.mutateAsync({ documentId: document_id })
-      
+      await completeUpload.mutateAsync({ documentId: intent.document_id })
       setUploadProgress(100)
-      toast.success('Document uploaded successfully')
-      queryClient.invalidateQueries({ queryKey: [`/api/v1/documents/matter/${matterId}`] })
-    } catch (err: any) {
-      console.error(err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Upload failed'
-      toast.error(`Upload Failed: ${errorMsg}`)
+      await queryClient.invalidateQueries({
+        queryKey: getListMatterDocumentsQueryKey(matterId),
+      })
+      toast.success('Document uploaded and queued for security scanning')
+    } catch (error: unknown) {
+      toast.error(readableError(error, 'Upload failed'))
     } finally {
       setIsUploading(false)
       setUploadProgress(0)
@@ -131,233 +120,352 @@ export default function MatterDetailPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  const openDocument = async (document: DocumentResponse) => {
+    try {
+      const download = await downloadDocument(document.id)
+      setActiveDocument({ id: document.id, title: document.title, url: download.presigned_url })
+    } catch (error: unknown) {
+      toast.error(readableError(error, 'Document is not available yet'))
+    }
+  }
+
   const handleCreateDraft = async () => {
     try {
-      const res = await saveDraft({
-        data: {
-          matter_id: matterId,
-          title: 'New Draft',
-          content: ''
-        }
+      const draft = await saveDraft.mutateAsync({
+        data: { matter_id: matterId, title: 'New Draft', content: '' },
       })
       toast.success('Draft created')
-      router.push(`/drafts/${(res as any).id}`)
-    } catch (err) {
-      toast.error('Failed to create draft')
+      router.push(`/drafts/${draft.id}`)
+    } catch (error: unknown) {
+      toast.error(readableError(error, 'Failed to create draft'))
     }
   }
 
-  const handleRebuildMesa = async () => {
-    try {
-      const res = await rebuildMesa({ matterId })
-      toast.success(`Successfully synced ${(res as any).synced_pages} pages to MESA Core`)
-    } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Failed to sync with MESA Core')
-    }
-  }
-
-  if (activeDoc) {
-    return <DocumentViewer documentId={activeDoc.id} matterId={matterId} url={activeDoc.url} title={activeDoc.title} onClose={() => setActiveDoc(null)} />
+  if (activeDocument) {
+    return (
+      <DocumentViewer
+        documentId={activeDocument.id}
+        matterId={matterId}
+        url={activeDocument.url}
+        title={activeDocument.title}
+        onClose={() => setActiveDocument(null)}
+      />
+    )
   }
 
   return (
-    <div className="flex flex-col h-full bg-[var(--background)]">
-      {/* Top Header */}
-      {!isLoadingMatters && currentMatter && (
-        <MatterContextHeader 
+    <div className="flex h-full flex-col bg-[var(--background)]">
+      {!isLoadingMatter && matter && (
+        <MatterContextHeader
           matter={{
-            name: currentMatter.name || currentMatter.title,
-            internal_reference: currentMatter.internal_reference || matterId.substring(0, 8),
-            client_name: currentMatter.client_name || 'Client',
-            responsible_attorney_name: currentMatter.responsible_attorney_name || 'Partner',
-            status: currentMatter.status || 'ACTIVE',
-            confidentiality_level: currentMatter.confidentiality_level || 'Strict',
-            legal_hold: currentMatter.legal_hold || false,
-            ai_processing_policy: currentMatter.ai_processing_policy || 'Standard'
-          }} 
+            name: matter.title,
+            internal_reference: matter.internal_reference ?? matterId.slice(0, 8),
+            client_name: matter.client_name ?? 'Not specified',
+            responsible_attorney_name: 'Not assigned',
+            status: matter.status,
+            confidentiality_level: matter.confidentiality_level,
+            legal_hold: false,
+            ai_processing_policy: matter.ai_processing_policy,
+          }}
         />
       )}
 
-      {/* Tabs Navigation */}
-      <div className="bg-[var(--bg-surface)] border-b border-[var(--border-surface)] px-6 py-2">
-        <div className="flex items-center gap-1">
-          {['overview', 'documents', 'drafts', 'research'].map((tab) => (
+      <div className="border-b border-[var(--border-surface)] bg-[var(--bg-surface)] px-6 py-2">
+        <div className="flex flex-wrap items-center gap-1">
+          {(['overview', 'documents', 'qa', 'drafts', 'research'] as MatterTab[]).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab as any)}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === tab ? 'bg-[var(--bg-surface-hover)] text-[var(--foreground)]' : 'text-[var(--color-anthracite-400)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)]'}`}
+              onClick={() => setActiveTab(tab)}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === tab
+                  ? 'bg-[var(--bg-surface-hover)] text-[var(--foreground)]'
+                  : 'text-[var(--color-anthracite-400)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--foreground)]'
+              }`}
             >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab === 'qa' ? 'Sourced Q&A' : tab.charAt(0).toUpperCase() + tab.slice(1)}
             </button>
           ))}
+          <Link
+            href={`/matters/${matterId}/reviews`}
+            className="ml-auto inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-[var(--color-anthracite-400)] hover:bg-[var(--bg-surface-hover)] hover:text-[var(--foreground)]"
+          >
+            <FileCheck className="h-4 w-4" /> Reviews
+          </Link>
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="flex-1 overflow-auto p-6 md:p-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto max-w-7xl">
           {activeTab === 'overview' && (
             <div className="space-y-8">
-              {/* Grid 1: Parties */}
-              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
-                  <h3 className="font-semibold text-[var(--foreground)]">Matter Parties</h3>
-                </div>
-                <div className="p-4 overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
-                      <tr>
-                        <th className="px-4 py-2 rounded-tl-lg">Name</th>
-                        <th className="px-4 py-2">Role</th>
-                        <th className="px-4 py-2 rounded-tr-lg">Type</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoadingParties ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
-                      ) : parties.length === 0 ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">No parties found.</td></tr>
-                      ) : (
-                        parties.map((p: any) => (
-                          <tr key={p.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
-                            <td className="px-4 py-3 font-medium text-[var(--foreground)]">{p.name}</td>
-                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{p.role}</td>
-                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{p.type}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Grid 2: Claims */}
-              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
-                  <h3 className="font-semibold text-[var(--foreground)]">Claims</h3>
-                </div>
-                <div className="p-4 overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
-                      <tr>
-                        <th className="px-4 py-2 rounded-tl-lg">Description</th>
-                        <th className="px-4 py-2">Claimant ID</th>
-                        <th className="px-4 py-2 rounded-tr-lg">Defendant ID</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoadingClaims ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
-                      ) : claims.length === 0 ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">No claims found.</td></tr>
-                      ) : (
-                        claims.map((c: any) => (
-                          <tr key={c.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
-                            <td className="px-4 py-3 font-medium text-[var(--foreground)] max-w-[400px] truncate">{c.description}</td>
-                            <td className="px-4 py-3 text-[var(--color-anthracite-400)] truncate max-w-[150px]">{c.claimant_party_id}</td>
-                            <td className="px-4 py-3 text-[var(--color-anthracite-400)] truncate max-w-[150px]">{c.defendant_party_id}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Grid 3: Events & Deadlines */}
-              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)]">
-                  <h3 className="font-semibold text-[var(--foreground)]">Events & Deadlines</h3>
-                </div>
-                <div className="p-4 overflow-x-auto">
-                  <table className="w-full text-sm text-left">
-                    <thead className="text-xs text-[var(--color-anthracite-400)] uppercase bg-[var(--bg-surface-hover)]">
-                      <tr>
-                        <th className="px-4 py-2 rounded-tl-lg">Date</th>
-                        <th className="px-4 py-2">Description</th>
-                        <th className="px-4 py-2 rounded-tr-lg">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {isLoadingDeadlines ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">Loading...</td></tr>
-                      ) : deadlines.length === 0 ? (
-                        <tr><td colSpan={3} className="px-4 py-4 text-center">No deadlines found.</td></tr>
-                      ) : (
-                        deadlines.map((d: any) => (
-                          <tr key={d.id} className="border-b border-[var(--border-surface)] hover:bg-[var(--bg-surface-hover)] transition-colors">
-                            <td className="px-4 py-3 font-medium text-[var(--foreground)] whitespace-nowrap">{d.calculated_date || d.trigger_date || 'Unknown'}</td>
-                            <td className="px-4 py-3 text-[var(--color-anthracite-400)]">{d.description || d.trigger_event}</td>
-                            <td className="px-4 py-3"><StatusBadge status="neutral" label={d.status} /></td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
+              <MesaBindingCard matterId={matterId} canEdit={canEdit} />
+              <OverviewTable
+                title="Matter parties"
+                isLoading={isLoadingParties}
+                isEmpty={parties.length === 0}
+                headers={['Name', 'Role', 'Type']}
+                rows={parties.map((party) => [party.name, party.role, party.type])}
+              />
+              <OverviewTable
+                title="Canonical claims"
+                isLoading={isLoadingClaims}
+                isEmpty={claims.length === 0}
+                headers={['Description', 'Status', 'Review status']}
+                rows={claims.map((claim) => [claim.description, claim.status, claim.review_status])}
+              />
+              <OverviewTable
+                title="Manual deadlines"
+                isLoading={isLoadingDeadlines}
+                isEmpty={deadlines.length === 0}
+                headers={['Due date', 'Description', 'State']}
+                rows={deadlines.map((deadline) => [
+                  deadline.due_date,
+                  deadline.description,
+                  deadline.is_completed ? 'COMPLETED' : 'OPEN',
+                ])}
+              />
             </div>
           )}
 
           {activeTab === 'documents' && (
             <div className="space-y-6">
-              {/* Upload Action */}
               {canEdit && (
-                <div 
+                <button
+                  type="button"
                   onClick={() => !isUploading && fileInputRef.current?.click()}
-                  className={`border-2 border-dashed border-[var(--border-surface)] rounded-xl p-6 text-center cursor-pointer transition-colors ${isUploading ? 'opacity-50' : 'hover:border-[var(--color-lila-500)] bg-[var(--bg-surface)]'}`}
+                  disabled={isUploading}
+                  className="w-full rounded-xl border-2 border-dashed border-[var(--border-surface)] bg-[var(--bg-surface)] p-6 text-center transition-colors hover:border-[var(--color-lila-500)] disabled:opacity-50"
                 >
-                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".pdf,.docx,.txt" />
-                  <UploadCloud className="w-8 h-8 text-[var(--color-anthracite-400)] mx-auto mb-2" />
-                  <h3 className="text-sm font-medium mb-1 text-[var(--foreground)]">Upload a Document</h3>
-                  {isUploading && (
-                    <div className="mt-4 max-w-xs mx-auto">
-                      <div className="w-full bg-[var(--color-anthracite-800)] rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-[var(--color-lila-500)] h-1.5 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Documents List */}
-              <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-                <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)] flex justify-between items-center">
-                  <h3 className="font-semibold text-[var(--foreground)] flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                    Matter Documents
-                  </h3>
-                </div>
-                <div className="divide-y divide-[var(--border-surface)] max-h-[600px] overflow-y-auto">
-                  {isLoadingDocs ? (
-                    <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">Loading...</div>
-                  ) : documents.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-[var(--color-anthracite-400)]">No documents uploaded.</div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    accept=".pdf,.docx,.txt"
+                  />
+                  {isUploading ? (
+                    <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin" />
                   ) : (
-                    documents.map((doc: any) => (
-                      <div 
-                        key={doc.id} 
-                        className="p-4 flex items-center justify-between hover:bg-[var(--bg-surface-hover)] transition-colors cursor-pointer"
-                        onClick={() => setActiveDoc({ id: doc.id, url: doc.presigned_url || '#', title: doc.title })}
-                      >
-                        <div className="flex items-center gap-3 truncate">
-                          <FileText className="w-4 h-4 text-[var(--color-anthracite-400)] shrink-0" />
-                          <span className="text-sm font-medium truncate">{doc.title}</span>
-                        </div>
-                        <StatusBadge status="neutral" label={doc.status || 'Processing'} />
-                      </div>
-                    ))
+                    <UploadCloud className="mx-auto mb-2 h-8 w-8 text-[var(--color-anthracite-400)]" />
                   )}
-                </div>
+                  <span className="text-sm font-medium text-[var(--foreground)]">
+                    {isUploading ? `Uploading ${uploadProgress}%` : 'Upload PDF, DOCX or TXT'}
+                  </span>
+                </button>
+              )}
+              <div className="glass-card overflow-hidden rounded-xl border border-[var(--border-surface)]">
+                <div className="border-b border-[var(--border-surface)] p-4 font-semibold">Matter documents</div>
+                {isLoadingDocuments ? (
+                  <div className="p-8 text-center">Loading…</div>
+                ) : documents.length === 0 ? (
+                  <div className="p-8 text-center text-[var(--color-anthracite-400)]">No documents uploaded.</div>
+                ) : (
+                  <div className="divide-y divide-[var(--border-surface)]">
+                    {documents.map((document) => (
+                      <button
+                        type="button"
+                        key={document.id}
+                        onClick={() => openDocument(document)}
+                        className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-[var(--bg-surface-hover)]"
+                      >
+                        <div className="min-w-0">
+                          <span className="flex items-center gap-2 truncate font-medium">
+                            <FileText className="h-4 w-4 shrink-0" /> {document.title}
+                          </span>
+                          <span className="mt-1 block text-xs text-[var(--color-anthracite-400)]">
+                            {document.provenance_state}
+                            {document.failure_reason ? ` · ${document.failure_reason}` : ''}
+                          </span>
+                        </div>
+                        <StatusBadge status="neutral" label={document.status} />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {activeTab === 'research' && <ResearchShell />}
-          {activeTab === 'drafts' && <DraftStudioShell matterId={matterId} />}
+          {activeTab === 'qa' && <QAShell matterId={matterId} />}
+          {activeTab === 'drafts' && (
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={handleCreateDraft} disabled={saveDraft.isPending}>
+                  {saveDraft.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  New manual draft
+                </Button>
+              </div>
+              <DraftStudioShell matterId={matterId} />
+            </div>
+          )}
+          {activeTab === 'research' && <ResearchShell matterId={matterId} />}
         </div>
       </div>
     </div>
+  )
+}
+
+function OverviewTable({
+  title,
+  isLoading,
+  isEmpty,
+  headers,
+  rows,
+}: {
+  title: string
+  isLoading: boolean
+  isEmpty: boolean
+  headers: string[]
+  rows: string[][]
+}) {
+  return (
+    <section className="glass-card overflow-hidden rounded-xl border border-[var(--border-surface)]">
+      <h3 className="border-b border-[var(--border-surface)] bg-[var(--bg-surface)] p-4 font-semibold">
+        {title}
+      </h3>
+      <div className="overflow-x-auto p-4">
+        {isLoading ? (
+          <p className="py-4 text-center text-sm">Loading…</p>
+        ) : isEmpty ? (
+          <p className="py-4 text-center text-sm text-[var(--color-anthracite-400)]">No records.</p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[var(--bg-surface-hover)] text-xs uppercase text-[var(--color-anthracite-400)]">
+              <tr>{headers.map((header) => <th key={header} className="px-4 py-2">{header}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIndex) => (
+                <tr key={`${title}-${rowIndex}`} className="border-b border-[var(--border-surface)]">
+                  {row.map((cell, cellIndex) => <td key={`${rowIndex}-${cellIndex}`} className="px-4 py-3">{cell}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function MesaBindingCard({ matterId, canEdit }: { matterId: string; canEdit: boolean }) {
+  const queryClient = useQueryClient()
+  const [form, setForm] = useState<MesaBindingCreate>({
+    mesa_tenant_id: '',
+    workspace_id: '',
+    dataset_id: '',
+    agent_id: '',
+  })
+  const { data: binding, isLoading, error } = useGetMesaBinding<MesaBindingResponse, ApiError>(
+    matterId,
+    { query: { retry: false } },
+  )
+  const createBinding = useCreateMesaBinding<ApiError>({
+    mutation: {
+      onSuccess: async () => {
+        toast.success('Binding saved; MESA permission preflight queued')
+        await queryClient.invalidateQueries({ queryKey: getGetMesaBindingQueryKey(matterId) })
+      },
+      onError: (mutationError) => toast.error(readableError(mutationError, 'Binding failed')),
+    },
+  })
+
+  if (isLoading) {
+    return <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">Loading MESA binding…</section>
+  }
+  if (binding) {
+    return (
+      <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h3 className="font-semibold">MESA Core v4 binding</h3>
+            <p className="mt-1 text-sm text-[var(--color-anthracite-400)]">
+              Workspace {binding.workspace_id} · dataset {binding.dataset_id} · agent {binding.agent_id}
+            </p>
+          </div>
+          <StatusBadge
+            status={binding.provisioning_status === 'READY' ? 'success' : binding.last_error ? 'error' : 'neutral'}
+            label={binding.provisioning_status}
+          />
+        </div>
+        {binding.last_error && <p className="mt-4 text-sm text-red-400">{binding.last_error}</p>}
+        <p className="mt-4 text-xs text-[var(--color-anthracite-500)]">
+          Law performs preflight only. ACL provisioning remains an external mesa-v4-admin onboarding task.
+        </p>
+      </section>
+    )
+  }
+
+  if (!(error instanceof ApiError && error.status === 404)) {
+    return (
+      <section className="glass-card flex gap-3 rounded-xl border border-red-500/20 p-6 text-red-400">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        {readableError(error, 'MESA binding status could not be loaded')}
+      </section>
+    )
+  }
+
+  return (
+    <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">
+      <h3 className="font-semibold">Bind pre-provisioned MESA Core v4 scope</h3>
+      <p className="mt-1 text-sm text-[var(--color-anthracite-400)]">
+        Enter identifiers already provisioned by mesa-v4-admin. This action is immutable.
+      </p>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <BindingInput
+          label="mesa_tenant_id"
+          value={form.mesa_tenant_id}
+          disabled={!canEdit || createBinding.isPending}
+          onChange={(value) => setForm((current) => ({ ...current, mesa_tenant_id: value }))}
+        />
+        <BindingInput
+          label="workspace_id"
+          value={form.workspace_id}
+          disabled={!canEdit || createBinding.isPending}
+          onChange={(value) => setForm((current) => ({ ...current, workspace_id: value }))}
+        />
+        <BindingInput
+          label="dataset_id"
+          value={form.dataset_id}
+          disabled={!canEdit || createBinding.isPending}
+          onChange={(value) => setForm((current) => ({ ...current, dataset_id: value }))}
+        />
+        <BindingInput
+          label="agent_id"
+          value={form.agent_id}
+          disabled={!canEdit || createBinding.isPending}
+          onChange={(value) => setForm((current) => ({ ...current, agent_id: value }))}
+        />
+      </div>
+      <Button
+        className="mt-4"
+        disabled={!canEdit || createBinding.isPending || Object.values(form).some((value) => !value.trim())}
+        onClick={() => createBinding.mutate({ matterId, data: form })}
+      >
+        Save binding and run preflight
+      </Button>
+    </section>
+  )
+}
+
+function BindingInput({
+  label,
+  value,
+  disabled,
+  onChange,
+}: {
+  label: string
+  value: string
+  disabled: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <input
+      aria-label={label}
+      placeholder={label}
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      className="rounded-md border border-[var(--border-surface)] bg-[var(--bg-surface)] px-3 py-2 text-sm"
+    />
   )
 }

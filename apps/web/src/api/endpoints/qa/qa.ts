@@ -16,64 +16,41 @@ import type {
 
 import type {
   HTTPValidationError,
-  QAQuery
+  QAQuery,
+  QAResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
 
-export type askQuestionResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type askQuestionResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type askQuestionResponseSuccess = (askQuestionResponse200) & {
-  headers: Headers;
-};
-export type askQuestionResponseError = (askQuestionResponse422) & {
-  headers: Headers;
-};
-
-export type askQuestionResponse = (askQuestionResponseSuccess | askQuestionResponseError)
-
-export const getAskQuestionUrl = () => {
-
-
-
-
-  return `/api/v1/qa/ask`
-}
-
 /**
  * @summary Ask Question
  */
-export const askQuestion = async (qAQuery: QAQuery, options?: RequestInit): Promise<askQuestionResponse> => {
-
-  return customInstance<askQuestionResponse>(getAskQuestionUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(qAQuery)
-  }
-);}
+export const askQuestion = (
+    qAQuery: BodyType<QAQuery>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
+      return customInstance<QAResponse>(
+      {url: `/api/v1/qa/ask`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: qAQuery, signal
+    },
+      options);
+    }
 
 
 
-export const getAskQuestionMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: QAQuery}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: QAQuery}, TContext> => {
+
+export const getAskQuestionMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: BodyType<QAQuery>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: BodyType<QAQuery>}, TContext> => {
 
 const mutationKey = ['askQuestion'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -85,7 +62,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askQuestion>>, {data: QAQuery}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof askQuestion>>, {data: BodyType<QAQuery>}> = (props) => {
           const {data} = props ?? {};
 
           return  askQuestion(data,requestOptions)
@@ -99,18 +76,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AskQuestionMutationResult = NonNullable<Awaited<ReturnType<typeof askQuestion>>>
-    export type AskQuestionMutationBody = QAQuery
-    export type AskQuestionMutationError = HTTPValidationError
+    export type AskQuestionMutationBody = BodyType<QAQuery>
+    export type AskQuestionMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Ask Question
  */
-export const useAskQuestion = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: QAQuery}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useAskQuestion = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof askQuestion>>, TError,{data: BodyType<QAQuery>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof askQuestion>>,
         TError,
-        {data: QAQuery},
+        {data: BodyType<QAQuery>},
         TContext
       > => {
       return useMutation(getAskQuestionMutationOptions(options), queryClient);

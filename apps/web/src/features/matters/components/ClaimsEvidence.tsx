@@ -1,6 +1,5 @@
-import React from 'react';
 import { useListClaimsWithEvidence } from '@/api/endpoints/default/default';
-import { Loader2, AlertCircle, CheckCircle, ShieldAlert } from 'lucide-react';
+import { AlertCircle, ShieldAlert } from 'lucide-react';
 
 export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
   const { data: claimsResponse, isLoading: loading } = useListClaimsWithEvidence(matterId);
@@ -20,17 +19,17 @@ export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
     <div className="p-6">
       <h2 className="text-xl font-semibold mb-6 text-[var(--foreground)]">Claims & Evidence Review</h2>
       <div className="space-y-4">
-        {claims.map((claim: any) => (
+        {claims.map((claim) => (
           <div key={claim.id} className="bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl p-5 flex flex-col md:flex-row gap-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex-1">
               <h3 className="text-sm font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider mb-2">Extracted Claim</h3>
-              <p className="text-[var(--foreground)] leading-relaxed">{claim.description || claim.claim}</p>
+              <p className="text-[var(--foreground)] leading-relaxed">{claim.claim}</p>
               <div className="mt-4 flex gap-2">
                 <span className={`text-xs px-2.5 py-1 rounded-full border font-medium ${claim.confidence === 'high' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : claim.confidence === 'medium' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-red-500/10 text-red-400 border-red-500/20'}`}>
                   {claim.confidence || 'Medium'} Confidence
                 </span>
                 <span className="text-xs px-2.5 py-1 rounded-full border font-medium bg-[var(--color-anthracite-800)] text-[var(--color-anthracite-300)] border-[var(--color-anthracite-700)]">
-                  {claim.status || 'PENDING'}
+                  PROPOSED
                 </span>
               </div>
             </div>
@@ -63,4 +62,3 @@ export function ClaimsEvidence({ matterId = "1" }: { matterId?: string }) {
     </div>
   );
 }
-

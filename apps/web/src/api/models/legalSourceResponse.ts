@@ -6,9 +6,9 @@
  */
 
 export interface LegalSourceResponse {
-  id: string;
-  title: string;
   citation: string;
-  source_type: string;
   content: string;
+  id: string;
+  source_type: string;
+  title: string;
 }

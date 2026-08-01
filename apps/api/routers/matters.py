@@ -325,7 +325,16 @@ class OverrideConflictRequest(BaseModel):
     reason: str
 
 
-@router.post("/{matter_id}/override-conflict", operation_id="overrideConflict")
+class OverrideConflictResponse(BaseModel):
+    status: str
+    message: str
+
+
+@router.post(
+    "/{matter_id}/override-conflict",
+    operation_id="overrideConflict",
+    response_model=OverrideConflictResponse,
+)
 @limiter.limit("5/minute")
 async def override_conflict(
     request: Request,
@@ -337,19 +346,26 @@ async def override_conflict(
 ):
     await MatterAccessPolicy.can_manage_members(context, db, matter_id)
 
-    # Normally we'd log the reason to the matter metadata or an audit trail.
     matter = await db.get(Matter, matter_id)
     if not matter or matter.tenant_id != context.tenant_id:
         from fastapi import HTTPException
 
         raise HTTPException(status_code=404, detail="Matter not found")
 
-    # Mark as overridden in metadata
-    if not matter.metadata_info:
-        matter.metadata_info = {}
-    matter.metadata_info["conflict_overridden"] = True
-    matter.metadata_info["conflict_override_reason"] = payload.reason
-    matter.metadata_info["conflict_override_by"] = context.principal_id
+    from apps.api.models.audit import AuditEvent
+
+    db.add(
+        AuditEvent(
+            tenant_id=context.tenant_id,
+            user_id=context.principal_id,
+            action="CONFLICT_OVERRIDE",
+            entity_type="matter",
+            entity_id=matter.id,
+            changes={"reason": payload.reason},
+        )
+    )
 
     await db.commit()
-    return {"status": "success", "message": "Conflict check overridden"}
+    return OverrideConflictResponse(
+        status="success", message="Conflict check override recorded in the audit log"
+    )

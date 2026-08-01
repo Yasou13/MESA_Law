@@ -37,6 +37,11 @@ jobs:
       - name: Compile check
         run: python -m compileall apps tests
 
+      - name: OpenAPI drift
+        env:
+          MESA_LAW_ENVIRONMENT: test
+        run: uv run python scripts/export_openapi.py --check
+
       - name: Run Pytest
         env:
           MESA_LAW_ENVIRONMENT: test
@@ -69,6 +74,11 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Generated API client drift
+        run: |
+          pnpm api:generate
+          git diff --exit-code -- src/api
 
       - name: Unit Tests
         run: pnpm test:unit

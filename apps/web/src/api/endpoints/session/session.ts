@@ -24,11 +24,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ActiveFirmResponse,
   HTTPValidationError,
-  SetActiveFirmApiV1SessionActiveFirmPostParams
+  SessionContextResponse,
+  SetActiveFirmParams
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -50,107 +53,153 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type getSessionContextApiV1SessionContextGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getSessionContextApiV1SessionContextGetResponseSuccess = (getSessionContextApiV1SessionContextGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getSessionContextApiV1SessionContextGetResponse = (getSessionContextApiV1SessionContextGetResponseSuccess)
-
-export const getGetSessionContextApiV1SessionContextGetUrl = () => {
-
-
-
-
-  return `/api/v1/session/context`
-}
-
 /**
+ * Verified tenant switch flow.
+ * Validates that the currently authenticated user is an active member of the requested firm.
+ * Returns the firm details and role, setting a secure server-side cookie.
+ * @summary Set Active Firm
+ */
+export const setActiveFirm = (
+    params: SetActiveFirmParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ActiveFirmResponse>(
+      {url: `/api/v1/session/active-firm`, method: 'POST',
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getSetActiveFirmMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setActiveFirm>>, TError,{params: SetActiveFirmParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof setActiveFirm>>, TError,{params: SetActiveFirmParams}, TContext> => {
+
+const mutationKey = ['setActiveFirm'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setActiveFirm>>, {params: SetActiveFirmParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  setActiveFirm(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetActiveFirmMutationResult = NonNullable<Awaited<ReturnType<typeof setActiveFirm>>>
+
+    export type SetActiveFirmMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Set Active Firm
+ */
+export const useSetActiveFirm = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setActiveFirm>>, TError,{params: SetActiveFirmParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof setActiveFirm>>,
+        TError,
+        {params: SetActiveFirmParams},
+        TContext
+      > => {
+      return useMutation(getSetActiveFirmMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Get Session Context
  */
-export const getSessionContextApiV1SessionContextGet = async ( options?: RequestInit): Promise<getSessionContextApiV1SessionContextGetResponse> => {
+export const getSessionContext = (
 
-  return customInstance<getSessionContextApiV1SessionContextGetResponse>(getGetSessionContextApiV1SessionContextGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<SessionContextResponse>(
+      {url: `/api/v1/session/context`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getGetSessionContextApiV1SessionContextGetQueryKey = () => {
+export const getGetSessionContextQueryKey = () => {
     return [
     `/api/v1/session/context`
     ] as const;
     }
 
 
-export const getGetSessionContextApiV1SessionContextGetQueryOptions = <TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetSessionContextQueryOptions = <TData = Awaited<ReturnType<typeof getSessionContext>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetSessionContextApiV1SessionContextGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetSessionContextQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>> = ({ signal }) => getSessionContextApiV1SessionContextGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSessionContext>>> = ({ signal }) => getSessionContext(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetSessionContextApiV1SessionContextGetQueryResult = NonNullable<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>>
-export type GetSessionContextApiV1SessionContextGetQueryError = unknown
+export type GetSessionContextQueryResult = NonNullable<Awaited<ReturnType<typeof getSessionContext>>>
+export type GetSessionContextQueryError = ErrorType<unknown>
 
 
-export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>> & Pick<
+export function useGetSessionContext<TData = Awaited<ReturnType<typeof getSessionContext>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>,
+          Awaited<ReturnType<typeof getSessionContext>>,
           TError,
-          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>
+          Awaited<ReturnType<typeof getSessionContext>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>> & Pick<
+export function useGetSessionContext<TData = Awaited<ReturnType<typeof getSessionContext>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>,
+          Awaited<ReturnType<typeof getSessionContext>>,
           TError,
-          Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>
+          Awaited<ReturnType<typeof getSessionContext>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetSessionContext<TData = Awaited<ReturnType<typeof getSessionContext>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Session Context
  */
 
-export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContextApiV1SessionContextGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetSessionContext<TData = Awaited<ReturnType<typeof getSessionContext>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSessionContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetSessionContextApiV1SessionContextGetQueryOptions(options)
+  const queryOptions = getGetSessionContextQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -162,102 +211,3 @@ export function useGetSessionContextApiV1SessionContextGet<TData = Awaited<Retur
 
 
 
-export type setActiveFirmApiV1SessionActiveFirmPostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type setActiveFirmApiV1SessionActiveFirmPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type setActiveFirmApiV1SessionActiveFirmPostResponseSuccess = (setActiveFirmApiV1SessionActiveFirmPostResponse200) & {
-  headers: Headers;
-};
-export type setActiveFirmApiV1SessionActiveFirmPostResponseError = (setActiveFirmApiV1SessionActiveFirmPostResponse422) & {
-  headers: Headers;
-};
-
-export type setActiveFirmApiV1SessionActiveFirmPostResponse = (setActiveFirmApiV1SessionActiveFirmPostResponseSuccess | setActiveFirmApiV1SessionActiveFirmPostResponseError)
-
-export const getSetActiveFirmApiV1SessionActiveFirmPostUrl = (params: SetActiveFirmApiV1SessionActiveFirmPostParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/session/active-firm?${stringifiedParams}` : `/api/v1/session/active-firm`
-}
-
-/**
- * Verified tenant switch flow.
- * Validates that the currently authenticated user is an active member of the requested firm.
- * Returns the firm details and role, setting a secure server-side cookie.
- * @summary Set Active Firm
- */
-export const setActiveFirmApiV1SessionActiveFirmPost = async (params: SetActiveFirmApiV1SessionActiveFirmPostParams, options?: RequestInit): Promise<setActiveFirmApiV1SessionActiveFirmPostResponse> => {
-
-  return customInstance<setActiveFirmApiV1SessionActiveFirmPostResponse>(getSetActiveFirmApiV1SessionActiveFirmPostUrl(params),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getSetActiveFirmApiV1SessionActiveFirmPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>, TError,{params: SetActiveFirmApiV1SessionActiveFirmPostParams}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>, TError,{params: SetActiveFirmApiV1SessionActiveFirmPostParams}, TContext> => {
-
-const mutationKey = ['setActiveFirmApiV1SessionActiveFirmPost'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>, {params: SetActiveFirmApiV1SessionActiveFirmPostParams}> = (props) => {
-          const {params} = props ?? {};
-
-          return  setActiveFirmApiV1SessionActiveFirmPost(params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type SetActiveFirmApiV1SessionActiveFirmPostMutationResult = NonNullable<Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>>
-
-    export type SetActiveFirmApiV1SessionActiveFirmPostMutationError = HTTPValidationError
-
-    /**
- * @summary Set Active Firm
- */
-export const useSetActiveFirmApiV1SessionActiveFirmPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>, TError,{params: SetActiveFirmApiV1SessionActiveFirmPostParams}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof setActiveFirmApiV1SessionActiveFirmPost>>,
-        TError,
-        {params: SetActiveFirmApiV1SessionActiveFirmPostParams},
-        TContext
-      > => {
-      return useMutation(getSetActiveFirmApiV1SessionActiveFirmPostMutationOptions(options), queryClient);
-    }

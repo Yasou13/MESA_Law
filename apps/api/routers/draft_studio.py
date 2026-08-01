@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from apps.api.core.config import settings
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
@@ -34,7 +36,44 @@ class ExportDraftRequest(BaseModel):
     format: str  # 'pdf' or 'docx'
 
 
-@router.post("/drafts")
+class DraftSummaryResponse(BaseModel):
+    id: str
+    matter_id: str
+    title: str
+    version: int
+    status: str
+    updated_at: datetime | None
+
+
+class DraftDetailResponse(DraftSummaryResponse):
+    content: str
+    etag: str | None = None
+
+
+class DraftStatusResponse(BaseModel):
+    status: str
+
+
+class DraftCitationResponse(BaseModel):
+    id: str
+    document_id: str | None
+    citation_text: str
+    verification_state: str
+
+
+class ExportDraftResponse(BaseModel):
+    message: str
+    job_id: str
+    format: str
+    version: int
+
+
+class GenerateDraftResponse(BaseModel):
+    message: str
+    job_id: str
+
+
+@router.post("/drafts", response_model=DraftDetailResponse, operation_id="saveDraft")
 async def save_draft(
     request: Request,
     payload: SaveDraftRequest,
@@ -55,14 +94,21 @@ async def save_draft(
     await db.refresh(draft)
     return {
         "id": draft.id,
+        "matter_id": draft.matter_id,
         "version": draft.version,
         "title": draft.title,
         "content": draft.content,
         "status": draft.status,
+        "updated_at": draft.updated_at,
+        "etag": draft.etag,
     }
 
 
-@router.get("/drafts/matter/{matter_id}")
+@router.get(
+    "/drafts/matter/{matter_id}",
+    response_model=list[DraftSummaryResponse],
+    operation_id="listMatterDrafts",
+)
 async def list_matter_drafts(
     request: Request,
     matter_id: str,
@@ -80,6 +126,7 @@ async def list_matter_drafts(
     return [
         {
             "id": d.id,
+            "matter_id": d.matter_id,
             "title": d.title,
             "version": d.version,
             "status": d.status,
@@ -89,7 +136,11 @@ async def list_matter_drafts(
     ]
 
 
-@router.get("/drafts")
+@router.get(
+    "/drafts",
+    response_model=list[DraftSummaryResponse],
+    operation_id="listAllDrafts",
+)
 async def list_all_drafts(
     request: Request,
     context: RequestContext = Depends(setup_tenant_context),
@@ -117,13 +168,16 @@ async def list_all_drafts(
             "matter_id": d.matter_id,
             "title": d.title,
             "version": d.version,
+            "status": d.status,
             "updated_at": d.updated_at.isoformat() if d.updated_at else None,
         }
         for d in drafts
     ]
 
 
-@router.get("/drafts/{draft_id}")
+@router.get(
+    "/drafts/{draft_id}", response_model=DraftDetailResponse, operation_id="getDraft"
+)
 async def get_draft(
     request: Request,
     draft_id: str,
@@ -144,10 +198,15 @@ async def get_draft(
         "version": draft.version,
         "status": draft.status,
         "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+        "etag": draft.etag,
     }
 
 
-@router.put("/drafts/{draft_id}")
+@router.put(
+    "/drafts/{draft_id}",
+    response_model=DraftDetailResponse,
+    operation_id="updateDraft",
+)
 async def update_draft(
     request: Request,
     draft_id: str,
@@ -209,18 +268,24 @@ async def update_draft(
     response = JSONResponse(
         content={
             "id": draft.id,
+            "matter_id": draft.matter_id,
             "version": draft.version,
             "title": draft.title,
             "content": draft.content,
             "status": draft.status,
             "etag": draft.etag,
+            "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
         }
     )
     response.headers["ETag"] = f'"{draft.etag}"'
     return response
 
 
-@router.post("/drafts/{draft_id}/submit-review", operation_id="submitReviewDraft")
+@router.post(
+    "/drafts/{draft_id}/submit-review",
+    operation_id="submitReviewDraft",
+    response_model=DraftStatusResponse,
+)
 async def submit_review_draft(
     request: Request,
     draft_id: str,
@@ -245,7 +310,11 @@ async def submit_review_draft(
     return {"status": draft.status}
 
 
-@router.post("/drafts/{draft_id}/approve", operation_id="approveDraft")
+@router.post(
+    "/drafts/{draft_id}/approve",
+    operation_id="approveDraft",
+    response_model=DraftStatusResponse,
+)
 async def approve_draft(
     request: Request,
     draft_id: str,
@@ -282,7 +351,11 @@ async def approve_draft(
     return {"status": draft.status}
 
 
-@router.get("/drafts/{draft_id}/citations", operation_id="getDraftCitations")
+@router.get(
+    "/drafts/{draft_id}/citations",
+    operation_id="getDraftCitations",
+    response_model=list[DraftCitationResponse],
+)
 async def get_draft_citations(
     request: Request,
     draft_id: str,
@@ -306,14 +379,18 @@ async def get_draft_citations(
         {
             "id": c.id,
             "document_id": c.document_id,
-            "text_snippet": c.text_snippet,
+            "citation_text": c.citation_text,
             "verification_state": c.verification_state,
         }
         for c in citations
     ]
 
 
-@router.post("/drafts/{draft_id}/export")
+@router.post(
+    "/drafts/{draft_id}/export",
+    response_model=ExportDraftResponse,
+    operation_id="exportDraft",
+)
 async def export_draft(
     request: Request,
     draft_id: str,
@@ -397,7 +474,11 @@ class GenerateDraftRequest(BaseModel):
     template_name: str | None = None
 
 
-@router.post("/drafts/generate")
+@router.post(
+    "/drafts/generate",
+    response_model=GenerateDraftResponse,
+    operation_id="generateDraft",
+)
 async def generate_draft(
     request: Request,
     payload: GenerateDraftRequest,
@@ -424,3 +505,6 @@ async def generate_draft(
     db.add(job)
     await db.commit()
     return {"message": "Draft generation job queued", "job_id": job.id}
+
+
+from datetime import datetime

@@ -12,6 +12,8 @@ from apps.api.models.domain import MatterMember
 from apps.api.models.queue import Job
 from apps.api.schemas.api import (
     DocumentResponse,
+    DownloadResponse,
+    UploadCompleteResponse,
     UploadIntentRequest,
     UploadIntentResponse,
 )
@@ -20,6 +22,29 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+
+
+def _document_response(
+    document: Document, revision: DocumentRevision | None
+) -> DocumentResponse:
+    status = revision.scan_status.value if revision else "NO_REVISION"
+    provenance_state = "PENDING_VERIFICATION"
+    if revision and revision.scan_status == DocumentState.READY:
+        provenance_state = (
+            "VERIFIED_PDF"
+            if revision.mime_type == "application/pdf"
+            else "LOW_PROVENANCE"
+        )
+    return DocumentResponse(
+        id=document.id,
+        matter_id=document.matter_id,
+        title=document.title,
+        status=status,
+        latest_revision_id=revision.id if revision else None,
+        provenance_state=provenance_state,
+        failure_reason=revision.failure_reason if revision else None,
+        created_at=document.created_at,
+    )
 
 
 @router.post(
@@ -132,8 +157,7 @@ async def list_matter_documents(
             .order_by(DocumentRevision.version.desc())
         )
         latest_rev = rev_res.scalars().first()
-        status = latest_rev.scan_status if latest_rev else "clean"
-        res.append({"id": d.id, "title": d.title, "status": status})
+        res.append(_document_response(d, latest_rev))
     return res
 
 
@@ -169,8 +193,7 @@ async def list_all_documents(
             .order_by(DocumentRevision.version.desc())
         )
         latest_rev = rev_res.scalars().first()
-        status = latest_rev.scan_status if latest_rev else "clean"
-        res.append({"id": d.id, "title": d.title, "status": status})
+        res.append(_document_response(d, latest_rev))
     return res
 
 
@@ -195,12 +218,14 @@ async def get_document(
         .order_by(DocumentRevision.version.desc())
     )
     latest_rev = rev_res.scalars().first()
-    status = latest_rev.scan_status if latest_rev else "clean"
-
-    return {"id": doc.id, "title": doc.title, "status": status}
+    return _document_response(doc, latest_rev)
 
 
-@router.post("/{document_id}/complete", operation_id="completeUpload")
+@router.post(
+    "/{document_id}/complete",
+    operation_id="completeUpload",
+    response_model=UploadCompleteResponse,
+)
 @limiter.limit("30/minute")
 async def complete_upload(
     request: Request,
@@ -429,7 +454,11 @@ async def complete_upload(
     return {"status": rev.scan_status.value, "revision_id": rev.id}
 
 
-@router.get("/{document_id}/download", operation_id="downloadDocument")
+@router.get(
+    "/{document_id}/download",
+    operation_id="downloadDocument",
+    response_model=DownloadResponse,
+)
 @limiter.limit("60/minute")
 async def download_document(
     request: Request,
@@ -459,4 +488,4 @@ async def download_document(
         raise HTTPException(status_code=425, detail="Document is still being scanned")
 
     url = await storage_service.generate_presigned_download_url(rev.s3_key)
-    return {"presigned_url": url}
+    return {"presigned_url": url, "expires_in_seconds": 300}

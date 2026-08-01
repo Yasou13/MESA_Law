@@ -6,5 +6,9 @@
  */
 
 export interface SupportAccessRequest {
+  /**
+     * @minimum 1
+     * @maximum 72
+     */
   duration_hours?: number;
 }

@@ -4,9 +4,10 @@
  * MESA Law API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReviewState } from './reviewState';
 
-export type ListDraftReviewsApiV1ReviewsGetParams = {
+export type ListReviewsParams = {
 matter_id?: string | null;
-status?: string | null;
+status?: ReviewState | null;
 entity_type?: string | null;
 };

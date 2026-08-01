@@ -4,7 +4,7 @@ import { use } from 'react'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { DraftStudioShell } from '@/features/drafts/components/DraftStudioShell'
-import { useGetDraftApiV1DraftStudioDraftsDraftIdGet as useGetDraft } from '@/api/endpoints/draft-studio/draft-studio'
+import { useGetDraft } from '@/api/endpoints/draft-studio/draft-studio'
 
 export default function DraftStudioPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -20,7 +20,7 @@ export default function DraftStudioPage({ params }: { params: Promise<{ id: stri
     return <div className="flex h-[calc(100vh-4rem)] items-center justify-center bg-[var(--background)] text-red-500 font-medium">Failed to load draft</div>
   }
 
-  const matterId = (draft as any).matter_id;
+  const matterId = draft.matter_id
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-[var(--background)] overflow-hidden w-full">

@@ -19,7 +19,12 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
+import type {
+  NotificationResponse
+} from '../../models';
+
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -41,108 +46,88 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type sseEndpointApiV1NotificationsSseGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type sseEndpointApiV1NotificationsSseGetResponseSuccess = (sseEndpointApiV1NotificationsSseGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type sseEndpointApiV1NotificationsSseGetResponse = (sseEndpointApiV1NotificationsSseGetResponseSuccess)
-
-export const getSseEndpointApiV1NotificationsSseGetUrl = () => {
-
-
-
-
-  return `/api/v1/notifications/sse`
-}
-
 /**
- * Server-Sent Events endpoint for real-time notifications.
- * @summary Sse Endpoint
+ * Get all notifications for the current tenant and user.
+ * @summary Get Notifications
  */
-export const sseEndpointApiV1NotificationsSseGet = async ( options?: RequestInit): Promise<sseEndpointApiV1NotificationsSseGetResponse> => {
+export const listNotifications = (
 
-  return customInstance<sseEndpointApiV1NotificationsSseGetResponse>(getSseEndpointApiV1NotificationsSseGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<NotificationResponse[]>(
+      {url: `/api/v1/notifications`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getSseEndpointApiV1NotificationsSseGetQueryKey = () => {
+export const getListNotificationsQueryKey = () => {
     return [
-    `/api/v1/notifications/sse`
+    `/api/v1/notifications`
     ] as const;
     }
 
 
-export const getSseEndpointApiV1NotificationsSseGetQueryOptions = <TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListNotificationsQueryOptions = <TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getSseEndpointApiV1NotificationsSseGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListNotificationsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>> = ({ signal }) => sseEndpointApiV1NotificationsSseGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNotifications>>> = ({ signal }) => listNotifications(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type SseEndpointApiV1NotificationsSseGetQueryResult = NonNullable<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>>
-export type SseEndpointApiV1NotificationsSseGetQueryError = unknown
+export type ListNotificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listNotifications>>>
+export type ListNotificationsQueryError = ErrorType<unknown>
 
 
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
+          Awaited<ReturnType<typeof listNotifications>>,
           TError,
-          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>
+          Awaited<ReturnType<typeof listNotifications>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
+          Awaited<ReturnType<typeof listNotifications>>,
           TError,
-          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>
+          Awaited<ReturnType<typeof listNotifications>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Sse Endpoint
+ * @summary Get Notifications
  */
 
-export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListNotifications<TData = Awaited<ReturnType<typeof listNotifications>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listNotifications>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getSseEndpointApiV1NotificationsSseGetQueryOptions(options)
+  const queryOptions = getListNotificationsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -154,108 +139,88 @@ export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnTyp
 
 
 
-export type getNotificationsApiV1NotificationsGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getNotificationsApiV1NotificationsGetResponseSuccess = (getNotificationsApiV1NotificationsGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getNotificationsApiV1NotificationsGetResponse = (getNotificationsApiV1NotificationsGetResponseSuccess)
-
-export const getGetNotificationsApiV1NotificationsGetUrl = () => {
-
-
-
-
-  return `/api/v1/notifications`
-}
-
 /**
- * Get all notifications for the current tenant and user.
- * @summary Get Notifications
+ * Server-Sent Events endpoint for real-time notifications.
+ * @summary Sse Endpoint
  */
-export const getNotificationsApiV1NotificationsGet = async ( options?: RequestInit): Promise<getNotificationsApiV1NotificationsGetResponse> => {
+export const sseEndpointApiV1NotificationsSseGet = (
 
-  return customInstance<getNotificationsApiV1NotificationsGetResponse>(getGetNotificationsApiV1NotificationsGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<unknown>(
+      {url: `/api/v1/notifications/sse`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getGetNotificationsApiV1NotificationsGetQueryKey = () => {
+export const getSseEndpointApiV1NotificationsSseGetQueryKey = () => {
     return [
-    `/api/v1/notifications`
+    `/api/v1/notifications/sse`
     ] as const;
     }
 
 
-export const getGetNotificationsApiV1NotificationsGetQueryOptions = <TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getSseEndpointApiV1NotificationsSseGetQueryOptions = <TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetNotificationsApiV1NotificationsGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getSseEndpointApiV1NotificationsSseGetQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>> = ({ signal }) => getNotificationsApiV1NotificationsGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>> = ({ signal }) => sseEndpointApiV1NotificationsSseGet(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetNotificationsApiV1NotificationsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>>
-export type GetNotificationsApiV1NotificationsGetQueryError = unknown
+export type SseEndpointApiV1NotificationsSseGetQueryResult = NonNullable<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>>
+export type SseEndpointApiV1NotificationsSseGetQueryError = ErrorType<unknown>
 
 
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
+          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
           TError,
-          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>
+          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>> & Pick<
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>,
+          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>,
           TError,
-          Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>
+          Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary Get Notifications
+ * @summary Sse Endpoint
  */
 
-export function useGetNotificationsApiV1NotificationsGet<TData = Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getNotificationsApiV1NotificationsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useSseEndpointApiV1NotificationsSseGet<TData = Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof sseEndpointApiV1NotificationsSseGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetNotificationsApiV1NotificationsGetQueryOptions(options)
+  const queryOptions = getSseEndpointApiV1NotificationsSseGetQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

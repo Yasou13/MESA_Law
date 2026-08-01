@@ -6,6 +6,8 @@ module.exports = {
       target: 'src/api/endpoints',
       schemas: 'src/api/models',
       client: 'react-query',
+      httpClient: 'axios',
+      clean: true,
       override: {
         mutator: {
           path: './src/lib/api/client.ts',

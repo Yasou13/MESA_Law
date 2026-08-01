@@ -55,6 +55,6 @@ We enforce high standards for frontend quality:
 ## Environment Variables
 
 Check `.env.example` (or configure your local `.env`) for required variables. Typically, you will need:
-- `NEXT_PUBLIC_API_URL`: Points to the Python FastAPI backend.
+- `NEXT_PUBLIC_MESA_LAW_API_BASE_URL`: Optional FastAPI origin. Leave unset for same-origin deployments; do not append `/api/v1`.
 - `NEXTAUTH_SECRET`: Secret for NextAuth session encryption.
 - `NEXTAUTH_URL`: Canonical URL of the frontend.

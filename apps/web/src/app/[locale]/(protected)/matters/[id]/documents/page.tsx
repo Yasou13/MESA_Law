@@ -1,6 +1,12 @@
 'use client'
 
-import { useListMatterDocuments, downloadDocument, useCreateUploadIntent, useCompleteUpload } from '@/api/endpoints/default/default'
+import {
+  downloadDocument,
+  getListMatterDocumentsQueryKey,
+  useCompleteUpload,
+  useCreateUploadIntent,
+  useListMatterDocuments,
+} from '@/api/endpoints/default/default'
 import { FileText, Folder, AlertTriangle, Search, Download, Eye, MessageSquare, ArrowLeft, UploadCloud, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useState, use, useRef } from 'react'
@@ -11,6 +17,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { DocumentViewer } from '@/features/documents/components/DocumentViewer'
 import { toast } from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
+import { ApiError } from '@/lib/api/client'
 
 export default function MatterDocumentsPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
@@ -19,9 +26,9 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
   
   const { data: res, isLoading, isError, refetch } = useListMatterDocuments(matterId, {
     query: {
-      refetchInterval: (query: any) => {
+      refetchInterval: (query) => {
         const docs = query.state?.data
-        if (docs?.some((d: any) => d.status === 'uploading' || d.status === 'scanning' || d.status === 'processing')) {
+        if (docs?.some((document) => ['UPLOADING', 'SCANNING', 'PROCESSING'].includes(document.status.toUpperCase()))) {
           return 3000
         }
         return false
@@ -38,7 +45,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
   const uploadIntent = useCreateUploadIntent()
   const completeUpload = useCompleteUpload()
 
-  const documents = (res as unknown as any[]) || []
+  const documents = res ?? []
   const filteredDocuments = documents.filter((doc) => 
     doc.title?.toLowerCase().includes(search.toLowerCase()) || 
     doc.id?.toLowerCase().includes(search.toLowerCase())
@@ -60,27 +67,28 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
           size_bytes: file.size
         }
       })
-      const intentData = intentRes.data as any
-      const { document_id, presigned_url } = intentData
+      const { document_id, presigned_url } = intentRes
       
       setUploadProgress(50)
-      await fetch(presigned_url, {
+      const uploadResponse = await fetch(presigned_url, {
         method: 'PUT',
         body: file,
         headers: {
           'Content-Type': file.type || 'application/pdf'
         }
       })
+      if (!uploadResponse.ok) {
+        throw new Error(`Object storage rejected the upload (${uploadResponse.status})`)
+      }
       setUploadProgress(90)
 
       await completeUpload.mutateAsync({ documentId: document_id })
       
       setUploadProgress(100)
       toast.success('Document uploaded successfully')
-      queryClient.invalidateQueries({ queryKey: [`/api/v1/documents/matter/${matterId}`] })
-    } catch (err: any) {
-      console.error(err)
-      const errorMsg = err.response?.data?.detail || err.message || 'Upload failed'
+      await queryClient.invalidateQueries({ queryKey: getListMatterDocumentsQueryKey(matterId) })
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : 'Upload failed'
       toast.error(`Upload Failed: ${errorMsg}`)
     } finally {
       setIsUploading(false)
@@ -162,7 +170,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments.map((doc: any) => (
+              {filteredDocuments.map((doc) => (
                 <TableRow key={doc.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -184,9 +192,9 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          setActiveDoc({ url: (res as any).presigned_url, title: doc.title, documentId: doc.id, matterId: matterId })
-                        } catch (e: any) {
-                          toast.error('Cannot view document yet')
+                          setActiveDoc({ url: res.presigned_url, title: doc.title, documentId: doc.id, matterId })
+                        } catch (error: unknown) {
+                          toast.error(error instanceof ApiError ? error.message : 'Cannot view document yet')
                         }
                       }} title="View Document">
                         <Eye className="w-4 h-4 text-[var(--color-anthracite-400)]" />
@@ -194,9 +202,9 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          window.open((res as any).presigned_url, '_blank')
-                        } catch (e: any) {
-                          toast.error('Cannot download document yet')
+                          window.open(res.presigned_url, '_blank', 'noopener,noreferrer')
+                        } catch (error: unknown) {
+                          toast.error(error instanceof ApiError ? error.message : 'Cannot download document yet')
                         }
                       }} title="Download">
                         <Download className="w-4 h-4 text-[var(--color-semantic-info)]" />

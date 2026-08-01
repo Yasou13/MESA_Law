@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -65,8 +66,23 @@ class UploadIntentResponse(BaseModel):
 
 class DocumentResponse(BaseModel):
     id: str
+    matter_id: str
     title: str
-    status: str | None = "clean"
+    status: str
+    latest_revision_id: str | None = None
+    provenance_state: str
+    failure_reason: str | None = None
+    created_at: datetime
+
+
+class UploadCompleteResponse(BaseModel):
+    status: str
+    revision_id: str
+
+
+class DownloadResponse(BaseModel):
+    presigned_url: str
+    expires_in_seconds: int
 
 
 class BoundingBox(BaseModel):

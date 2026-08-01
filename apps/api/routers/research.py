@@ -19,7 +19,14 @@ class ResearchRequest(BaseModel):
     query: str
 
 
-@router.post("/start", operation_id="startLegalResearch")
+class ResearchJobResponse(BaseModel):
+    status: str
+    job_id: str
+
+
+@router.post(
+    "/start", operation_id="startLegalResearch", response_model=ResearchJobResponse
+)
 @limiter.limit("20/minute")
 async def start_legal_research(
     request: Request,

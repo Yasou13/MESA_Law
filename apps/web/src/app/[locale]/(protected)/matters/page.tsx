@@ -3,11 +3,18 @@
 import { useQueryClient } from '@tanstack/react-query'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Plus, FolderOpen, Loader2, Search, ArrowRight, Activity, Clock, LayoutGrid, List } from 'lucide-react'
+import { Plus, FolderOpen, Loader2, Search, ArrowRight, Clock, LayoutGrid, List } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { clsx } from 'clsx'
-import { useListMatters, useCreateMatter, useConflictCheck } from '@/api/endpoints/default/default'
+import {
+  getListMattersQueryKey,
+  useConflictCheck,
+  useCreateMatter,
+  useListMatters,
+  useOverrideConflict,
+} from '@/api/endpoints/default/default'
+import type { ConflictResult, MatterResponse } from '@/api/models'
 
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,11 +40,10 @@ export default function MattersPage() {
   const [search, setSearch] = useState('')
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card')
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [conflicts, setConflicts] = useState<any[] | null>(null)
-  const [conflictCheckId, setConflictCheckId] = useState<string | null>(null)
+  const [conflicts, setConflicts] = useState<ConflictResult[] | null>(null)
+  const [overrideReason, setOverrideReason] = useState('')
 
-  const { data: mattersResponse, isLoading } = useListMatters()
-  const allMatters: any[] = (mattersResponse as unknown as any[]) || []
+  const { data: allMatters = [], isLoading } = useListMatters()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<MatterFormValues>({
     resolver: zodResolver(matterSchema),
@@ -45,27 +51,53 @@ export default function MattersPage() {
   })
 
   const conflictCheck = useConflictCheck()
+  const createMatter = useCreateMatter()
+  const overrideConflict = useOverrideConflict()
 
-  const createMatter = useCreateMatter({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ['/api/v1/matters'] })
-        reset()
-        setIsCreateOpen(false)
-        setConflicts(null)
-        setConflictCheckId(null)
-        toast.success('Matter workspace created successfully')
-      },
-      onError: () => {
-        toast.error('Failed to create workspace')
+  const finishCreation = () => {
+    queryClient.invalidateQueries({ queryKey: getListMattersQueryKey() })
+    reset()
+    setIsCreateOpen(false)
+    setConflicts(null)
+    setOverrideReason('')
+  }
+
+  const createWorkspace = async (data: MatterFormValues, reason?: string) => {
+    let createdMatter: MatterResponse | undefined
+    try {
+      createdMatter = await createMatter.mutateAsync({ data: { title: data.title } })
+      if (reason) {
+        await overrideConflict.mutateAsync({
+          matterId: createdMatter.id,
+          data: { reason },
+        })
       }
+      finishCreation()
+      toast.success(
+        reason
+          ? 'Matter created and conflict override recorded'
+          : 'Matter workspace created successfully',
+      )
+    } catch {
+      if (createdMatter) {
+        finishCreation()
+        toast.error(
+          'Matter was created, but the conflict override audit failed. Contact an administrator before using it.',
+        )
+        return
+      }
+      toast.error('Failed to create workspace')
     }
-  })
+  }
 
-  const onSubmit = (data: MatterFormValues) => {
+  const onSubmit = async (data: MatterFormValues) => {
     if (conflicts !== null) {
-      // User has already run conflict check and is overriding/proceeding
-      createMatter.mutate({ data: { title: data.title } as any })
+      const reason = overrideReason.trim()
+      if (reason.length < 3) {
+        toast.error('A conflict override reason of at least 3 characters is required')
+        return
+      }
+      await createWorkspace(data, reason)
       return
     }
     
@@ -73,13 +105,11 @@ export default function MattersPage() {
     const parties = data.partyNames.split(',').map(p => p.trim()).filter(Boolean)
     conflictCheck.mutate({ data: { party_names: parties } }, {
       onSuccess: (res) => {
-        if ((res as any).has_conflicts) {
-          setConflicts((res as any).conflicts as unknown as any[])
-          setConflictCheckId((res as any).id || null)
+        if (res.has_conflicts) {
+          setConflicts(res.conflicts)
           toast.error('Conflicts found! Please review.')
         } else {
-          // No conflicts, create directly
-          createMatter.mutate({ data: { title: data.title } as any })
+          void createWorkspace(data)
         }
       },
       onError: () => {
@@ -88,7 +118,9 @@ export default function MattersPage() {
     })
   }
 
-  const filteredMatters = allMatters.filter(m => m.name?.toLowerCase().includes(search.toLowerCase()) || m.title?.toLowerCase().includes(search.toLowerCase()))
+  const filteredMatters = allMatters.filter((matter) =>
+    matter.title.toLowerCase().includes(search.toLowerCase()),
+  )
 
   const getMattersByStatus = (statusGroup: string) => {
     if (statusGroup === 'active') return filteredMatters.filter(m => m.status?.toLowerCase() === 'open' || m.status === 'ACTIVE')
@@ -97,7 +129,7 @@ export default function MattersPage() {
     return filteredMatters
   }
 
-  const renderCardView = (mattersList: any[]) => {
+  const renderCardView = (mattersList: MatterResponse[]) => {
     if (mattersList.length === 0) return <EmptyState />
     return (
       <motion.div 
@@ -126,14 +158,11 @@ export default function MattersPage() {
               </div>
               
               <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--color-lila-600)] dark:group-hover:text-[var(--color-lila-500)] transition-colors relative z-10 mb-2 truncate">
-                {matter.name || matter.title}
+                {matter.title}
               </h3>
               
               <div className="flex items-center gap-4 mt-6 text-sm text-[var(--color-anthracite-400)] relative z-10">
-                <div className="flex items-center gap-1.5">
-                  <Activity className="w-4 h-4" />
-                  <span>0 Docs</span>
-                </div>
+                <span>{matter.client_name ?? 'Client not specified'}</span>
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" />
                   <span className="font-mono">{matter.id.substring(0, 6)}</span>
@@ -150,7 +179,7 @@ export default function MattersPage() {
     )
   }
 
-  const renderTableView = (mattersList: any[]) => {
+  const renderTableView = (mattersList: MatterResponse[]) => {
     if (mattersList.length === 0) return <EmptyState />
     return (
       <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
@@ -169,7 +198,7 @@ export default function MattersPage() {
                 <TableCell className="font-medium">
                   <Link href={`/matters/${m.id}`} className="hover:underline flex items-center gap-2">
                     <FolderOpen className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                    {m.name || m.title}
+                    {m.title}
                   </Link>
                 </TableCell>
                 <TableCell><StatusBadge status={m.status === 'open' ? 'success' : 'neutral'} label={(m.status || 'ACTIVE').toUpperCase()} /></TableCell>
@@ -204,7 +233,7 @@ export default function MattersPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)] mb-2">Matter Workspaces</h1>
-          <p className="text-[var(--color-anthracite-500)]">Manage and analyze your legal cases with AI intelligence.</p>
+          <p className="text-[var(--color-anthracite-500)]">Manage matter-scoped documents, reviews, publication and sourced Q&amp;A.</p>
         </div>
         
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
@@ -216,7 +245,7 @@ export default function MattersPage() {
               <DialogHeader>
                 <DialogTitle>Create New Matter</DialogTitle>
                 <DialogDescription>
-                  Initialize a new secure workspace for legal research, draft review, and QA.
+                  Initialize a matter workspace. A MESA Core binding is configured separately after creation.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-6">
@@ -231,10 +260,6 @@ export default function MattersPage() {
                       <label htmlFor="partyNames" className="text-sm font-medium">Parties (comma separated)</label>
                       <Input id="partyNames" placeholder="e.g. Acme Corp, Globex" {...register('partyNames')} />
                       {errors.partyNames && <p className="text-sm text-[var(--color-semantic-error)]">{errors.partyNames.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="description" className="text-sm font-medium">Description (Optional)</label>
-                      <Input id="description" placeholder="Brief context about this matter..." {...register('description')} />
                     </div>
                   </>
                 ) : (
@@ -252,6 +277,22 @@ export default function MattersPage() {
                     <p className="text-sm text-[var(--color-anthracite-400)]">
                       Do you want to override these conflicts and create the matter anyway?
                     </p>
+                    <div className="space-y-2">
+                      <label htmlFor="overrideReason" className="text-sm font-medium">
+                        Override reason
+                      </label>
+                      <Input
+                        id="overrideReason"
+                        value={overrideReason}
+                        onChange={(event) => setOverrideReason(event.target.value)}
+                        placeholder="Document the business and ethical basis"
+                        minLength={3}
+                        required
+                      />
+                      <p className="text-xs text-[var(--color-anthracite-400)]">
+                        This reason is written to the audit log.
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -259,14 +300,22 @@ export default function MattersPage() {
                 <Button type="button" variant="outline" onClick={() => {
                   if (conflicts) {
                     setConflicts(null)
+                    setOverrideReason('')
                   } else {
                     setIsCreateOpen(false)
                   }
                 }}>
                   {conflicts ? 'Back' : 'Cancel'}
                 </Button>
-                <Button type="submit" disabled={createMatter.isPending || conflictCheck.isPending}>
-                  {createMatter.isPending || conflictCheck.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                <Button
+                  type="submit"
+                  disabled={
+                    createMatter.isPending ||
+                    conflictCheck.isPending ||
+                    overrideConflict.isPending
+                  }
+                >
+                  {createMatter.isPending || conflictCheck.isPending || overrideConflict.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                   {conflicts ? 'Override & Create' : 'Check Conflicts & Create'}
                 </Button>
               </DialogFooter>

@@ -6,6 +6,6 @@
  */
 
 export interface UpdateUserProfileRequest {
-  full_name?: string | null;
   email?: string | null;
+  full_name?: string | null;
 }

@@ -4,7 +4,8 @@
  * MESA Law API
  * OpenAPI spec version: 0.1.0
  */
+import type { Role } from './role';
 
 export interface RoleElevationRequest {
-  role: string;
+  role: Role;
 }

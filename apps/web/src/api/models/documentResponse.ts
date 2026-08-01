@@ -6,7 +6,12 @@
  */
 
 export interface DocumentResponse {
+  created_at: string;
+  failure_reason?: string | null;
   id: string;
+  latest_revision_id?: string | null;
+  matter_id: string;
+  provenance_state: string;
+  status: string;
   title: string;
-  status?: string | null;
 }

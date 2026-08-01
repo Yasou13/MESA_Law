@@ -1,21 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import { ShieldCheck, Search, Filter, Download, Activity, FileText, User, ArrowUpRight } from 'lucide-react'
+import { ShieldCheck, Search, Activity, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatDistanceToNow } from 'date-fns'
-import Link from 'next/link'
 
 import { useListAuditEvents } from '@/api/endpoints/audit/audit'
 
 export default function AuditPage() {
   const [search, setSearch] = useState('')
-  const { data: res, isLoading } = useListAuditEvents()
-  const logs = (res as unknown as any[]) || []
+  const { data: logs = [], isLoading } = useListAuditEvents()
   
-  const filteredLogs = logs.filter((l: any) => 
+  const filteredLogs = logs.filter((l) =>
     (l.user_id && l.user_id.toLowerCase().includes(search.toLowerCase())) || 
     l.action.toLowerCase().includes(search.toLowerCase()) ||
     l.entity_type.toLowerCase().includes(search.toLowerCase())
@@ -35,9 +33,6 @@ export default function AuditPage() {
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Audit Logs</h1>
           <p className="text-[var(--color-anthracite-500)] mt-1">Monitor all user activities, data exports, and system events for compliance.</p>
         </div>
-        <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-          <Download className="w-4 h-4" /> Export CSV
-        </Button>
       </div>
 
       <div className="flex items-center gap-4">
@@ -51,9 +46,6 @@ export default function AuditPage() {
             className="pl-9 w-full"
           />
         </div>
-        <Button variant="outline" className="gap-2 shrink-0">
-          <Filter className="w-4 h-4" /> Filter Events
-        </Button>
       </div>
 
       <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
@@ -105,9 +97,7 @@ export default function AuditPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-[var(--color-lila-500)] hover:text-[var(--color-lila-600)] gap-1">
-                      View <ArrowUpRight className="w-3 h-3" />
-                    </Button>
+                    <span className="text-xs text-[var(--color-anthracite-500)]">Recorded</span>
                   </TableCell>
                 </TableRow>
               ))}

@@ -1,15 +1,14 @@
 'use client'
 
 import { useListFirmMembers } from '@/api/endpoints/default/default'
-import { Users, Shield, User as UserIcon, Loader2, AlertCircle, Edit, MoreHorizontal, Mail } from 'lucide-react'
+import { Users, Shield, User as UserIcon, Loader2, AlertCircle, Mail } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/ui/status-badge'
 
 
 export default function MembersPage() {
-  const { data: membersRes, isLoading, isError } = useListFirmMembers()
-  const members = (membersRes as unknown as any[]) || []
+  const { data: members = [], isLoading, isError } = useListFirmMembers()
 
   return (
     <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
@@ -18,8 +17,8 @@ export default function MembersPage() {
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Organization Members</h1>
           <p className="text-[var(--color-anthracite-500)] mt-1">Manage access and roles for your firm.</p>
         </div>
-        <Button className="gap-2">
-          <Mail className="w-4 h-4" /> Invite Member
+        <Button className="gap-2" disabled title="Membership mutation is not exposed by the MVP API">
+          <Mail className="w-4 h-4" /> Invite unavailable
         </Button>
       </div>
 
@@ -54,7 +53,7 @@ export default function MembersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map((member: any) => (
+              {members.map((member) => (
                 <TableRow key={member.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -83,16 +82,7 @@ export default function MembersPage() {
                       label={member.is_active ? 'ACTIVE' : 'INACTIVE'} 
                     />
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon-sm" title="Edit Role">
-                        <Edit className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" className="text-red-500 hover:text-red-600 hover:bg-red-500/10" title="Deactivate User">
-                        <AlertCircle className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  <TableCell className="text-right text-xs text-[var(--color-anthracite-500)]">Read-only</TableCell>
                 </TableRow>
               ))}
             </TableBody>

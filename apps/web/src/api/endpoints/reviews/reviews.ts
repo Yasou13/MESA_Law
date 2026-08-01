@@ -26,11 +26,15 @@ import type {
 import type {
   CorrectReviewRequest,
   HTTPValidationError,
-  ListDraftReviewsApiV1ReviewsGetParams,
-  ReviewItemResponse
+  ListReviewsParams,
+  RejectReviewRequest,
+  ReviewItemResponse,
+  ReviewMutationRequest,
+  ReviewMutationResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -52,121 +56,88 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type listDraftReviewsApiV1ReviewsGetResponse200 = {
-  data: ReviewItemResponse[]
-  status: 200
-}
-
-export type listDraftReviewsApiV1ReviewsGetResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listDraftReviewsApiV1ReviewsGetResponseSuccess = (listDraftReviewsApiV1ReviewsGetResponse200) & {
-  headers: Headers;
-};
-export type listDraftReviewsApiV1ReviewsGetResponseError = (listDraftReviewsApiV1ReviewsGetResponse422) & {
-  headers: Headers;
-};
-
-export type listDraftReviewsApiV1ReviewsGetResponse = (listDraftReviewsApiV1ReviewsGetResponseSuccess | listDraftReviewsApiV1ReviewsGetResponseError)
-
-export const getListDraftReviewsApiV1ReviewsGetUrl = (params?: ListDraftReviewsApiV1ReviewsGetParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/reviews?${stringifiedParams}` : `/api/v1/reviews`
-}
-
 /**
  * @summary List Draft Reviews
  */
-export const listDraftReviewsApiV1ReviewsGet = async (params?: ListDraftReviewsApiV1ReviewsGetParams, options?: RequestInit): Promise<listDraftReviewsApiV1ReviewsGetResponse> => {
-
-  return customInstance<listDraftReviewsApiV1ReviewsGetResponse>(getListDraftReviewsApiV1ReviewsGetUrl(params),
-  {
-    ...options,
-    method: 'GET'
+export const listReviews = (
+    params?: ListReviewsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<ReviewItemResponse[]>(
+      {url: `/api/v1/reviews`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getListDraftReviewsApiV1ReviewsGetQueryKey = (params?: ListDraftReviewsApiV1ReviewsGetParams,) => {
+export const getListReviewsQueryKey = (params?: ListReviewsParams,) => {
     return [
     `/api/v1/reviews`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListDraftReviewsApiV1ReviewsGetQueryOptions = <TData = Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError = HTTPValidationError>(params?: ListDraftReviewsApiV1ReviewsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listReviews>>, TError = ErrorType<HTTPValidationError>>(params?: ListReviewsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListDraftReviewsApiV1ReviewsGetQueryKey(params);
+  const queryKey =  queryOptions?.queryKey ?? getListReviewsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>> = ({ signal }) => listDraftReviewsApiV1ReviewsGet(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReviews>>> = ({ signal }) => listReviews(params, requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ListDraftReviewsApiV1ReviewsGetQueryResult = NonNullable<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>>
-export type ListDraftReviewsApiV1ReviewsGetQueryError = HTTPValidationError
+export type ListReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listReviews>>>
+export type ListReviewsQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListDraftReviewsApiV1ReviewsGet<TData = Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError = HTTPValidationError>(
- params: undefined |  ListDraftReviewsApiV1ReviewsGetParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData>> & Pick<
+export function useListReviews<TData = Awaited<ReturnType<typeof listReviews>>, TError = ErrorType<HTTPValidationError>>(
+ params: undefined |  ListReviewsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>,
+          Awaited<ReturnType<typeof listReviews>>,
           TError,
-          Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>
+          Awaited<ReturnType<typeof listReviews>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListDraftReviewsApiV1ReviewsGet<TData = Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError = HTTPValidationError>(
- params?: ListDraftReviewsApiV1ReviewsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData>> & Pick<
+export function useListReviews<TData = Awaited<ReturnType<typeof listReviews>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListReviewsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>,
+          Awaited<ReturnType<typeof listReviews>>,
           TError,
-          Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>
+          Awaited<ReturnType<typeof listReviews>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListDraftReviewsApiV1ReviewsGet<TData = Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError = HTTPValidationError>(
- params?: ListDraftReviewsApiV1ReviewsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListReviews<TData = Awaited<ReturnType<typeof listReviews>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListReviewsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary List Draft Reviews
  */
 
-export function useListDraftReviewsApiV1ReviewsGet<TData = Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError = HTTPValidationError>(
- params?: ListDraftReviewsApiV1ReviewsGetParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDraftReviewsApiV1ReviewsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useListReviews<TData = Awaited<ReturnType<typeof listReviews>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListReviewsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listReviews>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListDraftReviewsApiV1ReviewsGetQueryOptions(params,options)
+  const queryOptions = getListReviewsQueryOptions(params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -178,145 +149,32 @@ export function useListDraftReviewsApiV1ReviewsGet<TData = Awaited<ReturnType<ty
 
 
 
-export type approveReviewApiV1ReviewsReviewIdApprovePostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type approveReviewApiV1ReviewsReviewIdApprovePostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type approveReviewApiV1ReviewsReviewIdApprovePostResponseSuccess = (approveReviewApiV1ReviewsReviewIdApprovePostResponse200) & {
-  headers: Headers;
-};
-export type approveReviewApiV1ReviewsReviewIdApprovePostResponseError = (approveReviewApiV1ReviewsReviewIdApprovePostResponse422) & {
-  headers: Headers;
-};
-
-export type approveReviewApiV1ReviewsReviewIdApprovePostResponse = (approveReviewApiV1ReviewsReviewIdApprovePostResponseSuccess | approveReviewApiV1ReviewsReviewIdApprovePostResponseError)
-
-export const getApproveReviewApiV1ReviewsReviewIdApprovePostUrl = (reviewId: string,) => {
-
-
-
-
-  return `/api/v1/reviews/${reviewId}/approve`
-}
-
 /**
  * @summary Approve Review
  */
-export const approveReviewApiV1ReviewsReviewIdApprovePost = async (reviewId: string, options?: RequestInit): Promise<approveReviewApiV1ReviewsReviewIdApprovePostResponse> => {
-
-  return customInstance<approveReviewApiV1ReviewsReviewIdApprovePostResponse>(getApproveReviewApiV1ReviewsReviewIdApprovePostUrl(reviewId),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
+export const approveReview = (
+    reviewId: string,
+    reviewMutationRequest: BodyType<ReviewMutationRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-
-
-
-export const getApproveReviewApiV1ReviewsReviewIdApprovePostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>, TError,{reviewId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>, TError,{reviewId: string}, TContext> => {
-
-const mutationKey = ['approveReviewApiV1ReviewsReviewIdApprovePost'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>, {reviewId: string}> = (props) => {
-          const {reviewId} = props ?? {};
-
-          return  approveReviewApiV1ReviewsReviewIdApprovePost(reviewId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ApproveReviewApiV1ReviewsReviewIdApprovePostMutationResult = NonNullable<Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>>
-
-    export type ApproveReviewApiV1ReviewsReviewIdApprovePostMutationError = HTTPValidationError
-
-    /**
- * @summary Approve Review
- */
-export const useApproveReviewApiV1ReviewsReviewIdApprovePost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>, TError,{reviewId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof approveReviewApiV1ReviewsReviewIdApprovePost>>,
-        TError,
-        {reviewId: string},
-        TContext
-      > => {
-      return useMutation(getApproveReviewApiV1ReviewsReviewIdApprovePostMutationOptions(options), queryClient);
+      return customInstance<ReviewMutationResponse>(
+      {url: `/api/v1/reviews/${reviewId}/approve`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: reviewMutationRequest, signal
+    },
+      options);
     }
-    export type rejectReviewApiV1ReviewsReviewIdRejectPostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type rejectReviewApiV1ReviewsReviewIdRejectPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type rejectReviewApiV1ReviewsReviewIdRejectPostResponseSuccess = (rejectReviewApiV1ReviewsReviewIdRejectPostResponse200) & {
-  headers: Headers;
-};
-export type rejectReviewApiV1ReviewsReviewIdRejectPostResponseError = (rejectReviewApiV1ReviewsReviewIdRejectPostResponse422) & {
-  headers: Headers;
-};
-
-export type rejectReviewApiV1ReviewsReviewIdRejectPostResponse = (rejectReviewApiV1ReviewsReviewIdRejectPostResponseSuccess | rejectReviewApiV1ReviewsReviewIdRejectPostResponseError)
-
-export const getRejectReviewApiV1ReviewsReviewIdRejectPostUrl = (reviewId: string,) => {
 
 
 
 
-  return `/api/v1/reviews/${reviewId}/reject`
-}
+export const getApproveReviewMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveReview>>, TError,{reviewId: string;data: BodyType<ReviewMutationRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof approveReview>>, TError,{reviewId: string;data: BodyType<ReviewMutationRequest>}, TContext> => {
 
-/**
- * @summary Reject Review
- */
-export const rejectReviewApiV1ReviewsReviewIdRejectPost = async (reviewId: string, options?: RequestInit): Promise<rejectReviewApiV1ReviewsReviewIdRejectPostResponse> => {
-
-  return customInstance<rejectReviewApiV1ReviewsReviewIdRejectPostResponse>(getRejectReviewApiV1ReviewsReviewIdRejectPostUrl(reviewId),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getRejectReviewApiV1ReviewsReviewIdRejectPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>, TError,{reviewId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>, TError,{reviewId: string}, TContext> => {
-
-const mutationKey = ['rejectReviewApiV1ReviewsReviewIdRejectPost'];
+const mutationKey = ['approveReview'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -326,100 +184,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>, {reviewId: string}> = (props) => {
-          const {reviewId} = props ?? {};
-
-          return  rejectReviewApiV1ReviewsReviewIdRejectPost(reviewId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RejectReviewApiV1ReviewsReviewIdRejectPostMutationResult = NonNullable<Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>>
-
-    export type RejectReviewApiV1ReviewsReviewIdRejectPostMutationError = HTTPValidationError
-
-    /**
- * @summary Reject Review
- */
-export const useRejectReviewApiV1ReviewsReviewIdRejectPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>, TError,{reviewId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof rejectReviewApiV1ReviewsReviewIdRejectPost>>,
-        TError,
-        {reviewId: string},
-        TContext
-      > => {
-      return useMutation(getRejectReviewApiV1ReviewsReviewIdRejectPostMutationOptions(options), queryClient);
-    }
-    export type correctReviewApiV1ReviewsReviewIdCorrectPostResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type correctReviewApiV1ReviewsReviewIdCorrectPostResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type correctReviewApiV1ReviewsReviewIdCorrectPostResponseSuccess = (correctReviewApiV1ReviewsReviewIdCorrectPostResponse200) & {
-  headers: Headers;
-};
-export type correctReviewApiV1ReviewsReviewIdCorrectPostResponseError = (correctReviewApiV1ReviewsReviewIdCorrectPostResponse422) & {
-  headers: Headers;
-};
-
-export type correctReviewApiV1ReviewsReviewIdCorrectPostResponse = (correctReviewApiV1ReviewsReviewIdCorrectPostResponseSuccess | correctReviewApiV1ReviewsReviewIdCorrectPostResponseError)
-
-export const getCorrectReviewApiV1ReviewsReviewIdCorrectPostUrl = (reviewId: string,) => {
-
-
-
-
-  return `/api/v1/reviews/${reviewId}/correct`
-}
-
-/**
- * @summary Correct Review
- */
-export const correctReviewApiV1ReviewsReviewIdCorrectPost = async (reviewId: string,
-    correctReviewRequest: CorrectReviewRequest, options?: RequestInit): Promise<correctReviewApiV1ReviewsReviewIdCorrectPostResponse> => {
-
-  return customInstance<correctReviewApiV1ReviewsReviewIdCorrectPostResponse>(getCorrectReviewApiV1ReviewsReviewIdCorrectPostUrl(reviewId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(correctReviewRequest)
-  }
-);}
-
-
-
-
-
-export const getCorrectReviewApiV1ReviewsReviewIdCorrectPostMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>, TError,{reviewId: string;data: CorrectReviewRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>, TError,{reviewId: string;data: CorrectReviewRequest}, TContext> => {
-
-const mutationKey = ['correctReviewApiV1ReviewsReviewIdCorrectPost'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>, {reviewId: string;data: CorrectReviewRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof approveReview>>, {reviewId: string;data: BodyType<ReviewMutationRequest>}> = (props) => {
           const {reviewId,data} = props ?? {};
 
-          return  correctReviewApiV1ReviewsReviewIdCorrectPost(reviewId,data,requestOptions)
+          return  approveReview(reviewId,data,requestOptions)
         }
 
 
@@ -429,20 +197,150 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type CorrectReviewApiV1ReviewsReviewIdCorrectPostMutationResult = NonNullable<Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>>
-    export type CorrectReviewApiV1ReviewsReviewIdCorrectPostMutationBody = CorrectReviewRequest
-    export type CorrectReviewApiV1ReviewsReviewIdCorrectPostMutationError = HTTPValidationError
+    export type ApproveReviewMutationResult = NonNullable<Awaited<ReturnType<typeof approveReview>>>
+    export type ApproveReviewMutationBody = BodyType<ReviewMutationRequest>
+    export type ApproveReviewMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Approve Review
+ */
+export const useApproveReview = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof approveReview>>, TError,{reviewId: string;data: BodyType<ReviewMutationRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof approveReview>>,
+        TError,
+        {reviewId: string;data: BodyType<ReviewMutationRequest>},
+        TContext
+      > => {
+      return useMutation(getApproveReviewMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Correct Review
+ */
+export const correctReview = (
+    reviewId: string,
+    correctReviewRequest: BodyType<CorrectReviewRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ReviewMutationResponse>(
+      {url: `/api/v1/reviews/${reviewId}/correct`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: correctReviewRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getCorrectReviewMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctReview>>, TError,{reviewId: string;data: BodyType<CorrectReviewRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof correctReview>>, TError,{reviewId: string;data: BodyType<CorrectReviewRequest>}, TContext> => {
+
+const mutationKey = ['correctReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof correctReview>>, {reviewId: string;data: BodyType<CorrectReviewRequest>}> = (props) => {
+          const {reviewId,data} = props ?? {};
+
+          return  correctReview(reviewId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CorrectReviewMutationResult = NonNullable<Awaited<ReturnType<typeof correctReview>>>
+    export type CorrectReviewMutationBody = BodyType<CorrectReviewRequest>
+    export type CorrectReviewMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Correct Review
  */
-export const useCorrectReviewApiV1ReviewsReviewIdCorrectPost = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>, TError,{reviewId: string;data: CorrectReviewRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useCorrectReview = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof correctReview>>, TError,{reviewId: string;data: BodyType<CorrectReviewRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof correctReviewApiV1ReviewsReviewIdCorrectPost>>,
+        Awaited<ReturnType<typeof correctReview>>,
         TError,
-        {reviewId: string;data: CorrectReviewRequest},
+        {reviewId: string;data: BodyType<CorrectReviewRequest>},
         TContext
       > => {
-      return useMutation(getCorrectReviewApiV1ReviewsReviewIdCorrectPostMutationOptions(options), queryClient);
+      return useMutation(getCorrectReviewMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Reject Review
+ */
+export const rejectReview = (
+    reviewId: string,
+    rejectReviewRequest: BodyType<RejectReviewRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ReviewMutationResponse>(
+      {url: `/api/v1/reviews/${reviewId}/reject`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: rejectReviewRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getRejectReviewMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectReview>>, TError,{reviewId: string;data: BodyType<RejectReviewRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof rejectReview>>, TError,{reviewId: string;data: BodyType<RejectReviewRequest>}, TContext> => {
+
+const mutationKey = ['rejectReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectReview>>, {reviewId: string;data: BodyType<RejectReviewRequest>}> = (props) => {
+          const {reviewId,data} = props ?? {};
+
+          return  rejectReview(reviewId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RejectReviewMutationResult = NonNullable<Awaited<ReturnType<typeof rejectReview>>>
+    export type RejectReviewMutationBody = BodyType<RejectReviewRequest>
+    export type RejectReviewMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Reject Review
+ */
+export const useRejectReview = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rejectReview>>, TError,{reviewId: string;data: BodyType<RejectReviewRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rejectReview>>,
+        TError,
+        {reviewId: string;data: BodyType<RejectReviewRequest>},
+        TContext
+      > => {
+      return useMutation(getRejectReviewMutationOptions(options), queryClient);
     }

@@ -11,21 +11,22 @@ const mockEvents = [
     date: '2023-01-15T10:00:00Z',
     title: 'Initial Complaint Filed',
     description: 'The plaintiff filed the initial complaint in federal court.',
-    type: 'filing',
-    sourceDocuments: [{ id: 'doc_1', title: 'Complaint.pdf' }]
+    source: 'Complaint.pdf',
+    confidence: 'high',
   },
   {
     id: 'event_2',
     date: '2023-02-20T14:30:00Z',
     title: 'Defendant Answer',
     description: 'Defendant filed their answer denying all claims.',
-    type: 'filing',
+    source: 'Answer.pdf',
+    confidence: 'medium',
   }
 ]
 
 vi.mock('@/api/endpoints/default/default', () => ({
   useListTimelineEvents: vi.fn(() => ({
-    data: { data: mockEvents },
+    data: mockEvents,
     isLoading: false
   }))
 }))

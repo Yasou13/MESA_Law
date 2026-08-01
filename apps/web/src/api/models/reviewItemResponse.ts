@@ -4,14 +4,19 @@
  * MESA Law API
  * OpenAPI spec version: 0.1.0
  */
+import type { ReviewItemResponseCorrectedContent } from './reviewItemResponseCorrectedContent';
 import type { ReviewItemResponseProposedContent } from './reviewItemResponseProposedContent';
+import type { ReviewState } from './reviewState';
 
 export interface ReviewItemResponse {
+  corrected_content?: ReviewItemResponseCorrectedContent;
+  decision_reason?: string | null;
+  entity_id: string;
+  entity_type: string;
   id: string;
   matter_id: string;
-  entity_type: string;
-  entity_id: string;
   proposed_content: ReviewItemResponseProposedContent;
-  status: string;
+  status: ReviewState;
   suggestion_id?: string | null;
+  version_id: number;
 }

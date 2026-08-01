@@ -10,13 +10,14 @@ import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { DocumentViewer } from '@/features/documents/components/DocumentViewer'
 import { toast } from 'react-hot-toast'
+import { ApiError } from '@/lib/api/client'
 
 export default function GlobalDocumentsPage() {
   const { data: res, isLoading, isError, refetch } = useListAllDocuments()
   const [search, setSearch] = useState('')
   const [activeDoc, setActiveDoc] = useState<{url: string, title: string, documentId: string, matterId: string} | null>(null)
   
-  const documents = (res as unknown as any[]) || []
+  const documents = res ?? []
   const filteredDocuments = documents.filter((doc) => 
     doc.title?.toLowerCase().includes(search.toLowerCase()) || 
     doc.id?.toLowerCase().includes(search.toLowerCase())
@@ -77,7 +78,7 @@ export default function GlobalDocumentsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDocuments.map((doc: any) => (
+              {filteredDocuments.map((doc) => (
                 <TableRow key={doc.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-3">
@@ -99,9 +100,9 @@ export default function GlobalDocumentsPage() {
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          setActiveDoc({ url: (res as any).presigned_url, title: doc.title, documentId: doc.id, matterId: doc.matter_id || 'unknown' })
-                        } catch (e: any) {
-                          toast.error('Cannot view document yet')
+                          setActiveDoc({ url: res.presigned_url, title: doc.title, documentId: doc.id, matterId: doc.matter_id })
+                        } catch (error: unknown) {
+                          toast.error(error instanceof ApiError ? error.message : 'Cannot view document yet')
                         }
                       }} title="View Document">
                         <Eye className="w-4 h-4 text-[var(--color-anthracite-400)]" />
@@ -109,9 +110,9 @@ export default function GlobalDocumentsPage() {
                       <Button variant="ghost" size="icon-sm" onClick={async () => {
                         try {
                           const res = await downloadDocument(doc.id)
-                          window.open((res as any).presigned_url, '_blank')
-                        } catch (e: any) {
-                          toast.error('Cannot download document yet')
+                          window.open(res.presigned_url, '_blank', 'noopener,noreferrer')
+                        } catch (error: unknown) {
+                          toast.error(error instanceof ApiError ? error.message : 'Cannot download document yet')
                         }
                       }} title="Download">
                         <Download className="w-4 h-4 text-[var(--color-semantic-info)]" />

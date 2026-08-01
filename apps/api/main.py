@@ -32,8 +32,9 @@ from apps.api.routers import (
     system,
     users,
 )
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -56,7 +57,15 @@ app.add_middleware(TraceMiddleware)
 app.add_middleware(IdempotencyMiddleware)
 app.state.limiter = limiter
 app.add_exception_handler(ProblemException, problem_exception_handler)
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def rate_limit_exception_handler(request: Request, exc: Exception) -> Response:
+    if not isinstance(exc, RateLimitExceeded):
+        raise exc
+    return _rate_limit_exceeded_handler(request, exc)
+
+
+app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 app.add_exception_handler(Exception, global_exception_handler)
 
 

@@ -1,15 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Command, Server, Shield, Users, Database, Zap, Activity } from 'lucide-react'
-import { useSystemDependenciesApiV1SystemDependenciesGet } from '@/api/endpoints/system/system'
+import { Activity, Command, Server, Users } from 'lucide-react'
+import { useGetSystemDependencies } from '@/api/endpoints/system/system'
 
 export function OperationsMenu() {
   const [isOpen, setIsOpen] = useState(false)
-  const { data: depsRes } = useSystemDependenciesApiV1SystemDependenciesGet(
+  const { data: deps = {} } = useGetSystemDependencies(
     { query: { enabled: isOpen } }
   )
-  const deps = depsRes || {}
   const allOk = Object.values(deps).every(v => v === 'ok' || v === 'degraded')
 
   // CMD+Shift+K shortcut (CMD+K is used by CommandMenu)

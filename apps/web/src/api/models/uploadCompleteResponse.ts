@@ -5,4 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type MatterQABody = { [key: string]: unknown };
+export interface UploadCompleteResponse {
+  revision_id: string;
+  status: string;
+}

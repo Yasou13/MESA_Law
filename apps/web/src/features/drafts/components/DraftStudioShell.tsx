@@ -3,15 +3,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { FileEdit, Plus, Save, Download, Loader2, Clock } from 'lucide-react';
 import { 
-  useListMatterDraftsApiV1DraftStudioDraftsMatterMatterIdGet as useListMatterDrafts,
-  useGetDraftApiV1DraftStudioDraftsDraftIdGet as useGetDraft,
-  useSaveDraftApiV1DraftStudioDraftsPost as useSaveDraft,
-  useUpdateDraftApiV1DraftStudioDraftsDraftIdPut as useUpdateDraft,
-  useExportDraftApiV1DraftStudioDraftsDraftIdExportPost as useExportDraft,
+  getGetDraftQueryKey,
+  getListMatterDraftsQueryKey,
+  useListMatterDrafts,
+  useGetDraft,
+  useSaveDraft,
+  useUpdateDraft,
+  useExportDraft,
   useSubmitReviewDraft,
   useApproveDraft,
   useGetDraftCitations
 } from '@/api/endpoints/draft-studio/draft-studio';
+import { ApiError } from '@/lib/api/client';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 
@@ -24,21 +27,20 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
   const [isDirty, setIsDirty] = useState(false);
 
   const { data: draftsResponse, isLoading: isLoadingList } = useListMatterDrafts(matterId);
-  const drafts: any = draftsResponse || [];
+  const drafts = draftsResponse ?? [];
 
   const { data: activeDraftResponse, isLoading: isLoadingDetail } = useGetDraft(activeDraftId as string, {
     query: { enabled: !!activeDraftId }
   });
-  const activeDraft: any = activeDraftResponse;
+  const activeDraft = activeDraftResponse;
 
   const { data: citationsResponse } = useGetDraftCitations(activeDraftId as string, {
     query: { enabled: !!activeDraftId }
   });
-  const citations: any[] = (citationsResponse as unknown as any[]) || [];
+  const citations = citationsResponse ?? [];
 
   useEffect(() => {
     if (activeDraft) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTitle(activeDraft.title || '');
       setContent(activeDraft.content || '');
       setCurrentVersion(activeDraft.version || 1);
@@ -48,26 +50,28 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
 
   const createMutation = useSaveDraft({
     mutation: {
-      onSuccess: (res: any) => {
+      onSuccess: (res) => {
         toast.success('New draft created');
-        queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
+        queryClient.invalidateQueries({ queryKey: getListMatterDraftsQueryKey(matterId) });
         setActiveDraftId(res.id);
       },
       onError: () => toast.error('Failed to create draft')
     }
   });
 
-  const saveMutation = useUpdateDraft({
+  const saveMutation = useUpdateDraft<ApiError>({
     mutation: {
-      onSuccess: (res: any) => {
+      onSuccess: (res) => {
         toast.success(`Draft saved (v${res.version})`);
         setCurrentVersion(res.version);
         setIsDirty(false);
-        queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
-        queryClient.invalidateQueries({ queryKey: ['useGetDraft', activeDraftId] });
+        queryClient.invalidateQueries({ queryKey: getListMatterDraftsQueryKey(matterId) });
+        if (activeDraftId) {
+          queryClient.invalidateQueries({ queryKey: getGetDraftQueryKey(activeDraftId) });
+        }
       },
-      onError: (error: any) => {
-        if (error.response?.status === 409) {
+      onError: (error) => {
+        if (error.status === 409) {
           toast.error('Version conflict! Someone else modified this draft.');
         } else {
           toast.error('Failed to save draft');
@@ -78,35 +82,39 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
 
   const exportMutation = useExportDraft({
     mutation: {
-      onSuccess: (res: any, variables) => {
+      onSuccess: (_res, variables) => {
         toast.success(`Export job queued (${variables.data.format.toUpperCase()})`);
       },
       onError: () => toast.error('Export request failed')
     }
   });
 
-  const submitReviewMutation = useSubmitReviewDraft({
+  const submitReviewMutation = useSubmitReviewDraft<ApiError>({
     mutation: {
       onSuccess: () => {
         toast.success('Draft submitted for review');
-        queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
-        queryClient.invalidateQueries({ queryKey: ['useGetDraft', activeDraftId] });
+        queryClient.invalidateQueries({ queryKey: getListMatterDraftsQueryKey(matterId) });
+        if (activeDraftId) {
+          queryClient.invalidateQueries({ queryKey: getGetDraftQueryKey(activeDraftId) });
+        }
       },
-      onError: (error: any) => {
-        toast.error(error.response?.data?.detail || 'Failed to submit for review');
+      onError: (error) => {
+        toast.error(error.message || 'Failed to submit for review');
       }
     }
   });
 
-  const approveMutation = useApproveDraft({
+  const approveMutation = useApproveDraft<ApiError>({
     mutation: {
       onSuccess: () => {
         toast.success('Draft approved for external use');
-        queryClient.invalidateQueries({ queryKey: ['useListMatterDrafts'] });
-        queryClient.invalidateQueries({ queryKey: ['useGetDraft', activeDraftId] });
+        queryClient.invalidateQueries({ queryKey: getListMatterDraftsQueryKey(matterId) });
+        if (activeDraftId) {
+          queryClient.invalidateQueries({ queryKey: getGetDraftQueryKey(activeDraftId) });
+        }
       },
-      onError: (error: any) => {
-        toast.error(error.response?.data?.detail || 'Failed to approve draft');
+      onError: (error) => {
+        toast.error(error.message || 'Failed to approve draft');
       }
     }
   });
@@ -136,7 +144,7 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
           </div>
         ) : drafts && drafts.length > 0 ? (
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {drafts.map((d: any) => (
+            {drafts.map((d) => (
               <button
                 key={d.id}
                 onClick={() => setActiveDraftId(d.id)}
@@ -307,7 +315,7 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
                 <div key={c.id} className="p-3 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-xl flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono text-[var(--color-lila-400)] bg-[var(--color-lila-500)]/10 px-1.5 py-0.5 rounded">
-                      Doc: {c.document_id.substring(0,8)}
+                      Doc: {c.document_id?.substring(0,8) ?? 'unknown'}
                     </span>
                     {c.verification_state === 'verified' ? (
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
@@ -318,7 +326,7 @@ export function DraftStudioShell({ matterId }: { matterId: string }) {
                     )}
                   </div>
                   <p className="text-xs text-[var(--foreground)] italic line-clamp-3">
-                    "{c.text_snippet}"
+                    &quot;{c.citation_text}&quot;
                   </p>
                   <div className="text-[10px] text-[var(--color-anthracite-400)] uppercase font-semibold mt-1">
                     State: <span className={c.verification_state === 'verified' ? 'text-emerald-500' : 'text-amber-500'}>{c.verification_state}</span>

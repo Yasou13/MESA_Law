@@ -5,4 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type UpdateSystemSettingsBody = { [key: string]: unknown };
+export interface RetentionSettings {
+  audit_log_days: number;
+  deleted_document_days: number;
+}

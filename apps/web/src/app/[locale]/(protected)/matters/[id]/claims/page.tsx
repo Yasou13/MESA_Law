@@ -25,7 +25,7 @@ export default function MatterClaimsPage({ params }: { params: Promise<{ id: str
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Claims, Defenses & Legal Issues</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Review the AI-extracted claims and their supporting evidence for this matter.</p>
+          <p className="text-[var(--color-anthracite-500)] mt-1">Inspect proposed claim/evidence pairs; canonical publication still requires review approval.</p>
         </div>
       </div>
 
@@ -50,7 +50,7 @@ export default function MatterClaimsPage({ params }: { params: Promise<{ id: str
             <p className="text-[var(--color-anthracite-500)]">Upload documents to begin automated claim extraction.</p>
           </div>
         ) : (
-          claims.map((claim: any) => {
+          claims.map((claim) => {
             const isExpanded = expandedClaim === claim.id
             const evidenceCount = claim.evidence ? 1 : 0
             
@@ -63,18 +63,18 @@ export default function MatterClaimsPage({ params }: { params: Promise<{ id: str
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider bg-[var(--color-lila-500)]/10 text-[var(--color-lila-600)] dark:text-[var(--color-lila-400)] rounded-md border border-[var(--color-lila-500)]/20">
-                        {claim.type || 'Claim'}
+                        Claim
                       </span>
                       <StatusBadge 
-                        status={claim.status === 'approved' ? 'success' : claim.status === 'rejected' ? 'error' : 'review-required'} 
-                        label={claim.status || 'PENDING'} 
+                        status="review-required"
+                        label="PROPOSED"
                       />
                       <span className={`text-xs px-2.5 py-1 rounded-md border font-medium ${claim.confidence === 'high' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : claim.confidence === 'medium' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                         {claim.confidence || 'Medium'} Confidence
                       </span>
                     </div>
                     <p className="text-[var(--foreground)] font-medium leading-relaxed max-w-4xl">
-                      {claim.description || claim.claim}
+                      {claim.claim}
                     </p>
                   </div>
                   
@@ -111,8 +111,7 @@ export default function MatterClaimsPage({ params }: { params: Promise<{ id: str
                     )}
                     
                     <div className="mt-6 flex justify-end gap-3">
-                      <Button variant="outline" size="sm">Request More Evidence</Button>
-                      <Button variant="default" size="sm">Verify with QA</Button>
+                      <span className="text-xs text-[var(--color-anthracite-500)]">Use the review center to approve, correct or reject.</span>
                     </div>
                   </div>
                 )}

@@ -15,14 +15,13 @@ export default function MatterResearchPage({ params }: { params: Promise<{ id: s
         <Link href={`/matters/${matterId}`} className="inline-flex items-center gap-2 text-sm text-[var(--color-anthracite-400)] hover:text-[var(--foreground)] transition-colors mb-2">
           <ArrowLeft className="w-4 h-4" /> Back to Matter
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">Legal Research</h1>
-        <p className="text-sm text-[var(--color-anthracite-500)] mt-1">Deep analysis and case law search grounded in matter evidence.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">External Legal Research</h1>
+        <p className="text-sm text-[var(--color-anthracite-500)] mt-1">This post-MVP capability is currently disabled.</p>
       </div>
 
       <div className="flex-1 overflow-hidden p-6 bg-[var(--bg-surface-hover)]">
         <div className="max-w-6xl mx-auto h-full shadow-sm rounded-xl overflow-hidden border border-[var(--border-surface)]">
-          {/* Note: In a real integration, we might pass matterId to ResearchShell so it limits context. */}
-          <ResearchShell />
+          <ResearchShell matterId={matterId} />
         </div>
       </div>
     </div>

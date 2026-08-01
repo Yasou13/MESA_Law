@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Activity, Clock, PlayCircle, CheckCircle2, AlertCircle, RotateCw, Filter, Search } from 'lucide-react'
+import { Activity, Clock, CheckCircle2, AlertCircle, RotateCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -12,10 +12,9 @@ import { useListJobs } from '@/api/endpoints/operations/operations'
 
 export default function OperationsPage() {
   const [search, setSearch] = useState('')
-  const { data: res, isLoading, refetch } = useListJobs()
-  const jobs = (res as unknown as any[]) || []
+  const { data: jobs = [], isLoading, refetch } = useListJobs()
   
-  const filteredJobs = jobs.filter((j: any) => 
+  const filteredJobs = jobs.filter((j) =>
     j.type.toLowerCase().includes(search.toLowerCase()) || 
     (j.matter_id && j.matter_id.toLowerCase().includes(search.toLowerCase())) ||
     j.id.toLowerCase().includes(search.toLowerCase())
@@ -23,10 +22,11 @@ export default function OperationsPage() {
 
   const getStatusIcon = (status: string) => {
     switch(status) {
-      case 'processing': return <RotateCw className="w-4 h-4 text-amber-500 animate-spin" />
-      case 'completed': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-      case 'failed': return <AlertCircle className="w-4 h-4 text-red-500" />
-      case 'queued': return <Clock className="w-4 h-4 text-[var(--color-anthracite-400)]" />
+      case 'RUNNING': return <RotateCw className="w-4 h-4 text-amber-500 animate-spin" />
+      case 'SUCCEEDED': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+      case 'FAILED':
+      case 'DEAD': return <AlertCircle className="w-4 h-4 text-red-500" />
+      case 'PENDING': return <Clock className="w-4 h-4 text-[var(--color-anthracite-400)]" />
       default: return <Activity className="w-4 h-4" />
     }
   }
@@ -36,34 +36,31 @@ export default function OperationsPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">System Operations</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Monitor background tasks, data extractions, and research jobs.</p>
+          <p className="text-[var(--color-anthracite-500)] mt-1">Monitor the durable legal_jobs execution queue.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" className="gap-2" onClick={() => refetch()} disabled={isLoading}>
             <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
-          <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-            <PlayCircle className="w-4 h-4" /> Start Manual Job
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="glass-card p-4 rounded-xl border border-[var(--border-surface)] shadow-sm">
-          <div className="text-sm font-medium text-[var(--color-anthracite-400)]">Total Jobs (24h)</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--foreground)]">128</div>
+          <div className="text-sm font-medium text-[var(--color-anthracite-400)]">Jobs returned</div>
+          <div className="text-2xl font-bold mt-1 text-[var(--foreground)]">{jobs.length}</div>
         </div>
         <div className="glass-card p-4 rounded-xl border border-[var(--color-lila-500)]/30 bg-[var(--color-lila-500)]/5 shadow-sm">
           <div className="text-sm font-medium text-[var(--color-lila-500)]">Processing</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--color-lila-400)]">1</div>
+          <div className="text-2xl font-bold mt-1 text-[var(--color-lila-400)]">{jobs.filter((job) => job.status === 'RUNNING').length}</div>
         </div>
         <div className="glass-card p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 shadow-sm">
           <div className="text-sm font-medium text-emerald-500">Completed</div>
-          <div className="text-2xl font-bold mt-1 text-emerald-400">124</div>
+          <div className="text-2xl font-bold mt-1 text-emerald-400">{jobs.filter((job) => job.status === 'SUCCEEDED').length}</div>
         </div>
         <div className="glass-card p-4 rounded-xl border border-[var(--color-semantic-error)]/30 bg-[var(--color-semantic-error)]/5 shadow-sm">
           <div className="text-sm font-medium text-[var(--color-semantic-error)]">Failed</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--color-semantic-error)]">3</div>
+          <div className="text-2xl font-bold mt-1 text-[var(--color-semantic-error)]">{jobs.filter((job) => ['FAILED', 'DEAD'].includes(job.status)).length}</div>
         </div>
       </div>
 
@@ -78,9 +75,6 @@ export default function OperationsPage() {
             className="pl-9 w-full"
           />
         </div>
-        <Button variant="outline" className="gap-2 shrink-0">
-          <Filter className="w-4 h-4" /> Filter
-        </Button>
       </div>
 
       <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
@@ -121,7 +115,7 @@ export default function OperationsPage() {
                   </TableCell>
                   <TableCell>
                     <StatusBadge 
-                      status={job.status === 'completed' ? 'success' : job.status === 'failed' || job.status === 'dead' ? 'error' : job.status === 'processing' ? 'processing' : 'default'} 
+                      status={job.status === 'SUCCEEDED' ? 'success' : job.status === 'FAILED' || job.status === 'DEAD' ? 'error' : job.status === 'RUNNING' ? 'processing' : 'default'}
                       label={job.status.toUpperCase()} 
                     />
                     {job.error_message && (
@@ -134,15 +128,15 @@ export default function OperationsPage() {
                     <div className="w-full max-w-[150px]">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-[var(--color-anthracite-400)]">
-                          {job.status === 'completed' ? '100%' : job.status === 'failed' || job.status === 'dead' ? 'Error' : 'Running...'}
+                          {job.status === 'SUCCEEDED' ? '100%' : job.status === 'FAILED' || job.status === 'DEAD' ? 'Error' : job.status === 'RUNNING' ? 'Running…' : 'Pending'}
                         </span>
                       </div>
                       <div className="h-1.5 w-full bg-[var(--bg-surface-hover)] rounded-full overflow-hidden">
                         <div 
                           className={`h-full rounded-full transition-all duration-500 ${
-                            job.status === 'completed' ? 'bg-emerald-500 w-full' :
-                            job.status === 'failed' || job.status === 'dead' ? 'bg-[var(--color-semantic-error)] w-full' :
-                            'bg-[var(--color-lila-500)] w-2/3 animate-pulse'
+                            job.status === 'SUCCEEDED' ? 'bg-emerald-500 w-full' :
+                            job.status === 'FAILED' || job.status === 'DEAD' ? 'bg-[var(--color-semantic-error)] w-full' :
+                            job.status === 'RUNNING' ? 'bg-[var(--color-lila-500)] w-2/3 animate-pulse' : 'w-0'
                           }`}
                         ></div>
                       </div>
@@ -152,9 +146,7 @@ export default function OperationsPage() {
                     {job.created_at ? formatDistanceToNow(new Date(job.created_at), { addSuffix: true }) : ''}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-[var(--color-lila-500)] hover:text-[var(--color-lila-600)]">
-                      View Logs
-                    </Button>
+                    <span className="text-xs text-[var(--color-anthracite-500)]">Attempt {job.retries + 1}/{job.max_retries}</span>
                   </TableCell>
                 </TableRow>
               ))}

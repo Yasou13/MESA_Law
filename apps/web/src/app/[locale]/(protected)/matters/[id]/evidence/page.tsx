@@ -18,8 +18,8 @@ export default function MatterEvidencePage({ params }: { params: Promise<{ id: s
   
   const [search, setSearch] = useState('')
 
-  const filteredEvidence = evidences.filter((ev: any) => 
-    ev.content?.toLowerCase().includes(search.toLowerCase()) || 
+  const filteredEvidence = evidences.filter((ev) =>
+    ev.description.toLowerCase().includes(search.toLowerCase()) ||
     ev.id?.toLowerCase().includes(search.toLowerCase()) ||
     ev.document_id?.toLowerCase().includes(search.toLowerCase())
   )
@@ -80,11 +80,11 @@ export default function MatterEvidencePage({ params }: { params: Promise<{ id: s
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredEvidence.map((ev: any) => (
+              {filteredEvidence.map((ev) => (
                 <TableRow key={ev.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
                   <TableCell>
                     <div className="font-medium text-sm text-[var(--foreground)] line-clamp-3">
-                      {ev.content || 'No text extracted'}
+                      {ev.description}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -99,20 +99,18 @@ export default function MatterEvidencePage({ params }: { params: Promise<{ id: s
                   </TableCell>
                   <TableCell>
                     <StatusBadge 
-                      status={ev.status === 'verified' ? 'success' : ev.status === 'rejected' ? 'error' : 'review-required'} 
-                      label={ev.status?.toUpperCase() || 'EXTRACTED'} 
+                      status={ev.review_status === 'APPROVED' ? 'success' : ev.review_status === 'REJECTED' ? 'error' : 'review-required'}
+                      label={ev.review_status}
                     />
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <LinkIcon className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-                      <span className="text-sm font-medium">{ev.linked_claims?.length || 0}</span>
+                      <span className="text-sm text-[var(--color-anthracite-500)]">Not exposed</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      View Details
-                    </Button>
+                    <span className="text-xs text-[var(--color-anthracite-500)]">Locator {ev.source_locator_id?.slice(0, 8) ?? 'pending'}</span>
                   </TableCell>
                 </TableRow>
               ))}

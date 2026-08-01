@@ -2,14 +2,14 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FolderOpen, Search, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, Clock, FileEdit, ChevronDown, Check, Menu, X, FileCheck } from 'lucide-react'
+import { FolderOpen, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, FileEdit, ChevronDown, Check, Menu, X, FileCheck } from 'lucide-react'
 import { clsx } from 'clsx'
 import { signOut } from 'next-auth/react'
 import { CommandMenu } from './CommandMenu'
-import { useGetNotificationsApiV1NotificationsGet } from '@/api/endpoints/notifications/notifications'
+import { useListNotifications } from '@/api/endpoints/notifications/notifications'
 import { useListUserFirms } from '@/api/endpoints/default/default'
-import { useSetActiveFirmApiV1SessionActiveFirmPost, useGetSessionContextApiV1SessionContextGet } from '@/api/endpoints/session/session'
-import { useState, useEffect } from 'react'
+import { useGetSessionContext, useSetActiveFirm } from '@/api/endpoints/session/session'
+import { useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useTranslations } from 'next-intl'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -39,28 +39,17 @@ export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { data: notifRes } = useGetNotificationsApiV1NotificationsGet()
-  const unreadCount = Array.isArray(notifRes)
-    ? notifRes.filter((n: { status?: string }) => n.status !== 'READ').length
-    : 0
+  const { data: notifications = [] } = useListNotifications()
+  const unreadCount = notifications.filter((notification) => notification.status !== 'READ').length
 
-  const { data: firmsRes } = useListUserFirms()
-  const firms = (firmsRes as unknown as any[]) || []
-  const { mutate: setActiveFirm, isPending: isSwitching } = useSetActiveFirmApiV1SessionActiveFirmPost()
+  const { data: firms = [] } = useListUserFirms()
+  const { mutate: setActiveFirm, isPending: isSwitching } = useSetActiveFirm()
 
-  const { data: contextRes, refetch: refetchContext } = useGetSessionContextApiV1SessionContextGet()
-  const activeFirmId = (contextRes as any)?.tenant_id || null
+  const { data: context, refetch: refetchContext } = useGetSessionContext()
+  const activeFirmId = context?.tenant_id ?? null
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-
-  useEffect(() => {
-    if (!activeFirmId && firms.length > 0) {
-      // API currently has no active firm, but user has firms, set the first one automatically
-      // Note: We don't automatically trigger a mutation here if we don't want to infinite-loop,
-      // but usually the backend defaults to the user's firm if they only have one.
-    }
-  }, [activeFirmId, firms])
 
   const handleSwitchFirm = (firmId: string) => {
     setIsDropdownOpen(false)
@@ -80,7 +69,7 @@ export function Sidebar() {
     })
   }
 
-  const activeFirmName = firms.find((f: { id: string; name: string }) => f.id === activeFirmId)?.name || 'MESA Law'
+  const activeFirmName = firms.find((firm) => firm.id === activeFirmId)?.name || 'Select firm'
 
   return (
     <>
@@ -141,7 +130,7 @@ export function Sidebar() {
             
             {isDropdownOpen && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-lg shadow-xl z-50 overflow-hidden">
-                {firms.map((firm: { id: string; name: string }) => (
+                {firms.map((firm) => (
                   <button
                     key={firm.id}
                     onClick={() => handleSwitchFirm(firm.id)}

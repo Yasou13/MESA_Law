@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { UseFormReturn } from 'react-hook-form'
+import type { FieldPath, FieldValues, UseFormReturn } from 'react-hook-form'
 import {
   FormControl,
   FormDescription,
@@ -18,15 +18,15 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
-interface BaseFieldProps {
-  form: UseFormReturn<any>
-  name: string
+interface BaseFieldProps<TValues extends FieldValues> {
+  form: UseFormReturn<TValues>
+  name: FieldPath<TValues>
   label: string
   description?: string
   placeholder?: string
 }
 
-export function TextField({ form, name, label, description, placeholder, type = 'text', ...props }: BaseFieldProps & React.InputHTMLAttributes<HTMLInputElement>) {
+export function TextField<TValues extends FieldValues>({ form, name, label, description, placeholder, type = 'text', ...props }: BaseFieldProps<TValues> & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <FormField
       control={form.control}
@@ -45,7 +45,7 @@ export function TextField({ form, name, label, description, placeholder, type = 
   )
 }
 
-export function TextAreaField({ form, name, label, description, placeholder, ...props }: BaseFieldProps & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextAreaField<TValues extends FieldValues>({ form, name, label, description, placeholder, ...props }: BaseFieldProps<TValues> & React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <FormField
       control={form.control}
@@ -69,7 +69,7 @@ interface SelectOption {
   value: string
 }
 
-export function SelectField({ form, name, label, description, placeholder, options }: BaseFieldProps & { options: SelectOption[] }) {
+export function SelectField<TValues extends FieldValues>({ form, name, label, description, placeholder, options }: BaseFieldProps<TValues> & { options: SelectOption[] }) {
   return (
     <FormField
       control={form.control}

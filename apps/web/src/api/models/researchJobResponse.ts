@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface SyncMesaCoreRequest {
-  tenant_id: string;
+export interface ResearchJobResponse {
+  job_id: string;
+  status: string;
 }

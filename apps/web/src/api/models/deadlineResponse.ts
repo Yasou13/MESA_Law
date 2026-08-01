@@ -6,9 +6,9 @@
  */
 
 export interface DeadlineResponse {
-  id: string;
-  matter_id: string;
-  due_date: string;
   description: string;
+  due_date: string;
+  id: string;
   is_completed: boolean;
+  matter_id: string;
 }

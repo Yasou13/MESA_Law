@@ -1,8 +1,8 @@
 import logging
-import os
 from typing import Any
 
 import aioboto3
+from apps.api.core.config import settings
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
@@ -23,14 +23,10 @@ class StorageIntegrityError(RuntimeError):
 class StorageService:
     def __init__(self) -> None:
         self.session = aioboto3.Session()
-        self.endpoint_url = os.getenv(
-            "MESA_LAW_STORAGE_ENDPOINT", "http://localhost:9000"
-        )
-        self.aws_access_key_id = os.getenv("MESA_LAW_STORAGE_ACCESS_KEY", "admin")
-        self.aws_secret_access_key = os.getenv(
-            "MESA_LAW_STORAGE_SECRET_KEY", "password123"
-        )
-        self.bucket_name = os.getenv("MESA_LAW_STORAGE_BUCKET", "mesa-law-docs")
+        self.endpoint_url = settings.storage_endpoint
+        self.aws_access_key_id = settings.storage_access_key
+        self.aws_secret_access_key = settings.storage_secret_key
+        self.bucket_name = settings.storage_bucket
         self.config = Config(signature_version="s3v4")
 
     def _client(self):

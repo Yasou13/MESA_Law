@@ -1,3 +1,5 @@
+import re
+
 import redis.asyncio as redis
 from starlette.datastructures import Headers
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -6,22 +8,53 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from .config import settings
-from .observability import trace_id_cv
+from .observability import matter_id_cv, request_id_cv, trace_id_cv
 from .utils import generate_uuid
 
 
 class TraceMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        trace_id = request.headers.get("X-Trace-Id") or generate_uuid()
+        request_id = (
+            _safe_correlation_id(
+                request.headers.get("X-Request-Id")
+                or request.headers.get("X-Correlation-Id")
+            )
+            or generate_uuid()
+        )
+        trace_id = _safe_correlation_id(request.headers.get("X-Trace-Id")) or request_id
         request.state.trace_id = trace_id
+        request.state.request_id = request_id
 
-        token = trace_id_cv.set(trace_id)
+        request_token = request_id_cv.set(request_id)
+        trace_token = trace_id_cv.set(trace_id)
+        matter_token = matter_id_cv.set(_matter_id_from_path(request.url.path))
         try:
             response = await call_next(request)
             response.headers["X-Trace-Id"] = trace_id
+            response.headers["X-Request-Id"] = request_id
+            response.headers["X-Correlation-Id"] = request_id
             return response
         finally:
-            trace_id_cv.reset(token)
+            matter_id_cv.reset(matter_token)
+            trace_id_cv.reset(trace_token)
+            request_id_cv.reset(request_token)
+
+
+_CORRELATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
+_MATTER_PATH_PATTERN = re.compile(r"/matters/([^/]+)")
+
+
+def _safe_correlation_id(value: str | None) -> str | None:
+    if value and _CORRELATION_ID_PATTERN.fullmatch(value):
+        return value
+    return None
+
+
+def _matter_id_from_path(path: str) -> str | None:
+    match = _MATTER_PATH_PATTERN.search(path)
+    if match and _CORRELATION_ID_PATTERN.fullmatch(match.group(1)):
+        return match.group(1)
+    return None
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

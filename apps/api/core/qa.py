@@ -2,6 +2,7 @@ import hashlib
 import logging
 
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
+from apps.api.core.observability import increment_metric
 from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
 from apps.api.core.ports.mesa_v4 import MesaV4Error, SessionStartRequest
 from apps.api.models.document import Document, DocumentRevision
@@ -45,6 +46,13 @@ class QuestionRequest(BaseModel):
     question: str = Field(min_length=1, max_length=4096)
 
 
+def _citation_rejected(reason: str) -> None:
+    increment_metric(
+        "citation_verification_failures_total",
+        attributes={"reason": reason},
+    )
+
+
 def _citation_from_local_chunk(
     chunk: DocumentChunk,
     page: ParsedPage,
@@ -58,13 +66,16 @@ def _citation_from_local_chunk(
         or chunk.character_end is None
         or chunk.character_end > len(page.text_content)
     ):
+        _citation_rejected("local_linkage")
         return None
     evidence = page.text_content[chunk.character_start : chunk.character_end]
     digest = hashlib.sha256(evidence.encode("utf-8")).hexdigest()
     if evidence != chunk.text_content or digest != chunk.content_sha256:
+        _citation_rejected("local_hash")
         return None
     low = chunk.provenance_state == "LOW_PROVENANCE"
     if not low and not chunk.provenance_state.startswith("VERIFIED_PDF"):
+        _citation_rejected("local_provenance_state")
         return None
     return QACitation(
         document_id=chunk.document_id,
@@ -128,11 +139,14 @@ async def _verify_mesa_evidence(
     evidence,
 ) -> QACitation | None:
     if evidence.dataset_id != dataset_id:
+        _citation_rejected("mesa_dataset")
         return None
     if document_filter and evidence.document_id != document_filter:
+        _citation_rejected("mesa_document_filter")
         return None
     locator_id = evidence.metadata.get("source_locator_id")
     if not isinstance(locator_id, str):
+        _citation_rejected("mesa_locator_missing")
         return None
     row = (
         await session.execute(
@@ -160,6 +174,7 @@ async def _verify_mesa_evidence(
         )
     ).one_or_none()
     if row is None:
+        _citation_rejected("mesa_locator_not_found")
         return None
     locator, chunk, page, revision, _ = row
     if (
@@ -174,6 +189,7 @@ async def _verify_mesa_evidence(
         or locator.evidence_text is None
         or locator.evidence_sha256 is None
     ):
+        _citation_rejected("mesa_identity")
         return None
     local_evidence = page.text_content[locator.character_start : locator.character_end]
     if (
@@ -183,6 +199,7 @@ async def _verify_mesa_evidence(
         or hashlib.sha256(local_evidence.encode()).hexdigest()
         != locator.evidence_sha256
     ):
+        _citation_rejected("mesa_evidence_hash")
         return None
     base = _citation_from_local_chunk(chunk, page, revision)
     if base is None:

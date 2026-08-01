@@ -1,5 +1,6 @@
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 
 class Settings(BaseSettings):
@@ -12,10 +13,13 @@ class Settings(BaseSettings):
     secret_key: str = "MUST_BE_PROVIDED_IN_ENV"
     api_port: int = 8001
     postgres_user: str = "mesa"
-    postgres_password: str = "mesa"
+    postgres_password: str = ""
     postgres_db: str = "mesa_law"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
+    database_pool_size: int = Field(default=5, ge=1, le=20)
+    database_max_overflow: int = Field(default=5, ge=0, le=20)
+    sql_echo: bool = False
 
     # If set via MESA_LAW_DATABASE_URL env var, this takes priority
     database_url: str | None = None
@@ -34,6 +38,20 @@ class Settings(BaseSettings):
         default="redis://localhost:6379/0",
         validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"),
     )
+    storage_endpoint: str = "http://localhost:9000"
+    storage_access_key: str = ""
+    storage_secret_key: str = ""
+    storage_bucket: str = "mesa-law-docs"
+    clamav_host: str = Field(
+        default="clamav",
+        validation_alias=AliasChoices("CLAMAV_HOST", "MESA_LAW_CLAMAV_HOST"),
+    )
+    clamav_port: int = Field(
+        default=3310,
+        validation_alias=AliasChoices("CLAMAV_PORT", "MESA_LAW_CLAMAV_PORT"),
+    )
+    clamav_required: bool = True
+    health_timeout_seconds: float = Field(default=1.5, gt=0, le=10)
     test_auth_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices(
@@ -55,7 +73,7 @@ class Settings(BaseSettings):
         ),
     )
     keycloak_client_secret: str = Field(
-        default="mesa-client-secret",
+        default="",
         validation_alias=AliasChoices(
             "KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"
         ),
@@ -104,19 +122,32 @@ settings = Settings()
 
 def validate_production_settings():
     if settings.is_secure_environment:
-        insecure_defaults = [
-            "MUST_BE_PROVIDED_IN_ENV",
-            "password123",
-            "supersecret_dev_key",
-            "mesa-client-secret",
-            "supersecret_nextauth_key_for_dev_only",
-        ]
+
+        def insecure_secret(value: str | None, *, minimum: int = 32) -> bool:
+            if not value or len(value) < minimum:
+                return True
+            lowered = value.lower()
+            return any(
+                marker in lowered
+                for marker in (
+                    "change_me",
+                    "development",
+                    "must_be_provided",
+                    "password123",
+                    "replace_with",
+                    "supersecret",
+                )
+            )
+
+        database_password = make_url(settings.effective_database_url).password
         if (
-            settings.secret_key in insecure_defaults
-            or settings.keycloak_client_secret in insecure_defaults
+            insecure_secret(settings.secret_key)
+            or insecure_secret(settings.keycloak_client_secret)
+            or insecure_secret(settings.storage_secret_key)
+            or insecure_secret(database_password)
         ):
             raise RuntimeError(
-                f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with insecure default secrets. Startup aborted."
+                f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with missing, short, or placeholder secrets. Startup aborted."
             )
         if not settings.keycloak_issuer.startswith(
             "https://"
@@ -131,9 +162,15 @@ def validate_production_settings():
             raise RuntimeError(
                 "CRITICAL SECURITY ERROR: Secure environments require an explicit HTTPS CORS allowlist."
             )
-        if settings.intelligence_adapter != "mesa_v4" or not settings.mesa_api_key:
+        if settings.intelligence_adapter != "mesa_v4" or insecure_secret(
+            settings.mesa_api_key, minimum=16
+        ):
             raise RuntimeError(
                 "CRITICAL SECURITY ERROR: Secure environments require the MESA v4 adapter and API key."
+            )
+        if not settings.clamav_required:
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: Secure environments require malware scanning."
             )
 
     if settings.test_auth_enabled and settings.env != "test":

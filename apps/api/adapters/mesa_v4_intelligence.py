@@ -1,9 +1,12 @@
 import asyncio
 import logging
+import re
+import time
 from typing import Any, TypeVar
 
 import httpx
 from apps.api.core.config import settings
+from apps.api.core.observability import record_metric
 from apps.api.core.ports.ingestion import IngestionItem, MesaIngestionPort
 from apps.api.core.ports.intelligence import (
     Evidence,
@@ -77,6 +80,42 @@ class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
         return str(body)[:500]
 
     async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        started = time.monotonic()
+        outcome = "error"
+        try:
+            result = await self._request_uninstrumented(
+                method,
+                path,
+                json=json,
+                params=params,
+            )
+            outcome = "success"
+            return result
+        finally:
+            route = re.sub(
+                r"(/v4/(?:mutations|sessions)/)[^/]+",
+                r"\1{id}",
+                path,
+            )
+            record_metric(
+                "mesa_request_duration_seconds",
+                time.monotonic() - started,
+                unit="s",
+                attributes={
+                    "method": method.upper(),
+                    "route": route,
+                    "outcome": outcome,
+                },
+            )
+
+    async def _request_uninstrumented(
         self,
         method: str,
         path: str,

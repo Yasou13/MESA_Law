@@ -5,8 +5,22 @@ import type { Provider } from "next-auth/providers/index"
 const environment = process.env.MESA_LAW_ENVIRONMENT || "development"
 const secureEnvironment = ["production", "staging", "pilot"].includes(environment)
 
-if (secureEnvironment && (!process.env.NEXTAUTH_SECRET || !process.env.KEYCLOAK_CLIENT_SECRET || !process.env.KEYCLOAK_PUBLIC_ISSUER)) {
-  throw new Error("Secure deployments require NEXTAUTH_SECRET and complete Keycloak configuration")
+function insecureSecret(value: string | undefined, minimum = 32): boolean {
+  if (!value || value.length < minimum) return true
+  return /(change_me|development|replace_with|supersecret|password123)/i.test(value)
+}
+
+if (
+  secureEnvironment &&
+  (
+    insecureSecret(process.env.NEXTAUTH_SECRET) ||
+    insecureSecret(process.env.KEYCLOAK_CLIENT_SECRET) ||
+    !process.env.KEYCLOAK_PUBLIC_ISSUER?.startsWith("https://")
+  )
+) {
+  throw new Error(
+    "Secure deployments require strong secrets and an HTTPS Keycloak issuer",
+  )
 }
 
 const providers: Provider[] = [
@@ -21,7 +35,7 @@ const providers: Provider[] = [
 ]
 
 const handler = NextAuth({
-  secret: process.env.NEXTAUTH_SECRET || "development_secret_only_do_not_use_in_prod",
+  secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt", maxAge: 12 * 60 * 60 },
   pages: {
     signIn: '/login',

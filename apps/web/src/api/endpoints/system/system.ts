@@ -26,6 +26,7 @@ import type {
 import type {
   GetSystemDependencies200,
   HTTPValidationError,
+  HealthResponse,
   SyncMesaCoreParams,
   SystemSettingsResponse
 } from '../../models';
@@ -367,13 +368,13 @@ export const useSyncMesaCore = <TError = ErrorType<HTTPValidationError>,
     /**
  * @summary Live
  */
-export const liveHealthLiveGet = (
+export const liveProbe = (
 
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
-      return customInstance<unknown>(
+      return customInstance<HealthResponse>(
       {url: `/health/live`, method: 'GET', signal
     },
       options);
@@ -382,69 +383,69 @@ export const liveHealthLiveGet = (
 
 
 
-export const getLiveHealthLiveGetQueryKey = () => {
+export const getLiveProbeQueryKey = () => {
     return [
     `/health/live`
     ] as const;
     }
 
 
-export const getLiveHealthLiveGetQueryOptions = <TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getLiveProbeQueryOptions = <TData = Awaited<ReturnType<typeof liveProbe>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getLiveHealthLiveGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getLiveProbeQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveHealthLiveGet>>> = ({ signal }) => liveHealthLiveGet(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof liveProbe>>> = ({ signal }) => liveProbe(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type LiveHealthLiveGetQueryResult = NonNullable<Awaited<ReturnType<typeof liveHealthLiveGet>>>
-export type LiveHealthLiveGetQueryError = ErrorType<unknown>
+export type LiveProbeQueryResult = NonNullable<Awaited<ReturnType<typeof liveProbe>>>
+export type LiveProbeQueryError = ErrorType<unknown>
 
 
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+export function useLiveProbe<TData = Awaited<ReturnType<typeof liveProbe>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          Awaited<ReturnType<typeof liveProbe>>,
           TError,
-          Awaited<ReturnType<typeof liveHealthLiveGet>>
+          Awaited<ReturnType<typeof liveProbe>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>> & Pick<
+export function useLiveProbe<TData = Awaited<ReturnType<typeof liveProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof liveHealthLiveGet>>,
+          Awaited<ReturnType<typeof liveProbe>>,
           TError,
-          Awaited<ReturnType<typeof liveHealthLiveGet>>
+          Awaited<ReturnType<typeof liveProbe>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useLiveProbe<TData = Awaited<ReturnType<typeof liveProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Live
  */
 
-export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealthLiveGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveHealthLiveGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useLiveProbe<TData = Awaited<ReturnType<typeof liveProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof liveProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getLiveHealthLiveGetQueryOptions(options)
+  const queryOptions = getLiveProbeQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -459,13 +460,13 @@ export function useLiveHealthLiveGet<TData = Awaited<ReturnType<typeof liveHealt
 /**
  * @summary Ready
  */
-export const readyHealthReadyGet = (
+export const readyProbe = (
 
  options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
 ) => {
 
 
-      return customInstance<unknown>(
+      return customInstance<HealthResponse>(
       {url: `/health/ready`, method: 'GET', signal
     },
       options);
@@ -474,69 +475,69 @@ export const readyHealthReadyGet = (
 
 
 
-export const getReadyHealthReadyGetQueryKey = () => {
+export const getReadyProbeQueryKey = () => {
     return [
     `/health/ready`
     ] as const;
     }
 
 
-export const getReadyHealthReadyGetQueryOptions = <TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getReadyProbeQueryOptions = <TData = Awaited<ReturnType<typeof readyProbe>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getReadyHealthReadyGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getReadyProbeQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyHealthReadyGet>>> = ({ signal }) => readyHealthReadyGet(requestOptions, signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof readyProbe>>> = ({ signal }) => readyProbe(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ReadyHealthReadyGetQueryResult = NonNullable<Awaited<ReturnType<typeof readyHealthReadyGet>>>
-export type ReadyHealthReadyGetQueryError = ErrorType<unknown>
+export type ReadyProbeQueryResult = NonNullable<Awaited<ReturnType<typeof readyProbe>>>
+export type ReadyProbeQueryError = ErrorType<unknown>
 
 
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+export function useReadyProbe<TData = Awaited<ReturnType<typeof readyProbe>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          Awaited<ReturnType<typeof readyProbe>>,
           TError,
-          Awaited<ReturnType<typeof readyHealthReadyGet>>
+          Awaited<ReturnType<typeof readyProbe>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>> & Pick<
+export function useReadyProbe<TData = Awaited<ReturnType<typeof readyProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof readyHealthReadyGet>>,
+          Awaited<ReturnType<typeof readyProbe>>,
           TError,
-          Awaited<ReturnType<typeof readyHealthReadyGet>>
+          Awaited<ReturnType<typeof readyProbe>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useReadyProbe<TData = Awaited<ReturnType<typeof readyProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Ready
  */
 
-export function useReadyHealthReadyGet<TData = Awaited<ReturnType<typeof readyHealthReadyGet>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyHealthReadyGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useReadyProbe<TData = Awaited<ReturnType<typeof readyProbe>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof readyProbe>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getReadyHealthReadyGetQueryOptions(options)
+  const queryOptions = getReadyProbeQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

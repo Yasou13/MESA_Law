@@ -288,12 +288,14 @@ class TestProcessBoundary:
         empty = MagicMock()
         empty.scalars.return_value.all.return_value = []
         session.execute.side_effect = [MagicMock(), empty]
+        session.scalar.return_value = 0
         session.__aenter__.return_value = session
         session.__aexit__.return_value = False
         session_local.return_value = session
 
         assert await Worker().process_batch() == 0
         assert session.execute.await_count == 2
+        session.commit.assert_awaited_once()
 
 
 def test_terminal_job_error_is_not_retryable() -> None:

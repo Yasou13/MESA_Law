@@ -22,7 +22,8 @@ import type {
 import type {
   HTTPValidationError,
   JobResponse,
-  ListJobsParams
+  ListJobsParams,
+  OperationalMetricsResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
@@ -131,6 +132,99 @@ export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListJobsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Return bounded, tenant- and matter-scoped operational snapshots.
+ * @summary Get Operational Metrics
+ */
+export const getOperationalMetrics = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<OperationalMetricsResponse>(
+      {url: `/api/v1/operations/metrics`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetOperationalMetricsQueryKey = () => {
+    return [
+    `/api/v1/operations/metrics`
+    ] as const;
+    }
+
+
+export const getGetOperationalMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOperationalMetricsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperationalMetrics>>> = ({ signal }) => getOperationalMetrics(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOperationalMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getOperationalMetrics>>>
+export type GetOperationalMetricsQueryError = ErrorType<unknown>
+
+
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalMetrics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalMetrics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Operational Metrics
+ */
+
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOperationalMetricsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

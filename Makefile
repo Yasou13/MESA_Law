@@ -1,4 +1,4 @@
-.PHONY: lint test openapi openapi-check dev-doctor
+.PHONY: lint test openapi openapi-check release-gate dev-doctor
 
 lint:
 	@echo "Running linters..."
@@ -15,6 +15,9 @@ openapi:
 
 openapi-check:
 	uv run python scripts/export_openapi.py --check
+
+release-gate:
+	./run_all_tests.sh
 
 dev-doctor:
 	@echo "Checking development environment..."

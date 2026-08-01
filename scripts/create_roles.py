@@ -23,7 +23,7 @@ async def create_roles():
             (
                 "mesa_law_migrator",
                 os.environ["MESA_LAW_MIGRATOR_DB_PASSWORD"],
-                "SUPERUSER",
+                "NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS",
             ),
         ]:
             exists = await conn.scalar(
@@ -33,14 +33,13 @@ async def create_roles():
             verb = "ALTER" if exists else "CREATE"
             statement = text(
                 f"{verb} ROLE {role} WITH LOGIN PASSWORD :password {extra}"
-            ).bindparams(
-                bindparam("password", type_=String(), literal_execute=True)
-            )
+            ).bindparams(bindparam("password", type_=String(), literal_execute=True))
             await conn.execute(
                 statement,
                 {"password": password},
             )
 
+        await conn.execute(text("GRANT ALL ON SCHEMA public TO mesa_law_migrator"))
         await conn.execute(
             text("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mesa_law_app")
         )

@@ -6,14 +6,20 @@ from collections.abc import Awaitable, Callable
 from datetime import timedelta
 
 from apps.api.core.database import AsyncSessionLocal
-from apps.api.core.observability import get_meter, job_id_cv, tenant_id_cv
+from apps.api.core.observability import (
+    increment_metric,
+    job_id_cv,
+    matter_id_cv,
+    record_metric,
+    tenant_id_cv,
+)
 from apps.api.core.rls import reset_tenant_id, set_tenant_id
 from apps.api.core.utils import generate_uuid, utc_now
 from apps.api.models.queue import Job, JobAttempt, JobStatus
 from apps.worker.jobs import JobExecutionError, LostLeaseError, validate_job_payload
 from opentelemetry import trace
 from pydantic import ValidationError
-from sqlalchemy import or_, select, text, update
+from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.queue")
@@ -56,7 +62,7 @@ class Worker:
         async with AsyncSessionLocal() as session:
             # A worker can die after recording its final allowed attempt. Such a
             # stale job must become terminal instead of being claimed forever.
-            await session.execute(
+            stale_result = await session.execute(
                 update(Job)
                 .where(
                     Job.status.in_([JobStatus.PENDING, JobStatus.RUNNING]),
@@ -73,7 +79,20 @@ class Worker:
                     lease_token=None,
                     updated_at=now,
                 )
+                .returning(Job.id)
             )
+            stale_count = len(stale_result.scalars().all())
+            if stale_count:
+                increment_metric(
+                    "stale_job_leases_recovered_total",
+                    amount=stale_count,
+                )
+            queue_depth = await session.scalar(
+                select(func.count(Job.id)).where(
+                    Job.status.in_([JobStatus.PENDING, JobStatus.RUNNING])
+                )
+            )
+            record_metric("job_queue_depth", float(queue_depth or 0))
             eligible = (
                 select(Job.id)
                 .where(
@@ -88,6 +107,9 @@ class Worker:
             )
             job_ids = list((await session.execute(eligible)).scalars().all())
             if not job_ids:
+                # Persist stale-lease terminal transitions even when there is
+                # no new work to claim in this polling cycle.
+                await session.commit()
                 return 0
 
             claim = (
@@ -218,12 +240,10 @@ class Worker:
             session.add(attempt)
             await session.commit()
 
-            duration_histogram = get_meter("mesa.worker").create_histogram(
-                "job_processing_duration", description="Time spent processing a job"
-            )
             tracer = trace.get_tracer(__name__)
             start_time = time.monotonic()
             job_token = job_id_cv.set(job.id)
+            matter_token = matter_id_cv.set(job.matter_id)
             observable_tenant_token = tenant_id_cv.set(job.tenant_id)
             tenant_token = set_tenant_id(job.tenant_id)
             heartbeat = asyncio.create_task(
@@ -268,14 +288,18 @@ class Worker:
                 attempt.status = "SUCCEEDED"
                 attempt.finished_at = completed_at
                 await session.commit()
-                duration_histogram.record(
+                record_metric(
+                    "job_processing_duration_seconds",
                     time.monotonic() - start_time,
-                    {"job.type": job.type, "status": "success"},
+                    unit="s",
+                    attributes={"job.type": job.type, "status": "success"},
                 )
             except Exception as exc:  # noqa: BLE001 - boundary classifies all handlers
-                duration_histogram.record(
+                record_metric(
+                    "job_processing_duration_seconds",
                     time.monotonic() - start_time,
-                    {"job.type": job.type, "status": "failed"},
+                    unit="s",
+                    attributes={"job.type": job.type, "status": "failed"},
                 )
                 await session.rollback()
                 if isinstance(exc, LostLeaseError):
@@ -311,6 +335,7 @@ class Worker:
                     await heartbeat
                 reset_tenant_id(tenant_token)
                 tenant_id_cv.reset(observable_tenant_token)
+                matter_id_cv.reset(matter_token)
                 job_id_cv.reset(job_token)
 
     async def _fail_job(
@@ -346,6 +371,22 @@ class Worker:
         job.locked_until = None
         job.heartbeat_at = None
         job.lease_token = None
+        if job.type in {
+            "SCAN_DOCUMENT",
+            "PARSE_DOCUMENT",
+            "OCR_DOCUMENT",
+            "EXTRACT_LEGAL_DATA",
+            "EXTRACT_LEGAL_FACTS",
+        }:
+            increment_metric(
+                "document_pipeline_failures_total",
+                attributes={
+                    "job.type": job.type,
+                    "terminal": str(
+                        job.status in {JobStatus.FAILED, JobStatus.DEAD}
+                    ).lower(),
+                },
+            )
         if job.status in {JobStatus.FAILED, JobStatus.DEAD}:
             await self._mark_terminal_resource_state(session, job, message)
         session.add(job)

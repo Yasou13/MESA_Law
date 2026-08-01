@@ -839,6 +839,27 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthResponse": {
+        "properties": {
+          "components": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Components",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "components"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
       "JobResponse": {
         "properties": {
           "created_at": {
@@ -1311,6 +1332,42 @@
           "timestamp"
         ],
         "title": "NotificationResponse",
+        "type": "object"
+      },
+      "OperationalMetricsResponse": {
+        "properties": {
+          "document_pipeline_failures": {
+            "title": "Document Pipeline Failures",
+            "type": "integer"
+          },
+          "job_queue_depth": {
+            "title": "Job Queue Depth",
+            "type": "integer"
+          },
+          "mesa_mutation_terminal_statuses": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Mesa Mutation Terminal Statuses",
+            "type": "object"
+          },
+          "review_backlog": {
+            "title": "Review Backlog",
+            "type": "integer"
+          },
+          "stale_job_leases": {
+            "title": "Stale Job Leases",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "job_queue_depth",
+          "stale_job_leases",
+          "document_pipeline_failures",
+          "review_backlog",
+          "mesa_mutation_terminal_statuses"
+        ],
+        "title": "OperationalMetricsResponse",
         "type": "object"
       },
       "OverrideConflictRequest": {
@@ -3989,6 +4046,28 @@
         ]
       }
     },
+    "/api/v1/operations/metrics": {
+      "get": {
+        "description": "Return bounded, tenant- and matter-scoped operational snapshots.",
+        "operationId": "getOperationalMetrics",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationalMetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Operational Metrics",
+        "tags": [
+          "Operations"
+        ]
+      }
+    },
     "/api/v1/parser/document/{document_id}": {
       "get": {
         "operationId": "listParsedDocuments",
@@ -4755,12 +4834,14 @@
     },
     "/health/live": {
       "get": {
-        "operationId": "live_health_live_get",
+        "operationId": "liveProbe",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4774,12 +4855,14 @@
     },
     "/health/ready": {
       "get": {
-        "operationId": "ready_health_ready_get",
+        "operationId": "readyProbe",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             },
             "description": "Successful Response"

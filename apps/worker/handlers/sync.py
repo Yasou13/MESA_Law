@@ -5,6 +5,7 @@ from datetime import timedelta
 from typing import Any, NoReturn
 
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
+from apps.api.core.observability import increment_metric, mutation_id_cv
 from apps.api.core.ports.mesa_v4 import (
     DocumentRequest,
     MemoryInsertRequest,
@@ -450,6 +451,7 @@ async def handle_poll_mesa_mutation(payload: dict, session: AsyncSession) -> Non
     if review is None:
         raise TerminalJobError("Published assertion lost its review audit record")
 
+    mutation_token = mutation_id_cv.set(record.mutation_id)
     adapter = MesaV4HttpAdapter()
     try:
         mutation = await adapter.mutation_status(record.mutation_id)
@@ -457,11 +459,16 @@ async def handle_poll_mesa_mutation(payload: dict, session: AsyncSession) -> Non
         _raise_mesa_job_error(exc)
     finally:
         await adapter.close()
+        mutation_id_cv.reset(mutation_token)
 
     record.attempts += 1
     record.last_polled_at = utc_now()
     record.status = mutation.state
     if mutation.is_terminal:
+        increment_metric(
+            "mesa_mutation_terminal_total",
+            attributes={"state": mutation.state},
+        )
         record.is_terminal = True
         if mutation.state == "COMMITTED":
             assertion.publication_status = "PUBLISHED"

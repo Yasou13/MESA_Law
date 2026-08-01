@@ -1,7 +1,7 @@
 import asyncio
-import os
-import socket
+from urllib.parse import urlparse
 
+import httpx
 from apps.api.core.config import settings
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
@@ -40,29 +40,79 @@ class SystemSettingsResponse(BaseModel):
     security: SecuritySettings
 
 
-async def check_tcp(host: str, port: int, timeout: float = 1.0) -> bool:
+class HealthResponse(BaseModel):
+    status: str
+    components: dict[str, str]
+
+
+async def check_tcp(host: str, port: int, timeout: float | None = None) -> bool:
+    effective_timeout = timeout or settings.health_timeout_seconds
     try:
-        connection = await asyncio.to_thread(
-            socket.create_connection, (host, port), timeout
+        _, writer = await asyncio.wait_for(
+            asyncio.open_connection(host, port), timeout=effective_timeout
         )
-        connection.close()
+        writer.close()
+        await writer.wait_closed()
         return True
-    except OSError:
+    except (OSError, TimeoutError):
         return False
 
 
-@router.get("/health/live")
-async def live():
-    return {"status": "ok"}
+async def check_http(
+    url: str,
+    *,
+    headers: dict[str, str] | None = None,
+    timeout: float | None = None,
+) -> bool:
+    try:
+        async with httpx.AsyncClient(
+            timeout=timeout or settings.health_timeout_seconds,
+            follow_redirects=False,
+        ) as client:
+            response = await client.get(url, headers=headers)
+        return 200 <= response.status_code < 400
+    except httpx.HTTPError:
+        return False
 
 
-@router.get("/health/ready")
-async def ready(response: Response, db: AsyncSession = Depends(get_db)):
+def _host_and_port(url: str, default_port: int) -> tuple[str, int]:
+    parsed = urlparse(url)
+    return parsed.hostname or "localhost", parsed.port or default_port
+
+
+def _keycloak_discovery_url() -> str:
+    issuer_path = urlparse(settings.keycloak_issuer).path.rstrip("/")
+    base_url = settings.keycloak_internal_url or settings.keycloak_issuer
+    if settings.keycloak_internal_url:
+        base_url = f"{base_url.rstrip('/')}{issuer_path}"
+    return f"{base_url.rstrip('/')}/.well-known/openid-configuration"
+
+
+@router.get("/health/live", response_model=HealthResponse, operation_id="liveProbe")
+async def live() -> HealthResponse:
+    return HealthResponse(status="ok", components={"process": "ok"})
+
+
+@router.get("/health/ready", response_model=HealthResponse, operation_id="readyProbe")
+async def ready(
+    response: Response, db: AsyncSession = Depends(get_db)
+) -> HealthResponse:
     dependencies = await get_dependencies(db)
-    if dependencies["postgres"] != "ok":
+    required = {"postgres", "redis", "object_storage", "keycloak"}
+    if settings.clamav_required:
+        required.add("clamav")
+    if any(dependencies[name] != "ok" for name in required):
         response.status_code = 503
-        return {"status": "unavailable", "components": dependencies}
-    return {"status": "ok", "components": dependencies}
+        return HealthResponse(status="unavailable", components=dependencies)
+    degraded = any(
+        value not in {"ok", "disabled", "mock"}
+        for name, value in dependencies.items()
+        if name not in required
+    )
+    return HealthResponse(
+        status="degraded" if degraded else "ok",
+        components=dependencies,
+    )
 
 
 @router.get(
@@ -134,23 +184,46 @@ async def get_dependencies(db: AsyncSession) -> dict[str, str]:
     }
 
     try:
-        await db.execute(text("SELECT 1"))
+        await asyncio.wait_for(
+            db.execute(text("SELECT 1")),
+            timeout=settings.health_timeout_seconds,
+        )
         dependencies["postgres"] = "ok"
-    except SQLAlchemyError:  # Dependency health must report failure instead of raising.
+    except (SQLAlchemyError, TimeoutError):
         pass
 
-    checks = await asyncio.gather(
-        check_tcp("redis", 6379),
-        check_tcp("keycloak", 8080),
-        check_tcp("clamav", 3310),
-        check_tcp("minio", 9000),
+    redis_host, redis_port = _host_and_port(settings.redis_url, 6379)
+    storage_host, storage_port = _host_and_port(settings.storage_endpoint, 9000)
+    storage_url = f"{settings.storage_endpoint.rstrip('/')}/minio/health/ready"
+    mesa_headers = (
+        {"X-API-Key": settings.mesa_api_key} if settings.mesa_api_key else None
     )
-    for name, available in zip(
-        ("redis", "keycloak", "clamav", "object_storage"), checks, strict=True
-    ):
-        if available:
-            dependencies[name] = "ok"
+    checks = await asyncio.gather(
+        check_tcp(redis_host, redis_port),
+        check_http(_keycloak_discovery_url()),
+        check_tcp(settings.clamav_host, settings.clamav_port),
+        check_tcp(storage_host, storage_port),
+        check_http(storage_url),
+    )
+    redis_ok, keycloak_ok, clamav_ok, storage_tcp_ok, storage_http_ok = checks
+    dependencies["redis"] = "ok" if redis_ok else "down"
+    dependencies["keycloak"] = "ok" if keycloak_ok else "down"
+    dependencies["clamav"] = (
+        "ok" if clamav_ok else "down" if settings.clamav_required else "disabled"
+    )
+    dependencies["object_storage"] = (
+        "ok" if storage_tcp_ok and storage_http_ok else "down"
+    )
 
-    adapter = os.getenv("MESA_LAW_INTELLIGENCE_ADAPTER", "mock").lower()
-    dependencies["intelligence_adapter"] = "mock" if adapter == "mock" else "degraded"
+    adapter = settings.intelligence_adapter.lower()
+    if adapter == "mock":
+        dependencies["intelligence_adapter"] = "mock"
+    elif adapter != "mesa_v4" or not settings.mesa_api_key:
+        dependencies["intelligence_adapter"] = "unconfigured"
+    else:
+        mesa_ok = await check_http(
+            f"{settings.mesa_backend_url.rstrip('/')}/v4/capability",
+            headers=mesa_headers,
+        )
+        dependencies["intelligence_adapter"] = "ok" if mesa_ok else "down"
     return dependencies

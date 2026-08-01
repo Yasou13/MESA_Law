@@ -66,6 +66,7 @@ class MesaSyncRecord(Base, AuditMixin, TenantAwareMixin):
     mutation_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     candidate_id: Mapped[str | None] = mapped_column(String, nullable=True)
     pipeline_run_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="PENDING")
     is_terminal: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

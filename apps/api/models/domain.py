@@ -198,6 +198,13 @@ class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
     source_locator_id: Mapped[str | None] = mapped_column(
         ForeignKey("source_locators.id", ondelete="SET NULL"), index=True, nullable=True
     )
+    review_id: Mapped[str | None] = mapped_column(
+        ForeignKey("review_items.id", ondelete="SET NULL"),
+        unique=True,
+        index=True,
+        nullable=True,
+    )
+    review_version: Mapped[int | None] = mapped_column(nullable=True)
     review_status: Mapped[str] = mapped_column(
         String, default="approved", nullable=False
     )
@@ -215,6 +222,16 @@ class LegalAssertion(Base, AuditMixin, TenantAwareMixin):
     )
     publication_status: Mapped[str] = mapped_column(
         String, default="NOT_PUBLISHED", nullable=False, index=True
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "canonical_status != 'REVIEWED' OR "
+            "(assertion_type IS NOT NULL AND subject_text IS NOT NULL "
+            "AND predicate IS NOT NULL AND object_text IS NOT NULL "
+            "AND source_locator_id IS NOT NULL AND review_id IS NOT NULL)",
+            name="ck_reviewed_legal_assertion_typed",
+        ),
     )
 
 

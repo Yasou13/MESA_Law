@@ -347,15 +347,59 @@ class Worker:
         job.heartbeat_at = None
         job.lease_token = None
         if job.status in {JobStatus.FAILED, JobStatus.DEAD}:
-            await self._mark_terminal_document_state(session, job, message)
+            await self._mark_terminal_resource_state(session, job, message)
         session.add(job)
         if attempt is not None:
             session.add(attempt)
         await session.commit()
 
-    async def _mark_terminal_document_state(
+    async def _mark_terminal_resource_state(
         self, session: AsyncSession, job: Job, message: str
     ) -> None:
+        if job.type == "PROVISION_MESA_SCOPE":
+            from apps.api.models.mesa import MesaScopeBinding
+
+            binding_id = dict(job.payload).get("binding_id")
+            binding = (
+                await session.get(MesaScopeBinding, binding_id) if binding_id else None
+            )
+            if binding is not None:
+                binding.provisioning_status = "PREFLIGHT_FAILED"
+                binding.last_error = message
+            return
+        if job.type in {"PUBLISH_REVIEW", "POLL_MESA_MUTATION"}:
+            from apps.api.models.domain import LegalAssertion
+            from apps.api.models.mesa import MesaSyncRecord
+            from apps.api.models.review import ReviewItem, ReviewState
+
+            review = None
+            assertion = None
+            if job.type == "PUBLISH_REVIEW":
+                review_id = dict(job.payload).get("review_id")
+                review = await session.get(ReviewItem, review_id) if review_id else None
+            else:
+                record_id = dict(job.payload).get("sync_record_id")
+                record = (
+                    await session.get(MesaSyncRecord, record_id) if record_id else None
+                )
+                if record is not None:
+                    record.last_error = message
+                    assertion = (
+                        await session.get(LegalAssertion, record.assertion_id)
+                        if record.assertion_id
+                        else None
+                    )
+                    review = (
+                        await session.get(ReviewItem, assertion.review_id)
+                        if assertion and assertion.review_id
+                        else None
+                    )
+            if assertion is not None:
+                assertion.publication_status = "PUBLICATION_FAILED"
+            if review is not None and review.status != ReviewState.PUBLISHED:
+                review.status = ReviewState.PUBLICATION_FAILED
+                review.version_id += 1
+            return
         if job.type not in {
             "SCAN_DOCUMENT",
             "PARSE_DOCUMENT",

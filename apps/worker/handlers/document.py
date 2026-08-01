@@ -61,15 +61,14 @@ async def handle_scan_document(payload: dict, session: AsyncSession) -> None:
     expected_sha256 = payload.get("expected_sha256")
     expected_size = payload.get("expected_size")
     mime_type = payload.get("mime_type")
-    if not all(
-        [
-            revision_id,
-            quarantine_key,
-            document_id,
-            expected_sha256,
-            expected_size,
-            mime_type,
-        ]
+    if not (
+        isinstance(revision_id, str)
+        and isinstance(quarantine_key, str)
+        and isinstance(document_id, str)
+        and isinstance(expected_sha256, str)
+        and isinstance(expected_size, int)
+        and expected_size > 0
+        and isinstance(mime_type, str)
     ):
         raise TerminalJobError("Missing immutable scan payload fields")
 

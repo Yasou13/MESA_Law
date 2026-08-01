@@ -43,7 +43,7 @@ def get_jwks(force_refresh: bool = False) -> JwksCache:
     except (OSError, TimeoutError, ValueError):
         if _jwks_cache["keys"]:
             return _jwks_cache
-        return {"keys": []}
+        return {"keys": [], "expires_at": now + 30}
 
 
 async def get_current_user(

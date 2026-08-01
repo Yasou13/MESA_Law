@@ -11,8 +11,9 @@ from apps.worker.handlers.ocr import handle_ocr_document
 from apps.worker.handlers.parser import handle_parse_document
 from apps.worker.handlers.sync import (
     handle_build_lexical_index,
+    handle_poll_mesa_mutation,
+    handle_provision_mesa_scope,
     handle_publish_review,
-    handle_sync_mesa_document,
 )
 
 logging.basicConfig(
@@ -39,9 +40,10 @@ async def main() -> None:
     worker.register("EXTRACT_LEGAL_FACTS", handle_extract_legal_data)
     worker.register("EXTRACT_LEGAL_DATA", handle_extract_legal_data)
     worker.register("BUILD_LEXICAL_INDEX", handle_build_lexical_index)
-    worker.register("SYNC_MESA_DOCUMENT", handle_sync_mesa_document)
     worker.register("EXPORT_DRAFT", handle_export_draft)
     worker.register("PUBLISH_REVIEW", handle_publish_review)
+    worker.register("PROVISION_MESA_SCOPE", handle_provision_mesa_scope)
+    worker.register("POLL_MESA_MUTATION", handle_poll_mesa_mutation)
 
     loop = asyncio.get_running_loop()
 

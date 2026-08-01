@@ -35,7 +35,8 @@ async def get_dashboard_metrics(
     # Pending Reviews
     reviews_count = await db.scalar(
         select(func.count(ReviewItem.id)).where(
-            ReviewItem.tenant_id == tenant_id, ReviewItem.status == ReviewState.PENDING
+            ReviewItem.tenant_id == tenant_id,
+            ReviewItem.status == ReviewState.PROPOSED,
         )
     )
 

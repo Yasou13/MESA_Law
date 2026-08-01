@@ -79,6 +79,7 @@ async def persist_parsed_pages(
             page_number=page["page_number"],
             text_content=page["text"],
             layout_data=page["layout"],
+            fts_vector=func.to_tsvector("turkish", page["text"]),
         )
         session.add(parsed_page)
         await session.flush()
@@ -109,6 +110,7 @@ async def persist_parsed_pages(
                     extraction_version=CHUNKING_VERSION,
                     provenance_state=chunk.provenance_state,
                     bbox=chunk.bbox,
+                    fts_vector=func.to_tsvector("turkish", chunk.text),
                 )
             )
 

@@ -191,26 +191,22 @@ async def rebuild_matter_mesa(
     )
 
 
-from apps.api.core.qa import ask_matter_question
+from apps.api.core.qa import QAResponse, QuestionRequest, ask_matter_question
 
 
-@router.post("/{matter_id}/qa", operation_id="matterQA")
+@router.post("/{matter_id}/qa", operation_id="matterQA", response_model=QAResponse)
 @limiter.limit("20/minute")
 async def matter_qa_endpoint(
     request: Request,
     matter_id: str,
-    query: dict,
+    query: QuestionRequest,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db),
 ):
     await MatterAccessPolicy.can_read(context, db, matter_id)
-    question = query.get("question")
-    if not question:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=400, detail="Missing question in body")
-
-    return await ask_matter_question(db, context.tenant_id, matter_id, None, question)
+    return await ask_matter_question(
+        db, context.tenant_id, matter_id, None, query.question
+    )
 
 
 class MatterPartyResponse(BaseModel):

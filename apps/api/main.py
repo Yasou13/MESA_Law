@@ -21,6 +21,7 @@ from apps.api.routers import (
     draft_studio,
     firms,
     matters,
+    mesa_bindings,
     notifications,
     operations,
     parser,
@@ -68,6 +69,7 @@ async def root():
 app.include_router(firms.router, prefix="/api/v1")
 app.include_router(session.router, prefix="/api/v1")
 app.include_router(matters.router, prefix="/api/v1/matters")
+app.include_router(mesa_bindings.router, prefix="/api/v1")
 app.include_router(documents.router, prefix="/api/v1/documents")
 app.include_router(domain_data.router, prefix="/api/v1")
 app.include_router(parser.router, prefix="/api/v1/parser")

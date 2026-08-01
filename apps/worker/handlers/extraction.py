@@ -194,7 +194,7 @@ async def handle_extract_legal_data(payload: dict, session: AsyncSession) -> Non
                 entity_id=f"proposal-{uuid6.uuid7()}",
                 suggestion_id=suggestion.id,
                 proposed_content=proposed_content,
-                status=ReviewState.PENDING,
+                status=ReviewState.PROPOSED,
             )
         )
         return True

@@ -10,7 +10,10 @@ class SourceManifest(BaseModel):
     publisher: str = Field(..., description="Publisher or source of the legal package")
     release_date: date = Field(..., description="Date when this snapshot was released")
     license: str = Field(..., description="License terms (must be provided)")
-    package_hash: str = Field(..., description="SHA-256 hash of the entire payload contents for integrity")
+    package_hash: str = Field(
+        ..., description="SHA-256 hash of the entire payload contents for integrity"
+    )
+
 
 class LegislationItem(BaseModel):
     id: str
@@ -25,7 +28,8 @@ class LegislationItem(BaseModel):
     valid_from: date
     valid_to: date | None = None
     content: str
-    
+
+
 class CourtDecisionItem(BaseModel):
     id: str
     court: str = Field(..., description="e.g., YARGITAY, AYM")
@@ -42,31 +46,36 @@ class CourtDecisionItem(BaseModel):
             raise ValueError("anonymization_status must be ANONYMIZED, RAW, or PENDING")
         return v
 
+
 class GoldenLegalPackage(BaseModel):
     manifest: SourceManifest
     legislation: list[LegislationItem] = []
     court_decisions: list[CourtDecisionItem] = []
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def verify_package_hash(self):
         # A simple check to ensure both license and hash are present is already done by Pydantic (Field(...))
         # Here we could theoretically re-hash the contents and compare to `manifest.package_hash`
         if self.manifest.package_hash == "FORCE_INVALID_HASH":
             raise ValueError("Package hash validation failed")
-        
+
         # Verify court decisions are anonymized if public release
         if self.manifest.license == "PUBLIC":
             for decision in self.court_decisions:
                 if decision.anonymization_status != "ANONYMIZED":
-                    raise ValueError(f"Decision {decision.id} must be ANONYMIZED for PUBLIC license")
-                    
+                    raise ValueError(
+                        f"Decision {decision.id} must be ANONYMIZED for PUBLIC license"
+                    )
+
         return self
 
     def generate_hash(self) -> str:
         """Helper to generate the correct hash for staging"""
         data = {
-            "legislation": [item.model_dump(mode='json') for item in self.legislation],
-            "court_decisions": [item.model_dump(mode='json') for item in self.court_decisions]
+            "legislation": [item.model_dump(mode="json") for item in self.legislation],
+            "court_decisions": [
+                item.model_dump(mode="json") for item in self.court_decisions
+            ],
         }
         encoded = json.dumps(data, sort_keys=True).encode("utf-8")
         return hashlib.sha256(encoded).hexdigest()

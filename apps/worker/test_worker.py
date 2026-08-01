@@ -194,7 +194,7 @@ class TestProcessBoundary:
         session_local.return_value = session
         worker = Worker()
         completion = AsyncMock(return_value=True)
-        worker._complete_job = completion
+        worker._complete_job = completion  # type: ignore[method-assign]
 
         await worker.process_job(job.id, "lease-1")
 
@@ -219,7 +219,7 @@ class TestProcessBoundary:
 
         worker.register(job.type, fail_handler)
         completion = AsyncMock(return_value=True)
-        worker._complete_job = completion
+        worker._complete_job = completion  # type: ignore[method-assign]
 
         await worker.process_job(job.id, "lease-1")
 
@@ -244,7 +244,7 @@ class TestProcessBoundary:
             handled = True
 
         worker.register(job.type, successful_handler)
-        worker._complete_job = AsyncMock(return_value=True)
+        worker._complete_job = AsyncMock(return_value=True)  # type: ignore[method-assign]
 
         await worker.process_job(job.id, "lease-1")
 
@@ -267,10 +267,10 @@ class TestProcessBoundary:
             return None
 
         worker.register(job.type, successful_handler)
-        worker._complete_job = AsyncMock(return_value=False)
-        worker._record_lost_lease = AsyncMock()
+        worker._complete_job = AsyncMock(return_value=False)  # type: ignore[method-assign]
+        worker._record_lost_lease = AsyncMock()  # type: ignore[method-assign]
         fail_job = AsyncMock()
-        worker._fail_job = fail_job
+        worker._fail_job = fail_job  # type: ignore[method-assign]
 
         await worker.process_job(job.id, "lease-1")
 

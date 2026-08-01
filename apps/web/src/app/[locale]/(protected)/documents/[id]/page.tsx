@@ -1,117 +1,357 @@
 'use client'
 
-import { useParams } from 'next/navigation'
-import { useGetDocument, useDownloadDocument } from '@/api/endpoints/default/default'
-import { AlertTriangle, ArrowLeft, Clock, FileText, Download } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import {
+  AlertTriangle,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Hash,
+  ShieldCheck,
+} from 'lucide-react'
+
+import {
+  useDownloadDocument,
+  useGetDocumentViewerContext,
+  useListParsedPages,
+} from '@/api/endpoints/default/default'
+import type {
+  DocumentViewerContextResponse,
+  DownloadResponse,
+  ParsedPageResponse,
+} from '@/api/models'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { Button } from '@/components/ui/button'
+import { InlineAlert } from '@/components/ui/inline-alert'
+import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
+import { SourceBadge } from '@/components/ui/source-badge'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { ApiError } from '@/lib/api/client'
+
+const PdfDocumentSurface = dynamic(
+  () => import('@/features/documents/components/PdfDocumentSurface'),
+  {
+    ssr: false,
+    loading: () => <LoadingState label="PDF.js yükleniyor" />,
+  },
+)
+
+interface FocusQuery {
+  revisionId: string | null
+  pageNumber: number | null
+  chunkId: string | null
+  textStart: number | null
+  textEnd: number | null
+}
+
+interface LayoutBlock {
+  characterStart: number
+  characterEnd: number
+  bbox: { x0: number; y0: number; x1: number; y1: number } | null
+}
+
+function finiteNumber(value: string | null): number | null {
+  if (value === null || value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function readFocus(searchParams: Pick<URLSearchParams, 'get'>): FocusQuery {
+  return {
+    revisionId: searchParams.get('revision'),
+    pageNumber: finiteNumber(searchParams.get('page')),
+    chunkId: searchParams.get('chunk'),
+    textStart: finiteNumber(searchParams.get('start')),
+    textEnd: finiteNumber(searchParams.get('end')),
+  }
+}
+
+function layoutBlocks(page: ParsedPageResponse | undefined): LayoutBlock[] {
+  const layout = page?.layout_data
+  if (!layout || typeof layout !== 'object') return []
+  const rawBlocks = Reflect.get(layout, 'blocks')
+  if (!Array.isArray(rawBlocks)) return []
+  return rawBlocks.flatMap((rawBlock) => {
+    if (!rawBlock || typeof rawBlock !== 'object') return []
+    const start = Reflect.get(rawBlock, 'character_start')
+    const end = Reflect.get(rawBlock, 'character_end')
+    const rawBbox = Reflect.get(rawBlock, 'bbox')
+    if (typeof start !== 'number' || typeof end !== 'number') return []
+    const bbox =
+      Array.isArray(rawBbox) &&
+      rawBbox.length === 4 &&
+      rawBbox.every((value) => typeof value === 'number' && Number.isFinite(value))
+        ? { x0: rawBbox[0], y0: rawBbox[1], x1: rawBbox[2], y1: rawBbox[3] }
+        : null
+    return [{ characterStart: start, characterEnd: end, bbox }]
+  })
+}
+
+function ParsedTextSurface({
+  page,
+  start,
+  end,
+  canHighlight,
+}: {
+  page: ParsedPageResponse | undefined
+  start: number | null
+  end: number | null
+  canHighlight: boolean
+}) {
+  if (!page) {
+    return <InlineAlert tone="warning" title="Parsed metin henüz hazır değil" />
+  }
+  const text = page.text_content
+  const validSpan =
+    canHighlight &&
+    start !== null &&
+    end !== null &&
+    start >= 0 &&
+    end > start &&
+    end <= text.length
+
+  return (
+    <article className="legal-reading mx-auto max-w-3xl whitespace-pre-wrap border border-border bg-surface p-6 leading-8 shadow-sm md:p-10">
+      {validSpan ? (
+        <>
+          {text.slice(0, start)}
+          <mark className="rounded-sm bg-warning/25 text-foreground">{text.slice(start, end)}</mark>
+          {text.slice(end)}
+        </>
+      ) : (
+        text
+      )}
+    </article>
+  )
+}
 
 export default function DocumentViewerPage() {
   const params = useParams()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const documentId = params.id as string
+  const focus = useMemo(() => readFocus(searchParams), [searchParams])
+  const [selectedPage, setSelectedPage] = useState(focus.pageNumber ?? 1)
+  const [pdfPageCount, setPdfPageCount] = useState(0)
 
-  const { data: docRes, isLoading: loadingDoc } = useGetDocument(documentId)
-  const { data: dlRes, isLoading: loadingDl, isError: dlError } = useDownloadDocument(documentId, {
-    query: {
-      enabled: ['CLEAN', 'PARSED', 'READY'].includes(docRes?.status.toUpperCase() ?? '')
-    }
+  useEffect(() => {
+    if (focus.pageNumber && focus.pageNumber > 0) setSelectedPage(focus.pageNumber)
+  }, [focus.pageNumber])
+
+  const contextQuery = useGetDocumentViewerContext<DocumentViewerContextResponse, ApiError>(documentId)
+  const context = contextQuery.data
+  const revision = context?.revision
+  const parsedDocument = context?.parsed_document
+  const parsedPagesQuery = useListParsedPages<ParsedPageResponse[], ApiError>(parsedDocument?.id ?? '', {
+    query: { enabled: Boolean(parsedDocument?.id) },
+  })
+  const pages = parsedPagesQuery.data ?? []
+  const selectedParsedPage = pages.find((page) => page.page_number === selectedPage)
+  const canonicalReady = Boolean(revision?.id && revision.scan_status === 'READY')
+  const downloadQuery = useDownloadDocument<DownloadResponse, ApiError>(documentId, {
+    query: { enabled: canonicalReady },
   })
 
-  const doc = docRes
-  const presignedUrl = dlRes?.presigned_url
+  const focusRequested = Boolean(
+    focus.revisionId || focus.pageNumber || focus.chunkId || focus.textStart !== null || focus.textEnd !== null,
+  )
+  const matchingBlock = layoutBlocks(selectedParsedPage).find(
+    (block) =>
+      focus.textStart !== null &&
+      focus.textEnd !== null &&
+      block.characterStart <= focus.textStart &&
+      block.characterEnd >= focus.textEnd,
+  )
+  const revisionMatches = Boolean(
+    focus.revisionId &&
+      revision?.id === focus.revisionId &&
+      parsedDocument?.revision_id === focus.revisionId,
+  )
+  const pageMatches = Boolean(focus.pageNumber && selectedParsedPage?.page_number === focus.pageNumber)
+  const focusVerified = Boolean(
+    revisionMatches && pageMatches && focus.chunkId && matchingBlock && focus.textStart !== null && focus.textEnd !== null,
+  )
+  const pdfHighlight = focusVerified ? matchingBlock?.bbox : null
+  const isPdf = revision?.mime_type === 'application/pdf'
+  const pageCount = Math.max(pdfPageCount, pages.length, selectedPage)
 
-
-
-  if (loadingDoc) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-lila-500)]"></div>
-      </div>
-    )
+  const selectPage = (page: number) => {
+    setSelectedPage(page)
+    const next = new URLSearchParams(searchParams.toString())
+    next.set('page', String(page))
+    next.delete('chunk')
+    next.delete('start')
+    next.delete('end')
+    router.replace(`?${next.toString()}`, { scroll: false })
   }
 
-  if (!doc) {
+  if (contextQuery.isLoading) return <LoadingState label="Belge bağlamı yükleniyor" />
+  if (contextQuery.isError) {
+    const error = contextQuery.error
     return (
-      <div className="p-6 text-center">
-        <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Document not found</h2>
-      </div>
+      <ErrorState
+        title="Belge açılamadı"
+        description={error.message}
+        referenceId={error.referenceId}
+        onRetry={() => contextQuery.refetch()}
+      />
     )
   }
+  if (!context) return null
 
   return (
-    <div className="h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-[var(--background)] overflow-hidden">
-      {/* Left Panel: Document Viewer */}
-      <div className="flex-1 flex flex-col min-w-0 border-r border-[var(--border-surface)]">
-        <div className="p-4 border-b border-[var(--border-surface)] bg-[var(--bg-surface)] flex flex-wrap items-center justify-between gap-4 shrink-0">
-          <div className="flex items-center gap-4 min-w-0">
-            <Link href="/documents" className="p-2 hover:bg-[var(--bg-surface-hover)] rounded-lg transition-colors shrink-0">
-              <ArrowLeft className="w-5 h-5 text-[var(--color-anthracite-400)]" />
-            </Link>
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-[var(--color-lila-500)] shrink-0" />
-                <h1 className="text-lg font-bold tracking-tight truncate text-[var(--foreground)]">{doc.title}</h1>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3 shrink-0">
-            <span className={`text-xs font-medium px-2 py-1 rounded-md border ${
-              ['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-              ['PROCESSING', 'SCANNING', 'PARSING'].includes(doc.status.toUpperCase()) ? 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20' :
-              'bg-red-500/10 text-red-400 border-red-500/20'
-            }`}>
-              {doc.status?.toUpperCase()}
-            </span>
-            {presignedUrl && (
-              <a 
-                href={presignedUrl} 
-                download
-                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--bg-surface-hover)] hover:bg-[var(--bg-surface)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-lg transition-colors text-xs font-medium"
-              >
-                <Download className="w-4 h-4" />
-                Original
-              </a>
-            )}
+    <div className="-m-4 flex min-h-[calc(100dvh-4rem)] flex-col border border-border bg-background md:-m-6 lg:-m-8">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button render={<Link href="/documents" />} variant="ghost" size="icon-sm" aria-label="Belgelere dön">
+            <ArrowLeft />
+          </Button>
+          <FileText className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold">{context.document.title}</h1>
+            <p className="technical-id truncate text-xs text-foreground-muted">{documentId}</p>
           </div>
         </div>
-
-        <div className="flex-1 bg-zinc-950 relative overflow-hidden">
-          {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && presignedUrl ? (
-            <iframe 
-              src={`${presignedUrl}#toolbar=0`} 
-              className="w-full h-full border-none bg-white rounded-none"
-              title={doc.title}
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-surface)] p-6">
-              <div className={`text-center max-w-md p-8 rounded-2xl border shadow-sm ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'bg-red-500/5 border-red-500/20' : 'bg-[var(--bg-surface-hover)] border-[var(--border-surface)]'}`}>
-                {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && loadingDl && (
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-lila-500)] mx-auto mb-4"></div>
-                )}
-                {['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) && (
-                  <div className="bg-red-500/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <AlertTriangle className="w-8 h-8 text-red-500" />
-                  </div>
-                )}
-                {['UPLOADING', 'VERIFYING', 'SCANNING', 'PARSING', 'PROCESSING'].includes(doc.status.toUpperCase()) && (
-                  <Clock className="w-12 h-12 text-[var(--color-anthracite-400)] mx-auto mb-4 animate-pulse" />
-                )}
-                <h3 className={`text-xl font-bold mb-2 ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'text-red-500' : 'text-[var(--foreground)]'}`}>
-                  {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase()) && dlError ? 'Failed to load preview' :
-                   ['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'SECURITY ALERT' : 'Preview Unavailable'}
-                </h3>
-                <p className={`text-sm ${['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase()) ? 'text-red-400' : 'text-[var(--color-anthracite-400)]'}`}>
-                  {['CLEAN', 'PARSED', 'READY'].includes(doc.status.toUpperCase())
-                    ? 'We could not generate a secure preview URL for this document.' 
-                    : ['QUARANTINED', 'INFECTED', 'BLOCKED'].includes(doc.status.toUpperCase())
-                      ? doc.failure_reason ?? 'This document failed a security or validation check and cannot be accessed.'
-                      : `Current state: ${doc.status}. Preview is available only after successful processing.`}
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center gap-2">
+          <StatusBadge status={context.document.status} label={context.document.status} />
+          {downloadQuery.data?.presigned_url && (
+            <Button render={<a href={downloadQuery.data.presigned_url} download />} variant="outline" size="sm">
+              <Download /> Orijinal
+            </Button>
           )}
         </div>
+      </header>
+
+      {focusRequested && !focusVerified && (
+        <InlineAlert
+          tone="warning"
+          title="Kaynak vurgusu doğrulanamadı"
+          className="m-3"
+        >
+          <p>URL’deki revision, sayfa veya metin aralığı canonical parsed kayıtla eşleşmedi. Yapay vurgu üretilmedi.</p>
+        </InlineAlert>
+      )}
+
+      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[11rem_minmax(0,1fr)_21rem]">
+        <aside className="border-b border-border bg-surface xl:border-b-0 xl:border-r" aria-label="Sayfalar">
+          <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">Sayfalar</span>
+            <span className="tabular-nums text-xs text-foreground-muted">{pageCount}</span>
+          </div>
+          <div className="flex max-h-36 gap-2 overflow-auto p-3 xl:max-h-[calc(100dvh-10rem)] xl:flex-col">
+            {Array.from({ length: pageCount }, (_, index) => index + 1).map((page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => selectPage(page)}
+                aria-current={selectedPage === page ? 'page' : undefined}
+                className="flex min-w-20 items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-subtle aria-[current=page]:border-primary aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary xl:w-full"
+              >
+                <span>Sayfa</span><span className="tabular-nums font-semibold">{page}</span>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <main className="min-h-[32rem] min-w-0 overflow-hidden bg-surface-subtle">
+          <div className="flex items-center justify-center gap-2 border-b border-border bg-surface px-3 py-2">
+            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.max(1, selectedPage - 1))} disabled={selectedPage <= 1} aria-label="Önceki sayfa"><ChevronLeft /></Button>
+            <span className="tabular-nums text-sm">{selectedPage} / {pageCount}</span>
+            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.min(pageCount, selectedPage + 1))} disabled={selectedPage >= pageCount} aria-label="Sonraki sayfa"><ChevronRight /></Button>
+          </div>
+          <div className="h-[calc(100%-3rem)] overflow-auto p-4">
+            {isPdf && downloadQuery.data?.presigned_url ? (
+              <PdfDocumentSurface
+                file={downloadQuery.data.presigned_url}
+                pageNumber={selectedPage}
+                highlight={pdfHighlight}
+                onPageCount={setPdfPageCount}
+              />
+            ) : isPdf && downloadQuery.isLoading ? (
+              <LoadingState label="Güvenli PDF bağlantısı hazırlanıyor" />
+            ) : isPdf ? (
+              <InlineAlert tone="warning" title="PDF önizlemesi kullanılamıyor">
+                <p>Canonical revision veya kısa ömürlü indirme bağlantısı henüz hazır değil.</p>
+              </InlineAlert>
+            ) : (
+              <div className="space-y-3">
+                <InlineAlert tone="warning" title="Düşük provenance parsed-text modu">
+                  <p>DOCX/TXT için gerçek PDF sayfası ve bbox doğrulanamaz; bu görünüm sayfa citation’ı değildir.</p>
+                </InlineAlert>
+                <ParsedTextSurface
+                  page={selectedParsedPage}
+                  start={focus.textStart}
+                  end={focus.textEnd}
+                  canHighlight={focusVerified}
+                />
+              </div>
+            )}
+          </div>
+        </main>
+
+        <aside className="space-y-3 border-t border-border bg-background p-3 xl:border-l xl:border-t-0" aria-label="Belge ve kaynak bilgisi">
+          <Panel>
+            <PanelHeader><h2 className="text-sm font-semibold">Canonical revision</h2></PanelHeader>
+            <PanelBody className="space-y-3 text-sm">
+              {revision ? (
+                <>
+                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">Revision</span><span className="technical-id">v{revision.version} · {revision.id.slice(0, 8)}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">MIME</span><span>{revision.mime_type}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">Boyut</span><span className="tabular-nums">{revision.size_bytes ? `${(revision.size_bytes / 1024).toFixed(1)} KB` : 'Bilinmiyor'}</span></div>
+                  <SourceBadge
+                    lowProvenance={revision.provenance_state === 'LOW_PROVENANCE'}
+                    label={revision.provenance_state}
+                  />
+                  {revision.sha256 && <p className="technical-id break-all text-xs text-foreground-muted"><Hash className="mr-1 inline size-3" />{revision.sha256}</p>}
+                </>
+              ) : (
+                <p className="text-sm text-foreground-muted">Canonical revision henüz oluşmadı.</p>
+              )}
+            </PanelBody>
+          </Panel>
+
+          <Panel>
+            <PanelHeader><h2 className="text-sm font-semibold">Parsing zinciri</h2></PanelHeader>
+            <PanelBody className="space-y-2 text-sm">
+              {parsedDocument ? (
+                <>
+                  <p><span className="text-foreground-muted">Parser:</span> {parsedDocument.parser}</p>
+                  <p><span className="text-foreground-muted">Parsing revision:</span> {parsedDocument.parsing_revision}</p>
+                  <p><span className="text-foreground-muted">Pipeline:</span> {parsedDocument.pipeline_version ?? 'Bilinmiyor'}</p>
+                  <p><span className="text-foreground-muted">OCR:</span> {parsedDocument.ocr_version ?? 'Kullanılmadı'}</p>
+                  <StatusBadge status={parsedDocument.status} label={parsedDocument.status} />
+                </>
+              ) : <p className="text-foreground-muted">Parsed document henüz yok.</p>}
+            </PanelBody>
+          </Panel>
+
+          {focusRequested && (
+            <Panel>
+              <PanelHeader><h2 className="text-sm font-semibold">Citation odağı</h2>{focusVerified && <ShieldCheck className="size-4 text-verified" />}</PanelHeader>
+              <PanelBody className="space-y-2 text-xs">
+                <p><span className="text-foreground-muted">Revision:</span> <span className="technical-id">{focus.revisionId ?? '—'}</span></p>
+                <p><span className="text-foreground-muted">Chunk:</span> <span className="technical-id">{focus.chunkId ?? '—'}</span></p>
+                <p><span className="text-foreground-muted">Metin aralığı:</span> <span className="tabular-nums">{focus.textStart ?? '—'}–{focus.textEnd ?? '—'}</span></p>
+              </PanelBody>
+            </Panel>
+          )}
+
+          {context.document.failure_reason && (
+            <InlineAlert tone="danger" title="İşleme hatası"><p>{context.document.failure_reason}</p></InlineAlert>
+          )}
+          {downloadQuery.isError && (
+            <InlineAlert tone="danger" title="İndirme bağlantısı alınamadı"><p>{downloadQuery.error.message}</p></InlineAlert>
+          )}
+          {parsedPagesQuery.isError && (
+            <InlineAlert tone="warning" title="Parsed sayfalar alınamadı"><p>Kaynak vurgusu devre dışı bırakıldı.</p></InlineAlert>
+          )}
+          {!canonicalReady && <AlertTriangle className="size-4 text-warning" aria-hidden="true" />}
+        </aside>
       </div>
     </div>
   )

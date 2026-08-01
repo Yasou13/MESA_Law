@@ -18,7 +18,30 @@ const matter = {
   opened_at: null,
   closed_at: null,
   access_scope: 'admin',
+  responsible_attorney: 'Law-side E2E Reviewer',
+  created_at: '2026-01-02T09:00:00Z',
+  updated_at: '2026-01-02T10:00:00Z',
 }
+
+const review = () => ({
+  id: reviewId,
+  matter_id: matterId,
+  entity_type: 'CONTRACT_OBLIGATION',
+  entity_id: 'assertion-1',
+  suggestion_id: 'suggestion-1',
+  proposed_content: {
+    assertion_type: 'OBLIGATION',
+    subject: 'Acme',
+    predicate: 'must_pay',
+    object: 'Invoice 42',
+  },
+  corrected_content: null,
+  status: reviewStatusForFixture,
+  decision_reason: null,
+  version_id: reviewStatusForFixture === 'PROPOSED' ? 7 : 8,
+})
+
+let reviewStatusForFixture = 'PROPOSED'
 
 async function json(route: Route, body: unknown, status = 200) {
   await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -30,6 +53,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   let bindingCreated = false
   let documentCompleted = false
   let reviewStatus = 'PROPOSED'
+  reviewStatusForFixture = reviewStatus
 
   await page.route('**/api/auth/session', async (route) => {
     if (!authenticated) return json(route, null)
@@ -78,25 +102,72 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
     if (method === 'GET' && pathname === '/api/v1/deadlines') return json(route, [])
     if (method === 'GET' && pathname === '/api/v1/reviews') {
       if (!matterCreated) return json(route, [])
-      return json(route, [
-        {
-          id: reviewId,
-          matter_id: matterId,
-          entity_type: 'CONTRACT_OBLIGATION',
-          entity_id: 'assertion-1',
-          suggestion_id: 'suggestion-1',
-          proposed_content: {
-            assertion_type: 'OBLIGATION',
-            subject: 'Acme',
-            predicate: 'must_pay',
-            object: 'Invoice 42',
-          },
-          corrected_content: null,
-          status: reviewStatus,
-          decision_reason: null,
-          version_id: reviewStatus === 'PROPOSED' ? 7 : 8,
+      reviewStatusForFixture = reviewStatus
+      return json(route, [review()])
+    }
+    if (method === 'GET' && pathname === `/api/v1/reviews/${reviewId}/context`) {
+      reviewStatusForFixture = reviewStatus
+      return json(route, {
+        review: review(),
+        suggestion: {
+          id: 'suggestion-1',
+          suggestion_type: 'CONTRACT_OBLIGATION',
+          extractor_name: 'law-side-fixture',
+          extractor_version: '1.0',
+          parser_version: 'pymupdf-1',
+          confidence_category: 'high',
         },
-      ])
+        source: {
+          document_id: documentId,
+          document_title: 'contract.pdf',
+          revision_id: revisionId,
+          page_number: 2,
+          chunk_id: 'chunk-contract-2',
+          text_start: 14,
+          text_end: 47,
+          bbox: { x0: 20, y0: 50, x1: 260, y1: 90 },
+          evidence_text: 'Acme must pay Invoice 42 within 30 days.',
+          evidence_sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          parser_version: 'pymupdf-1',
+          extraction_version: 'fixture-1',
+          provenance_state: 'VERIFIED_PDF',
+        },
+        history: [],
+      })
+    }
+    if (method === 'GET' && pathname === `/api/v1/documents/${documentId}/viewer-context`) {
+      return json(route, {
+        document: {
+          id: documentId,
+          matter_id: matterId,
+          title: 'contract.pdf',
+          status: 'READY',
+          latest_revision_id: revisionId,
+          provenance_state: 'VERIFIED_PDF',
+          failure_reason: null,
+          created_at: '2026-01-02T09:00:00Z',
+        },
+        revision: {
+          id: revisionId,
+          version: 1,
+          mime_type: 'application/pdf',
+          size_bytes: 1024,
+          sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          immutable_at: '2026-01-02T09:05:00Z',
+          scan_status: 'READY',
+          provenance_state: 'VERIFIED_PDF',
+        },
+        parsed_document: {
+          id: 'parsed-1',
+          revision_id: revisionId,
+          parser: 'pymupdf',
+          parsing_revision: 1,
+          ocr_version: null,
+          pipeline_version: 'fixture-1',
+          status: 'completed',
+          provenance_state: 'VERIFIED_PDF',
+        },
+      })
     }
     if (method === 'GET' && pathname === '/api/v1/matters') {
       return json(route, matterCreated ? [matter] : [])
@@ -177,6 +248,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
       expect(await request.headerValue('idempotency-key')).toBeTruthy()
       expect(request.postDataJSON()).toEqual({ expected_version: 7 })
       reviewStatus = 'PUBLISHING'
+      reviewStatusForFixture = reviewStatus
       return json(route, {
         id: reviewId,
         status: 'PUBLISHING',
@@ -204,7 +276,16 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
           evidence_sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
           provenance_state: 'VERIFIED_PDF',
           low_provenance: false,
+          relevance_score: 0.91,
         }],
+        retrieval: {
+          scope: 'MATTER',
+          engine: 'MESA',
+          dataset_id: 'dataset-1',
+          verified_document_count: 1,
+          verified_citation_count: 1,
+          duration_ms: 42,
+        },
       })
     }
 
@@ -243,19 +324,18 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   await expect(page.getByText('contract.pdf')).toBeVisible()
 
   await page.getByRole('link', { name: 'İnceleme Merkezi', exact: true }).click()
-  const reviewRow = page.getByRole('row', { name: /CONTRACT_OBLIGATION 7 PROPOSED/ })
-  await expect(reviewRow).toBeVisible()
-  await reviewRow.getByRole('button', { name: 'Approve' }).click()
-  await page.getByRole('tab', { name: 'Approved / publishing' }).click()
-  await expect(page.getByText(/PUBLISHING/)).toBeVisible()
+  await expect(page.getByText('Acme must pay Invoice 42 within 30 days.')).toBeVisible()
+  await page.getByRole('button', { name: 'Onayla', exact: true }).click()
+  await page.getByLabel('İnceleme durumu').selectOption('PUBLISHING')
+  await expect(page.getByText('PUBLISHING').first()).toBeVisible()
 
   await page.goto(`/matters/${matterId}/qa`)
-  await page.getByPlaceholder('Ask a question about verified matter evidence…').fill(
+  await page.getByPlaceholder('Örneğin: Sözleşmedeki fesih koşulları hangi belgelerde yer alıyor?').fill(
     'What payment obligation is verified?',
   )
-  await page.locator('form').filter({ hasText: '' }).last().locator('button[type="submit"]').click()
+  await page.getByRole('button', { name: 'Kaynaklarda ara' }).click()
   await expect(page.getByText('Acme must pay Invoice 42.')).toBeVisible()
-  await expect(page.getByText('page 2')).toBeVisible()
+  await expect(page.getByText('Sayfa 2')).toBeVisible()
   await expect(page.getByText('Acme must pay Invoice 42 within 30 days.')).toBeVisible()
 
   await page.goto(`/matters/${matterId}/research`)

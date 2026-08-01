@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import signal
-import sys
 
 from apps.api.core.observability import setup_observability
 from apps.worker.core.queue import Worker
@@ -12,23 +11,27 @@ from apps.worker.handlers.ocr import handle_ocr_document
 from apps.worker.handlers.parser import handle_parse_document
 from apps.worker.handlers.sync import (
     handle_build_lexical_index,
-    handle_publish_outbox,
     handle_publish_review,
     handle_sync_mesa_document,
 )
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger("worker")
 
 
-async def main():
+async def main() -> None:
     setup_observability(service_name="mesa-law-worker")
     logger.info("Starting MESA Law Worker...")
     import os
-    concurrency = int(os.getenv("MESA_LAW_WORKER_CONCURRENCY", "10"))
+
+    concurrency = int(os.getenv("MESA_LAW_WORKER_CONCURRENCY", "1"))
+    if concurrency < 1 or concurrency > 4:
+        raise RuntimeError("MESA_LAW_WORKER_CONCURRENCY must be between 1 and 4")
     worker = Worker(batch_size=concurrency, lease_minutes=5)
     logger.info(f"Worker concurrency set to {concurrency}")
-    
+
     # Register real handlers for all supported pipeline jobs
     worker.register("SCAN_DOCUMENT", handle_scan_document)
     worker.register("PARSE_DOCUMENT", handle_parse_document)
@@ -37,36 +40,27 @@ async def main():
     worker.register("EXTRACT_LEGAL_DATA", handle_extract_legal_data)
     worker.register("BUILD_LEXICAL_INDEX", handle_build_lexical_index)
     worker.register("SYNC_MESA_DOCUMENT", handle_sync_mesa_document)
-    worker.register("PUBLISH_OUTBOX", handle_publish_outbox)
     worker.register("EXPORT_DRAFT", handle_export_draft)
     worker.register("PUBLISH_REVIEW", handle_publish_review)
-    
-    from apps.worker.handlers.sync import handle_sync_approved_reviews
-    worker.register("SYNC_APPROVED_REVIEWS", handle_sync_approved_reviews)
-    
-    from apps.worker.handlers.research import handle_perform_legal_research
-    worker.register("PERFORM_LEGAL_RESEARCH", handle_perform_legal_research)
-    
-    from apps.worker.handlers.draft import handle_generate_draft
-    worker.register("GENERATE_DRAFT", handle_generate_draft)
 
     loop = asyncio.get_running_loop()
-    
-    def handle_sigterm():
+
+    def handle_sigterm() -> None:
         logger.info("Received stop signal, shutting down gracefully...")
         worker.stop()
-        
+
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, handle_sigterm)
 
     logger.info("Worker started, waiting for jobs...")
     try:
         await worker.start()
-    except Exception as e:
-        logger.error(f"Worker crashed: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Worker crashed")
+        raise
     finally:
         logger.info("Worker stopped.")
-        sys.exit(0)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

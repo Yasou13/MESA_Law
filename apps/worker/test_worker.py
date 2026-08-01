@@ -1,396 +1,294 @@
-"""
-Worker Test Suite — tests for the Worker queue processor, handler registration,
-job processing lifecycle, error handling, and retry logic.
-"""
-import asyncio
-from datetime import datetime, timedelta, timezone
+"""Fail-closed unit tests for the durable PostgreSQL worker."""
+
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
+from apps.api.core.rls import get_tenant_id
+from apps.api.core.utils import utc_now
+from apps.api.models.queue import Job, JobAttempt, JobStatus
 from apps.worker.core.queue import Worker
+from apps.worker.jobs import TerminalJobError, validate_job_payload
+from pydantic import ValidationError
 
 
-# ---------------------------------------------------------------------------
-# Handler Registration Tests
-# ---------------------------------------------------------------------------
+def make_job(
+    *,
+    job_type: str = "BUILD_LEXICAL_INDEX",
+    payload: dict | None = None,
+    attempts_made: int = 0,
+    max_retries: int = 3,
+) -> Job:
+    return Job(
+        id="job-1",
+        type=job_type,
+        payload=payload if payload is not None else {"matter_id": "matter-1"},
+        status=JobStatus.RUNNING,
+        tenant_id="tenant-1",
+        matter_id="matter-1",
+        max_retries=max_retries,
+        retries=max_retries - attempts_made,
+        attempts_made=attempts_made,
+        run_at=utc_now(),
+        locked_at=utc_now(),
+        locked_until=utc_now() + timedelta(minutes=5),
+        heartbeat_at=utc_now(),
+        lease_token="lease-1",
+    )
 
-class TestWorkerRegistration:
-    """Tests for handler registration and validation."""
 
-    def test_register_handler(self):
-        """Worker should accept and store valid handler registrations."""
-        worker = Worker(batch_size=5, lease_minutes=3)
+def session_factory_for(job: Job) -> tuple[AsyncMock, dict[str, JobAttempt]]:
+    session = AsyncMock()
+    attempts: dict[str, JobAttempt] = {}
 
-        async def my_handler(payload, session):
-            pass
+    def add(entity: object) -> None:
+        if isinstance(entity, JobAttempt):
+            entity.id = "attempt-1"
+            attempts[entity.id] = entity
 
-        worker.register("TEST_JOB", my_handler)
-        assert "TEST_JOB" in worker.handlers
-        assert worker.handlers["TEST_JOB"] is my_handler
+    async def get(model: type, entity_id: str, **_: object):
+        if model is Job:
+            return job
+        if model is JobAttempt:
+            return attempts.get(entity_id)
+        return None
 
-    def test_register_multiple_handlers(self):
-        """Worker should support multiple job types simultaneously."""
-        worker = Worker()
+    session.add = MagicMock(side_effect=add)
+    session.get.side_effect = get
+    session.__aenter__.return_value = session
+    session.__aexit__.return_value = False
+    return session, attempts
 
-        async def handler_a(payload, session):
-            pass
 
-        async def handler_b(payload, session):
-            pass
+class TestPayloadContract:
+    def test_valid_payload_is_normalized(self) -> None:
+        payload = validate_job_payload(
+            "SCAN_DOCUMENT",
+            {
+                "tenant_id": "tenant-1",
+                "matter_id": "matter-1",
+                "document_id": "document-1",
+                "revision_id": "revision-1",
+                "s3_key": "quarantine/object.pdf",
+            },
+        )
+        assert payload["revision_id"] == "revision-1"
+        assert "type" not in payload
 
-        worker.register("TYPE_A", handler_a)
-        worker.register("TYPE_B", handler_b)
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"tenant_id": "tenant-1", "matter_id": "matter-1"},
+            {
+                "tenant_id": "tenant-1",
+                "matter_id": "matter-1",
+                "document_id": "document-1",
+                "revision_id": "revision-1",
+                "s3_key": "object.pdf",
+                "unexpected": True,
+            },
+        ],
+    )
+    def test_missing_or_unknown_fields_are_terminally_invalid(
+        self, payload: dict
+    ) -> None:
+        with pytest.raises(ValidationError):
+            validate_job_payload("SCAN_DOCUMENT", payload)
 
-        assert len(worker.handlers) == 2
-        assert worker.handlers["TYPE_A"] is handler_a
-        assert worker.handlers["TYPE_B"] is handler_b
 
-    def test_register_overwrites_existing(self):
-        """Registering the same job type again should overwrite the old handler."""
-        worker = Worker()
-
-        async def handler_v1(payload, session):
-            pass
-
-        async def handler_v2(payload, session):
-            pass
-
-        worker.register("SAME_TYPE", handler_v1)
-        worker.register("SAME_TYPE", handler_v2)
-
-        assert worker.handlers["SAME_TYPE"] is handler_v2
+class TestRegistration:
+    def test_default_batch_size_is_one(self) -> None:
+        assert Worker().batch_size == 1
 
     @patch("apps.api.core.config.settings")
-    def test_dummy_handler_blocked_in_production(self, mock_settings):
-        """Dummy handlers must be rejected in secure environments."""
+    def test_dummy_handler_is_blocked_in_secure_environments(
+        self, mock_settings: MagicMock
+    ) -> None:
         mock_settings.is_secure_environment = True
         worker = Worker()
 
-        async def dummy_handler(payload, session):
-            pass
+        async def dummy_handler(payload: dict, session: object) -> None:
+            return None
 
-        with pytest.raises(RuntimeError, match="Dummy handlers are strictly prohibited"):
-            worker.register("DANGEROUS_JOB", dummy_handler)
+        with pytest.raises(RuntimeError, match="strictly prohibited"):
+            worker.register("SCAN_DOCUMENT", dummy_handler)
 
-    @patch("apps.api.core.config.settings")
-    def test_dummy_handler_allowed_in_dev(self, mock_settings):
-        """Dummy handlers should be allowed in development."""
-        mock_settings.is_secure_environment = False
+
+class TestFailureSemantics:
+    @pytest.mark.asyncio
+    async def test_retryable_failure_requeues_with_backoff(self) -> None:
+        job = make_job(attempts_made=1)
+        attempt = JobAttempt(
+            id="attempt-1",
+            job_id=job.id,
+            attempt_number=1,
+            status="RUNNING",
+            lease_token=job.lease_token,
+        )
+        session = AsyncMock()
+        session.add = MagicMock()
+        before = utc_now()
+
+        await Worker()._fail_job(session, job, "temporary outage", attempt)
+
+        assert job.status == JobStatus.PENDING
+        assert job.retries == 2
+        assert job.run_at >= before + timedelta(seconds=4)
+        assert job.lease_token is None
+        assert attempt.status == "FAILED"
+        session.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_terminal_failure_never_requeues(self) -> None:
+        job = make_job(attempts_made=1)
+        session = AsyncMock()
+        session.add = MagicMock()
+
+        await Worker()._fail_job(
+            session,
+            job,
+            "invalid payload",
+            retryable=False,
+            error_class="ValidationError",
+        )
+
+        assert job.status == JobStatus.FAILED
+        assert job.error_class == "ValidationError"
+        assert job.lease_token is None
+
+    @pytest.mark.asyncio
+    async def test_retry_budget_exhaustion_goes_dead(self) -> None:
+        job = make_job(attempts_made=3, max_retries=3)
+        session = AsyncMock()
+        session.add = MagicMock()
+        await Worker()._fail_job(session, job, "still unavailable")
+        assert job.status == JobStatus.DEAD
+        assert job.retries == 0
+
+    @pytest.mark.asyncio
+    async def test_completion_requires_owned_running_lease(self) -> None:
+        session = AsyncMock()
+        result = MagicMock()
+        result.scalar_one_or_none.return_value = None
+        session.execute.return_value = result
+
+        completed = await Worker()._complete_job(session, "job-1", "stale-lease")
+
+        assert completed is False
+
+
+class TestProcessBoundary:
+    @pytest.mark.asyncio
+    @patch("apps.worker.core.queue.AsyncSessionLocal")
+    async def test_invalid_payload_cannot_be_marked_succeeded(
+        self, session_local: MagicMock
+    ) -> None:
+        job = make_job(job_type="SCAN_DOCUMENT", payload={"matter_id": "matter-1"})
+        session, attempts = session_factory_for(job)
+        session_local.return_value = session
         worker = Worker()
+        completion = AsyncMock(return_value=True)
+        worker._complete_job = completion
 
-        async def dummy_handler(payload, session):
-            pass
+        await worker.process_job(job.id, "lease-1")
 
-        worker.register("DEV_JOB", dummy_handler)
-        assert "DEV_JOB" in worker.handlers
-
-
-# ---------------------------------------------------------------------------
-# Worker Configuration Tests
-# ---------------------------------------------------------------------------
-
-class TestWorkerConfig:
-    """Tests for worker configuration."""
-
-    def test_default_config(self):
-        """Worker should have sensible defaults."""
-        worker = Worker()
-        assert worker.batch_size == 10
-        assert worker.lease_duration == timedelta(minutes=5)
-        assert worker._running is False
-
-    def test_custom_config(self):
-        """Worker should accept custom batch_size and lease_minutes."""
-        worker = Worker(batch_size=20, lease_minutes=10)
-        assert worker.batch_size == 20
-        assert worker.lease_duration == timedelta(minutes=10)
-
-    def test_stop(self):
-        """Worker.stop() should set _running to False."""
-        worker = Worker()
-        worker._running = True
-        worker.stop()
-        assert worker._running is False
-
-
-# ---------------------------------------------------------------------------
-# Job Processing Logic Tests
-# ---------------------------------------------------------------------------
-
-class TestJobProcessing:
-    """Tests for job processing lifecycle."""
+        completion.assert_not_awaited()
+        assert job.status == JobStatus.FAILED
+        assert job.error_class == "JobExecutionError"
+        assert attempts["attempt-1"].status == "FAILED"
+        assert get_tenant_id() is None
 
     @pytest.mark.asyncio
     @patch("apps.worker.core.queue.AsyncSessionLocal")
-    async def test_process_batch_empty_queue(self, mock_session_local):
-        """Worker should return 0 when no jobs are available."""
-        mock_session = AsyncMock()
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        mock_session.execute.return_value = mock_result
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_session_local.return_value = mock_session
-
+    async def test_handler_exception_cannot_be_marked_succeeded(
+        self, session_local: MagicMock
+    ) -> None:
+        job = make_job()
+        session, _ = session_factory_for(job)
+        session_local.return_value = session
         worker = Worker()
-        count = await worker.process_batch()
-        assert count == 0
+
+        async def fail_handler(payload: dict, db: object) -> None:
+            raise RuntimeError("database unavailable")
+
+        worker.register(job.type, fail_handler)
+        completion = AsyncMock(return_value=True)
+        worker._complete_job = completion
+
+        await worker.process_job(job.id, "lease-1")
+
+        completion.assert_not_awaited()
+        assert job.status == JobStatus.PENDING
+        assert job.attempts_made == 1
+        assert get_tenant_id() is None
 
     @pytest.mark.asyncio
     @patch("apps.worker.core.queue.AsyncSessionLocal")
-    async def test_process_job_unknown_type(self, mock_session_local):
-        """Worker should fail jobs with no registered handler."""
-        mock_job = MagicMock()
-        mock_job.id = "job-123"
-        mock_job.type = "UNKNOWN_TYPE"
-        mock_job.tenant_id = "tenant-1"
-        mock_job.retries = 3
-        mock_job.max_retries = 3
-        mock_job.payload = {}
-
-        mock_session = AsyncMock()
-        mock_session.get.return_value = mock_job
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_session_local.return_value = mock_session
-
+    async def test_success_requires_handler_and_atomic_completion(
+        self, session_local: MagicMock
+    ) -> None:
+        job = make_job()
+        session, attempts = session_factory_for(job)
+        session_local.return_value = session
         worker = Worker()
-        await worker.process_job("job-123")
+        handled = False
 
-        # Verify job was failed with appropriate message
-        assert "FAILED_UNSUPPORTED_JOB_TYPE" in (mock_job.error_message or "")
+        async def successful_handler(payload: dict, db: object) -> None:
+            nonlocal handled
+            handled = True
+
+        worker.register(job.type, successful_handler)
+        worker._complete_job = AsyncMock(return_value=True)
+
+        await worker.process_job(job.id, "lease-1")
+
+        assert handled is True
+        worker._complete_job.assert_awaited_once_with(session, job.id, "lease-1")
+        assert attempts["attempt-1"].status == "SUCCEEDED"
+        assert get_tenant_id() is None
 
     @pytest.mark.asyncio
     @patch("apps.worker.core.queue.AsyncSessionLocal")
-    async def test_process_job_handler_success(self, mock_session_local):
-        """Worker should mark job as completed when handler succeeds."""
-        handler_called = {"called": False, "payload": None}
-
-        async def test_handler(payload, session):
-            handler_called["called"] = True
-            handler_called["payload"] = payload
-
-        mock_job = MagicMock()
-        mock_job.id = "job-456"
-        mock_job.type = "TEST_JOB"
-        mock_job.tenant_id = "tenant-1"
-        mock_job.retries = 3
-        mock_job.max_retries = 3
-        mock_job.payload = {"key": "value"}
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        mock_session.get.return_value = mock_job
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_session_local.return_value = mock_session
-
+    async def test_lost_lease_records_attempt_without_failing_new_owner(
+        self, session_local: MagicMock
+    ) -> None:
+        job = make_job()
+        session, attempts = session_factory_for(job)
+        session_local.return_value = session
         worker = Worker()
-        worker.register("TEST_JOB", test_handler)
 
-        await worker.process_job("job-456")
+        async def successful_handler(payload: dict, db: object) -> None:
+            return None
 
-        assert handler_called["called"] is True
-        assert handler_called["payload"]["key"] == "value"
-        assert handler_called["payload"]["tenant_id"] == "tenant-1"
+        worker.register(job.type, successful_handler)
+        worker._complete_job = AsyncMock(return_value=False)
+        worker._record_lost_lease = AsyncMock()
+        fail_job = AsyncMock()
+        worker._fail_job = fail_job
+
+        await worker.process_job(job.id, "lease-1")
+
+        fail_job.assert_not_awaited()
+        worker._record_lost_lease.assert_awaited_once()
+        assert attempts["attempt-1"].status == "RUNNING"
+        assert get_tenant_id() is None
 
     @pytest.mark.asyncio
     @patch("apps.worker.core.queue.AsyncSessionLocal")
-    async def test_process_job_handler_exception(self, mock_session_local):
-        """Worker should handle exceptions in handlers gracefully."""
-        async def failing_handler(payload, session):
-            raise ValueError("Something went wrong in handler")
+    async def test_expired_retry_budget_is_recovered_without_claim(
+        self, session_local: MagicMock
+    ) -> None:
+        session = AsyncMock()
+        empty = MagicMock()
+        empty.scalars.return_value.all.return_value = []
+        session.execute.side_effect = [MagicMock(), empty]
+        session.__aenter__.return_value = session
+        session.__aexit__.return_value = False
+        session_local.return_value = session
 
-        mock_job = MagicMock()
-        mock_job.id = "job-789"
-        mock_job.type = "FAIL_JOB"
-        mock_job.tenant_id = "tenant-1"
-        mock_job.retries = 3
-        mock_job.max_retries = 3
-        mock_job.payload = {}
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        mock_session.get.return_value = mock_job
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_session_local.return_value = mock_session
-
-        worker = Worker()
-        worker.register("FAIL_JOB", failing_handler)
-
-        # Should not raise — error handling is internal
-        await worker.process_job("job-789")
-
-    @pytest.mark.asyncio
-    async def test_process_job_nonexistent(self):
-        """Worker should silently skip jobs that no longer exist in DB."""
-        mock_session = AsyncMock()
-        mock_session.get.return_value = None
-
-        with patch("apps.worker.core.queue.AsyncSessionLocal") as mock_factory:
-            mock_factory.return_value.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_factory.return_value.__aexit__ = AsyncMock(return_value=False)
-
-            worker = Worker()
-            # Should not raise
-            await worker.process_job("nonexistent-job-id")
+        assert await Worker().process_batch() == 0
+        assert session.execute.await_count == 2
 
 
-# ---------------------------------------------------------------------------
-# Retry Logic Tests
-# ---------------------------------------------------------------------------
-
-class TestRetryLogic:
-    """Tests for job retry and dead letter behavior."""
-
-    @pytest.mark.asyncio
-    async def test_fail_job_decrements_retries(self):
-        """Failing a job should decrement the retry counter."""
-        mock_job = MagicMock()
-        mock_job.retries = 3
-        mock_job.max_retries = 3
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        worker = Worker()
-        await worker._fail_job(mock_session, mock_job, "test error")
-
-        assert mock_job.retries == 2
-        assert mock_job.status == "pending"
-
-    @pytest.mark.asyncio
-    async def test_fail_job_goes_dead_at_zero_retries(self):
-        """Job should enter 'dead' status when retries reach 0."""
-        mock_job = MagicMock()
-        mock_job.retries = 1
-        mock_job.max_retries = 3
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        worker = Worker()
-        await worker._fail_job(mock_session, mock_job, "final failure")
-
-        assert mock_job.retries == 0
-        assert mock_job.status == "dead"
-        assert mock_job.locked_until is None
-
-    @pytest.mark.asyncio
-    async def test_fail_job_records_error_message(self):
-        """Failed job should store the error message."""
-        mock_job = MagicMock()
-        mock_job.retries = 2
-        mock_job.max_retries = 3
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        worker = Worker()
-        await worker._fail_job(mock_session, mock_job, "Database connection timeout")
-
-        assert mock_job.error_message == "Database connection timeout"
-
-    @pytest.mark.asyncio
-    async def test_fail_job_with_attempt_record(self):
-        """Failed job should update the attempt record if provided."""
-        mock_job = MagicMock()
-        mock_job.retries = 2
-        mock_job.max_retries = 3
-        mock_job.status = "processing"
-
-        mock_attempt = MagicMock()
-        mock_attempt.status = "processing"
-
-        mock_session = AsyncMock()
-        worker = Worker()
-        await worker._fail_job(mock_session, mock_job, "Handler error", mock_attempt)
-
-        assert mock_attempt.status == "failed"
-        assert mock_attempt.error_details == "Handler error"
-        assert mock_attempt.finished_at is not None
-
-    @pytest.mark.asyncio
-    async def test_exponential_backoff_calculation(self):
-        """Retry scheduling should use exponential backoff."""
-        mock_job = MagicMock()
-        mock_job.retries = 2  # After decrement, will be 1 → 1 attempt made
-        mock_job.max_retries = 3
-        mock_job.status = "processing"
-
-        mock_session = AsyncMock()
-        worker = Worker()
-        await worker._fail_job(mock_session, mock_job, "transient error")
-
-        # After failure: retries = 1, attempts_made = 3-1 = 2
-        # Backoff: 2^2 * 5 = 20 seconds
-        assert mock_job.run_at is not None
-        assert mock_job.status == "pending"
-
-
-# ---------------------------------------------------------------------------
-# Start/Stop Lifecycle Tests
-# ---------------------------------------------------------------------------
-
-class TestWorkerLifecycle:
-    """Tests for worker start/stop lifecycle."""
-
-    @pytest.mark.asyncio
-    async def test_start_stop_cycle(self):
-        """Worker should stop gracefully when stop() is called."""
-        worker = Worker()
-
-        async def stop_after_delay():
-            await asyncio.sleep(0.1)
-            worker.stop()
-
-        with patch.object(worker, "process_batch", new_callable=AsyncMock, return_value=0):
-            # Run worker and stop it after a short delay
-            task = asyncio.create_task(worker.start())
-            stop_task = asyncio.create_task(stop_after_delay())
-
-            await asyncio.wait_for(asyncio.gather(task, stop_task), timeout=2.0)
-            assert worker._running is False
-
-
-# ---------------------------------------------------------------------------
-# Tenant Isolation in Worker Tests
-# ---------------------------------------------------------------------------
-
-class TestWorkerTenantIsolation:
-    """Tests for tenant context in worker job processing."""
-
-    def test_payload_includes_tenant_id(self):
-        """Job payload passed to handler should include tenant_id."""
-        # This is verified in test_process_job_handler_success above
-        # Verifying the contract that payload["tenant_id"] is always set
-        pass
-
-    @pytest.mark.asyncio
-    @patch("apps.worker.core.queue.AsyncSessionLocal")
-    async def test_handler_receives_tenant_in_payload(self, mock_session_local):
-        """Handler payload must always contain tenant_id from the job."""
-        received_tenant = {"value": None}
-
-        async def tenant_check_handler(payload, session):
-            received_tenant["value"] = payload.get("tenant_id")
-
-        mock_job = MagicMock()
-        mock_job.id = "job-tenant-test"
-        mock_job.type = "TENANT_CHECK"
-        mock_job.tenant_id = "specific-tenant-abc"
-        mock_job.retries = 1
-        mock_job.max_retries = 1
-        mock_job.payload = {"data": "test"}
-
-        mock_session = AsyncMock()
-        mock_session.get.return_value = mock_job
-        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-        mock_session.__aexit__ = AsyncMock(return_value=False)
-        mock_session_local.return_value = mock_session
-
-        worker = Worker()
-        worker.register("TENANT_CHECK", tenant_check_handler)
-
-        await worker.process_job("job-tenant-test")
-
-        assert received_tenant["value"] == "specific-tenant-abc"
+def test_terminal_job_error_is_not_retryable() -> None:
+    assert TerminalJobError.retryable is False

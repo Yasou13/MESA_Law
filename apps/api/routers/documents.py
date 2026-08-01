@@ -356,10 +356,14 @@ async def complete_upload(
         job = Job(
             type="SCAN_DOCUMENT",
             tenant_id=context.tenant_id,
+            matter_id=doc.matter_id,
+            requested_by=context.principal_id,
+            idempotency_key=f"scan:{rev.id}:{sha256_hash}",
             payload={
                 "document_id": doc.id,
                 "revision_id": rev.id,
                 "s3_key": rev.s3_key,
+                "matter_id": doc.matter_id,
             },
         )
         db.add(job)

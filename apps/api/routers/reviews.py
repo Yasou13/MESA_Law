@@ -100,7 +100,10 @@ async def approve_review(
     job = Job(
         type="PUBLISH_REVIEW",
         tenant_id=context.tenant_id,
-        payload={"review_id": review_id, "tenant_id": context.tenant_id},
+        matter_id=review.matter_id,
+        requested_by=context.principal_id,
+        idempotency_key=f"publish:{review.id}:{review.version_id}",
+        payload={"review_id": review_id, "matter_id": review.matter_id},
     )
     db.add(job)
 
@@ -200,7 +203,10 @@ async def correct_review(
     job = Job(
         type="PUBLISH_REVIEW",
         tenant_id=context.tenant_id,
-        payload={"review_id": review_id, "tenant_id": context.tenant_id},
+        matter_id=review.matter_id,
+        requested_by=context.principal_id,
+        idempotency_key=f"publish:{review.id}:{review.version_id}",
+        payload={"review_id": review_id, "matter_id": review.matter_id},
     )
     db.add(job)
 

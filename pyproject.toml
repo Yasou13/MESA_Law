@@ -48,9 +48,6 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-env = [
-    "MESA_LAW_ENVIRONMENT=test"
-]
 
 [tool.ruff]
 target-version = "py313"

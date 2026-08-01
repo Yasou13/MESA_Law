@@ -368,7 +368,14 @@ async def export_draft(
     job = Job(
         type="EXPORT_DRAFT",
         tenant_id=context.tenant_id,
-        payload={"draft_id": draft_id, "format": payload.format},
+        matter_id=draft.matter_id,
+        requested_by=context.principal_id,
+        idempotency_key=(f"export:{draft.id}:{idem_key}" if idem_key else None),
+        payload={
+            "draft_id": draft_id,
+            "format": payload.format,
+            "matter_id": draft.matter_id,
+        },
     )
     db.add(job)
     await db.commit()
@@ -406,6 +413,8 @@ async def generate_draft(
     job = Job(
         type="GENERATE_DRAFT",
         tenant_id=context.tenant_id,
+        matter_id=payload.matter_id,
+        requested_by=context.principal_id,
         payload={
             "tenant_id": context.tenant_id,
             "matter_id": payload.matter_id,

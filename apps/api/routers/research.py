@@ -39,6 +39,8 @@ async def start_legal_research(
     job = Job(
         type="PERFORM_LEGAL_RESEARCH",
         tenant_id=context.tenant_id,
+        matter_id=payload.matter_id,
+        requested_by=context.principal_id,
         payload={
             "matter_id": payload.matter_id,
             "query": payload.query,

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+export MESA_LAW_ENVIRONMENT=test
 
 echo "======================================"
 echo " MESA Law Production Hardening Checks"

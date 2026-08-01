@@ -346,7 +346,42 @@ class Worker:
         job.locked_until = None
         job.heartbeat_at = None
         job.lease_token = None
+        if job.status in {JobStatus.FAILED, JobStatus.DEAD}:
+            await self._mark_terminal_document_state(session, job, message)
         session.add(job)
         if attempt is not None:
             session.add(attempt)
         await session.commit()
+
+    async def _mark_terminal_document_state(
+        self, session: AsyncSession, job: Job, message: str
+    ) -> None:
+        if job.type not in {
+            "SCAN_DOCUMENT",
+            "PARSE_DOCUMENT",
+            "OCR_DOCUMENT",
+            "EXTRACT_LEGAL_DATA",
+            "EXTRACT_LEGAL_FACTS",
+        }:
+            return
+        revision_id = dict(job.payload).get("revision_id")
+        if revision_id is None and job.type.startswith("EXTRACT_"):
+            from apps.api.models.parser import ParsedDocument
+
+            parsed_id = dict(job.payload).get("parsed_document_id")
+            parsed = await session.get(ParsedDocument, parsed_id) if parsed_id else None
+            revision_id = parsed.revision_id if parsed else None
+        if revision_id is None:
+            return
+
+        from apps.api.models.document import DocumentRevision, DocumentState
+
+        revision = await session.get(DocumentRevision, revision_id)
+        if revision is None:
+            return
+        revision.scan_status = (
+            DocumentState.MANUAL_REVIEW_REQUIRED
+            if job.type == "OCR_DOCUMENT"
+            else DocumentState.FAILED
+        )
+        revision.failure_reason = message

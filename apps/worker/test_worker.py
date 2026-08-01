@@ -70,6 +70,9 @@ class TestPayloadContract:
                 "document_id": "document-1",
                 "revision_id": "revision-1",
                 "s3_key": "quarantine/object.pdf",
+                "expected_sha256": "a" * 64,
+                "expected_size": 1024,
+                "mime_type": "application/pdf",
             },
         )
         assert payload["revision_id"] == "revision-1"
@@ -85,6 +88,9 @@ class TestPayloadContract:
                 "document_id": "document-1",
                 "revision_id": "revision-1",
                 "s3_key": "object.pdf",
+                "expected_sha256": "a" * 64,
+                "expected_size": 1024,
+                "mime_type": "application/pdf",
                 "unexpected": True,
             },
         ],

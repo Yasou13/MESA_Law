@@ -1,5 +1,13 @@
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import JSON, ForeignKey, Index, Integer, String
+from sqlalchemy import (
+    JSON,
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -23,9 +31,18 @@ class ParsedDocument(Base, AuditMixin, TenantAwareMixin):
     output_hash: Mapped[str | None] = mapped_column(String, nullable=True)
 
     status: Mapped[str] = mapped_column(String, default="completed", nullable=False)
+    provenance_state: Mapped[str] = mapped_column(
+        String, default="LOW_PROVENANCE", nullable=False, index=True
+    )
 
     pages = relationship(
         "ParsedPage", back_populates="parsed_document", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "revision_id", "parsing_revision", name="uq_parsed_document_revision_run"
+        ),
     )
 
 
@@ -88,8 +105,15 @@ class DocumentChunk(Base, AuditMixin, TenantAwareMixin):
     fts_vector = mapped_column(TSVECTOR, nullable=True)
 
     # [x0, y0, x1, y1]
-    bbox: Mapped[dict] = mapped_column(JSON, nullable=True)
+    bbox: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     __table_args__ = (
         Index("ix_document_chunks_fts", "fts_vector", postgresql_using="gin"),
+        UniqueConstraint(
+            "revision_id", "page_id", "chunk_index", name="uq_document_chunk_span"
+        ),
+        CheckConstraint(
+            "character_start IS NULL OR character_end > character_start",
+            name="ck_document_chunk_offsets",
+        ),
     )

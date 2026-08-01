@@ -15,6 +15,13 @@ class ScanDocumentPayload(JobPayload):
     document_id: str = Field(min_length=1)
     revision_id: str = Field(min_length=1)
     s3_key: str = Field(min_length=1)
+    expected_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    expected_size: int = Field(gt=0, le=100 * 1024 * 1024)
+    mime_type: Literal[
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain",
+    ]
 
 
 class ParseDocumentPayload(JobPayload):

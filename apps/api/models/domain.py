@@ -2,7 +2,16 @@ import enum
 from datetime import datetime
 
 from apps.api.core.models import AuditMixin, Base, TenantAwareMixin
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    String,
+    Text,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -308,4 +317,18 @@ class SourceLocator(Base, AuditMixin, TenantAwareMixin):
     )
     verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "character_start IS NULL OR character_end > character_start",
+            name="ck_source_locator_offsets",
+        ),
+        CheckConstraint(
+            "provenance_state NOT LIKE 'VERIFIED_PDF%' OR "
+            "(document_revision_id IS NOT NULL AND parsed_page_id IS NOT NULL "
+            "AND chunk_id IS NOT NULL AND page_number > 0 "
+            "AND evidence_sha256 IS NOT NULL)",
+            name="ck_verified_pdf_locator",
+        ),
     )

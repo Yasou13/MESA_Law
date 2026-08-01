@@ -61,13 +61,13 @@ async def create_upload_intent(
     db.add(doc)
     await db.flush()  # get doc.id
 
-    # 2. Create Initial Revision (Quarantine State: uploading)
+    # 2. Create a provisional revision. It is not canonical until the exact
+    # uploaded bytes pass validation and malware scanning.
     rev = DocumentRevision(
         tenant_id=context.tenant_id,
         document_id=doc.id,
         version=1,
-        # temporary key to allow insert, we will update it after getting rev.id
-        s3_key=f"temp/{uuid6.uuid7()}",
+        s3_key=None,
         size_bytes=payload.size_bytes,
         mime_type=payload.mime_type,
         scan_status=DocumentState.UPLOADING,
@@ -84,16 +84,23 @@ async def create_upload_intent(
     elif payload.mime_type == "text/plain":
         ext = ".txt"
 
-    s3_key = f"{context.tenant_id}/{payload.matter_id}/{doc.id}/{rev.id}/original{ext}"
-    rev.s3_key = s3_key
+    quarantine_key = (
+        f"quarantine/{context.tenant_id}/{payload.matter_id}/{uuid6.uuid7()}{ext}"
+    )
+    rev.quarantine_key = quarantine_key
 
     # 3. Generate presigned URL
-    url = await storage_service.generate_presigned_upload_url(s3_key, payload.mime_type)
+    url = await storage_service.generate_presigned_upload_url(
+        quarantine_key, payload.mime_type
+    )
 
     await db.commit()
 
     return UploadIntentResponse(
-        document_id=doc.id, revision_id=rev.id, presigned_url=url, storage_key=s3_key
+        document_id=doc.id,
+        revision_id=rev.id,
+        presigned_url=url,
+        storage_key=quarantine_key,
     )
 
 
@@ -218,7 +225,9 @@ async def complete_upload(
         raise HTTPException(status_code=404, detail="Revision not found")
 
     if rev.scan_status == DocumentState.UPLOADING:
-        meta = await storage_service.get_object_metadata(rev.s3_key)
+        if not rev.quarantine_key or rev.is_canonical:
+            raise HTTPException(status_code=409, detail="Invalid upload revision state")
+        meta = await storage_service.get_object_metadata(rev.quarantine_key)
         if not meta or meta["size"] == 0:
             raise HTTPException(
                 status_code=400, detail="Uploaded file not found in storage or is empty"
@@ -227,7 +236,15 @@ async def complete_upload(
         if meta["size"] > 100 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="File size exceeds 100MB limit")
 
-        file_bytes = await storage_service.get_object_bytes(rev.s3_key)
+        if rev.size_bytes is not None and meta["size"] != rev.size_bytes:
+            rev.scan_status = DocumentState.QUARANTINED
+            rev.failure_reason = "Uploaded size does not match the upload intent"
+            await db.commit()
+            raise HTTPException(
+                status_code=400, detail="Uploaded size does not match upload intent"
+            )
+
+        file_bytes = await storage_service.get_object_bytes(rev.quarantine_key)
         if not file_bytes:
             raise HTTPException(
                 status_code=400, detail="Could not read file data from storage"
@@ -254,6 +271,7 @@ async def complete_upload(
 
         if actual_mime != rev.mime_type:
             rev.scan_status = DocumentState.QUARANTINED
+            rev.failure_reason = "Declared and detected MIME types differ"
             await db.commit()
             raise HTTPException(
                 status_code=400,
@@ -282,6 +300,9 @@ async def complete_upload(
                             )
                         ):
                             rev.scan_status = DocumentState.QUARANTINED
+                            rev.failure_reason = (
+                                "Nested archive or executable content in DOCX"
+                            )
                             await db.commit()
                             raise HTTPException(
                                 status_code=400,
@@ -292,12 +313,14 @@ async def complete_upload(
                     compression_ratio = total_uncompressed / max(len(file_bytes), 1)
                     if compression_ratio > 100:  # arbitrary threshold for zip bomb
                         rev.scan_status = DocumentState.QUARANTINED
+                        rev.failure_reason = "Potential DOCX decompression bomb"
                         await db.commit()
                         raise HTTPException(
                             status_code=400, detail="Potential ZIP bomb detected"
                         )
             except zipfile.BadZipFile:
                 rev.scan_status = DocumentState.QUARANTINED
+                rev.failure_reason = "Invalid DOCX container"
                 await db.commit()
                 raise HTTPException(status_code=400, detail="Invalid ZIP/DOCX format")
 
@@ -315,6 +338,7 @@ async def complete_upload(
                         or "/OpenAction" in xref_str
                     ):
                         rev.scan_status = DocumentState.QUARANTINED
+                        rev.failure_reason = "Active content in PDF"
                         await db.commit()
                         raise HTTPException(
                             status_code=400,
@@ -324,6 +348,7 @@ async def complete_upload(
                 if isinstance(e, HTTPException):
                     raise
                 rev.scan_status = DocumentState.QUARANTINED
+                rev.failure_reason = "PDF security parsing failed"
                 await db.commit()
                 raise HTTPException(
                     status_code=400, detail="Failed to parse PDF for security check"
@@ -343,6 +368,9 @@ async def complete_upload(
         )
         existing_dup = dup_res.scalars().first()
         if existing_dup:
+            rev.scan_status = DocumentState.BLOCKED
+            rev.failure_reason = "Duplicate content in this matter"
+            await db.commit()
             raise HTTPException(
                 status_code=409,
                 detail=f"Duplicate document detected: identical content exists in revision {existing_dup.id}",
@@ -362,7 +390,10 @@ async def complete_upload(
             payload={
                 "document_id": doc.id,
                 "revision_id": rev.id,
-                "s3_key": rev.s3_key,
+                "s3_key": rev.quarantine_key,
+                "expected_sha256": sha256_hash,
+                "expected_size": meta["size"],
+                "mime_type": rev.mime_type,
                 "matter_id": doc.matter_id,
             },
         )
@@ -395,7 +426,7 @@ async def complete_upload(
 
         await db.commit()
 
-    return {"status": DocumentState.SCANNING.value, "revision_id": rev.id}
+    return {"status": rev.scan_status.value, "revision_id": rev.id}
 
 
 @router.get("/{document_id}/download", operation_id="downloadDocument")
@@ -424,9 +455,7 @@ async def download_document(
         raise HTTPException(
             status_code=403, detail="Document is infected and cannot be downloaded"
         )
-    elif rev.scan_status != DocumentState.CLEAN:
-        # For development flexibility, we might allow downloading un-scanned docs,
-        # but strict policy: wait for scan
+    elif not rev.is_canonical or rev.s3_key is None:
         raise HTTPException(status_code=425, detail="Document is still being scanned")
 
     url = await storage_service.generate_presigned_download_url(rev.s3_key)

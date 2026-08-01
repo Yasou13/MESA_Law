@@ -1,370 +1,277 @@
+import hashlib
 import logging
+from dataclasses import dataclass
 
+import uuid6
 from apps.api.core.extraction import get_extraction_adapter
-from apps.api.models.document import Document
-from apps.api.models.parser import ParsedDocument, ParsedPage
+from apps.api.core.utils import utc_now
+from apps.api.models.audit import AuditEvent, Notification
+from apps.api.models.document import Document, DocumentRevision, DocumentState
+from apps.api.models.domain import MatterMember, SourceLocator
+from apps.api.models.parser import DocumentChunk, ParsedDocument, ParsedPage
+from apps.api.models.review import ExtractionSuggestion, ReviewItem, ReviewState
 from apps.worker.jobs import TerminalJobError
+from apps.worker.provenance import CHUNKING_VERSION
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("worker.extraction")
 
 
-async def handle_extract_legal_data(payload: dict, session: AsyncSession):
+@dataclass(frozen=True)
+class ResolvedEvidence:
+    chunk: DocumentChunk
+    page: ParsedPage
+    evidence_text: str
+    character_start: int
+    character_end: int
+
+
+def resolve_evidence(
+    evidence_text: str | None,
+    chunks: list[tuple[DocumentChunk, ParsedPage]],
+) -> ResolvedEvidence | None:
+    if not evidence_text or not evidence_text.strip():
+        return None
+    needle = evidence_text.strip()
+    for chunk, page in chunks:
+        local_start = chunk.text_content.find(needle)
+        if local_start < 0:
+            local_start = chunk.text_content.casefold().find(needle.casefold())
+        if local_start < 0 or chunk.character_start is None:
+            continue
+        actual = chunk.text_content[local_start : local_start + len(needle)]
+        start = chunk.character_start + local_start
+        return ResolvedEvidence(
+            chunk=chunk,
+            page=page,
+            evidence_text=actual,
+            character_start=start,
+            character_end=start + len(actual),
+        )
+    return None
+
+
+def make_locator(
+    *,
+    parsed_document: ParsedDocument,
+    matter_id: str,
+    resolved: ResolvedEvidence,
+) -> SourceLocator:
+    bbox = resolved.chunk.bbox or {}
+    verified = resolved.chunk.provenance_state.startswith("VERIFIED_PDF")
+    digest = hashlib.sha256(resolved.evidence_text.encode("utf-8")).hexdigest()
+    return SourceLocator(
+        tenant_id=parsed_document.tenant_id,
+        matter_id=matter_id,
+        document_id=parsed_document.document_id,
+        document_revision_id=parsed_document.revision_id,
+        parsed_document_id=parsed_document.id,
+        parsed_page_id=resolved.page.id,
+        chunk_id=resolved.chunk.id,
+        page_number=resolved.page.page_number,
+        character_start=resolved.character_start,
+        character_end=resolved.character_end,
+        bbox_x0=bbox.get("x0"),
+        bbox_y0=bbox.get("y0"),
+        bbox_x1=bbox.get("x1"),
+        bbox_y1=bbox.get("y1"),
+        text_snippet=resolved.evidence_text,
+        text_hash=digest,
+        evidence_text=resolved.evidence_text,
+        evidence_sha256=digest,
+        parser_version=parsed_document.parser_used,
+        ocr_version=parsed_document.ocr_version,
+        extraction_version=CHUNKING_VERSION,
+        provenance_state=resolved.chunk.provenance_state,
+        verified_at=utc_now() if verified else None,
+    )
+
+
+def suggestion_key(
+    revision_id: str, suggestion_type: str, resolved: ResolvedEvidence
+) -> str:
+    raw = (
+        f"{revision_id}:{suggestion_type}:{resolved.chunk.id}:"
+        f"{resolved.character_start}:{resolved.character_end}"
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+async def handle_extract_legal_data(payload: dict, session: AsyncSession) -> None:
     parsed_document_id = payload.get("parsed_document_id")
     if not parsed_document_id:
         raise TerminalJobError("Missing parsed_document_id in payload")
 
-    parsed_doc = await session.get(ParsedDocument, parsed_document_id)
-    if not parsed_doc:
+    parsed_document = await session.get(ParsedDocument, parsed_document_id)
+    if parsed_document is None:
         raise TerminalJobError(f"ParsedDocument {parsed_document_id} not found")
-    document = await session.get(Document, parsed_doc.document_id)
-    if document is None:
-        raise TerminalJobError(f"Document {parsed_doc.document_id} not found")
+    document = await session.get(Document, parsed_document.document_id)
+    revision = await session.get(DocumentRevision, parsed_document.revision_id)
+    if document is None or revision is None or revision.document_id != document.id:
+        raise TerminalJobError("Parsed document source revision is missing")
+    if not revision.is_canonical:
+        raise TerminalJobError("Extraction requires a canonical revision")
 
-    # Get all text from chunks
-    from apps.api.models.parser import DocumentChunk
-
-    chunks_result = await session.execute(
-        select(DocumentChunk)
-        .where(DocumentChunk.document_id == parsed_doc.document_id)
-        .order_by(DocumentChunk.chunk_index)
-    )
-    chunks = chunks_result.scalars().all()
-    full_text = "\n\n".join([c.watermarked_text for c in chunks])
-
-    if not full_text.strip():
-        # Fallback to pages if chunks aren't available for this legacy doc
-        pages_result = await session.execute(
-            select(ParsedPage)
-            .where(ParsedPage.parsed_document_id == parsed_document_id)
-            .order_by(ParsedPage.page_number)
+    rows = (
+        await session.execute(
+            select(DocumentChunk, ParsedPage)
+            .join(ParsedPage, DocumentChunk.page_id == ParsedPage.id)
+            .where(
+                ParsedPage.parsed_document_id == parsed_document.id,
+                DocumentChunk.revision_id == revision.id,
+            )
+            .order_by(ParsedPage.page_number, DocumentChunk.chunk_index)
         )
-        pages = pages_result.scalars().all()
-        full_text = "\n\n".join([p.text_content for p in pages])
-
-    if not full_text.strip():
-        raise TerminalJobError(
-            f"ParsedDocument {parsed_document_id} has no text content"
-        )
-
-    import hashlib
-
-    from apps.api.models.domain import SourceLocator
-    from apps.api.models.review import ExtractionSuggestion, ReviewItem, ReviewState
-
-    adapter = get_extraction_adapter()
+    ).all()
+    chunks = [(chunk, page) for chunk, page in rows]
+    if not chunks:
+        raise TerminalJobError("Parsed document has no exact source chunks")
+    full_text = "\n\n".join(chunk.text_content for chunk, _ in chunks)
     matter_id = document.matter_id
+    adapter = get_extraction_adapter()
 
-    # Generate Idempotency Key Helper
-    def generate_idempotency_key(
-        doc_rev_id: str, pipeline_v: str, type_str: str, locator: str
-    ) -> str:
-        raw = f"{doc_rev_id}_{pipeline_v}_{type_str}_{locator}"
-        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-    # 1. Extract Parties
-    parties_data = await adapter.extract_parties(full_text)
-
-    import uuid6
-
-    for pd in parties_data:
-        ik = generate_idempotency_key(
-            parsed_doc.revision_id,
-            "1.0.0",
-            "PARTY_SUGGESTION",
-            pd.get("provenance", "unknown_party"),
-        )
-
-        # Check idempotency
-        existing_sugg = await session.execute(
-            select(ExtractionSuggestion).where(
-                ExtractionSuggestion.idempotency_key == ik
-            )
-        )
-        if existing_sugg.scalars().first():
-            logger.info(f"Skipping duplicate PARTY_SUGGESTION {ik}")
-            continue
-
-        # Phase 7: Create genuine SourceLocator
-        locator = SourceLocator(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            parsed_document_id=parsed_document_id,
-            page_number=1,  # Default/Fallback
-            text_snippet=pd.get("provenance", "Snippet not available"),
-            text_hash=hashlib.sha256(
-                str(pd.get("provenance", "")).encode()
-            ).hexdigest(),
-            parser_version=parsed_doc.parser_used,
-        )
-        session.add(locator)
-        await session.flush()
-
-        suggestion = ExtractionSuggestion(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            source_locator_id=locator.id,
-            suggestion_type="PARTY_SUGGESTION",
-            payload={"name": pd["name"], "role": pd["role"], "type": pd["type"]},
-            extractor_name="adapter",
-            extractor_version="1.0.0",
-            prompt_version="1.0",
-            parser_version=parsed_doc.parser_used,
-            idempotency_key=ik,
-        )
-        session.add(suggestion)
-        await session.flush()
-
-        review_item = ReviewItem(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            entity_type="party",
-            entity_id=f"draft_party_{parsed_doc.id}_{pd['name'].replace(' ', '_')}",
-            suggestion_id=suggestion.id,
-            proposed_content=suggestion.payload,
-            status=ReviewState.PENDING,
-        )
-        session.add(review_item)
-
-    # 2. Extract Claims
-    claims_data = await adapter.extract_claims(full_text)
-
-    for cd in claims_data:
-        ik = generate_idempotency_key(
-            parsed_doc.revision_id,
-            "1.0.0",
-            "CLAIM_SUGGESTION",
-            cd.get("provenance", "unknown_claim"),
-        )
-        existing_sugg = await session.execute(
-            select(ExtractionSuggestion).where(
-                ExtractionSuggestion.idempotency_key == ik
-            )
-        )
-        if existing_sugg.scalars().first():
-            logger.info(f"Skipping duplicate CLAIM_SUGGESTION {ik}")
-            continue
-
-        # Phase 7: Create genuine SourceLocator
-        locator = SourceLocator(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            parsed_document_id=parsed_document_id,
-            page_number=1,  # Default/Fallback
-            text_snippet=cd.get("provenance", "Snippet not available"),
-            text_hash=hashlib.sha256(
-                str(cd.get("provenance", "")).encode()
-            ).hexdigest(),
-            parser_version=parsed_doc.parser_used,
-        )
-        session.add(locator)
-        await session.flush()
-
-        suggestion = ExtractionSuggestion(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            source_locator_id=locator.id,
-            suggestion_type="CLAIM_SUGGESTION",
-            payload={
-                "description": cd["description"],
-                "confidence": cd.get("confidence", 1.0),
-            },
-            extractor_name="adapter",
-            extractor_version="1.0.0",
-            prompt_version="1.0",
-            parser_version=parsed_doc.parser_used,
-            confidence_category="high" if cd.get("confidence", 1.0) > 0.8 else "medium",
-            idempotency_key=ik,
-        )
-        session.add(suggestion)
-        await session.flush()
-
-        review_item = ReviewItem(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            entity_type="claim",
-            entity_id=f"draft_claim_{uuid6.uuid7()}",
-            suggestion_id=suggestion.id,
-            proposed_content=suggestion.payload,
-            status=ReviewState.PENDING,
-        )
-        session.add(review_item)
-
-    # 3. Extract Events (Deadlines)
-    events_data = await adapter.extract_events(full_text)
-
-    for ed in events_data:
-        ik = generate_idempotency_key(
-            parsed_doc.revision_id,
-            "1.0.0",
-            "DEADLINE_TRIGGER_SUGGESTION",
-            ed.get("provenance", "unknown_event"),
-        )
-        existing_sugg = await session.execute(
-            select(ExtractionSuggestion).where(
-                ExtractionSuggestion.idempotency_key == ik
-            )
-        )
-        if existing_sugg.scalars().first():
-            continue
-
-        locator = SourceLocator(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            parsed_document_id=parsed_document_id,
-            page_number=1,
-            text_snippet=ed.get("provenance", "Snippet not available"),
-            text_hash=hashlib.sha256(
-                str(ed.get("provenance", "")).encode()
-            ).hexdigest(),
-            parser_version=parsed_doc.parser_used,
-        )
-        session.add(locator)
-        await session.flush()
-
-        suggestion = ExtractionSuggestion(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            source_locator_id=locator.id,
-            suggestion_type="DEADLINE_TRIGGER_SUGGESTION",
-            payload={
-                "trigger_event": ed["trigger_event"],
-                "rule_name": ed["rule_name"],
-                "offset_days": ed["offset_days"],
-                "description": ed["description"],
-            },
-            extractor_name="adapter",
-            extractor_version="1.0.0",
-            prompt_version="1.0",
-            parser_version=parsed_doc.parser_used,
-            idempotency_key=ik,
-        )
-        session.add(suggestion)
-        await session.flush()
-
-        review_item = ReviewItem(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
-            entity_type="deadline",
-            entity_id=f"draft_deadline_{uuid6.uuid7()}",
-            suggestion_id=suggestion.id,
-            proposed_content=suggestion.payload,
-            status=ReviewState.PENDING,
-        )
-        session.add(review_item)
-
-    # 4. Extract Evidence
+    party_data = await adapter.extract_parties(full_text)
+    claim_data = await adapter.extract_claims(full_text)
+    event_data = await adapter.extract_events(full_text)
     evidence_data = await adapter.extract_evidence(full_text)
+    created_counts = {"parties": 0, "claims": 0, "events": 0, "evidence": 0}
 
-    for ev in evidence_data:
-        ik = generate_idempotency_key(
-            parsed_doc.revision_id,
-            "1.0.0",
-            "EVIDENCE_SUGGESTION",
-            ev.get("provenance", "unknown_evidence"),
-        )
-        existing_sugg = await session.execute(
-            select(ExtractionSuggestion).where(
-                ExtractionSuggestion.idempotency_key == ik
+    async def create_review(
+        *,
+        item: dict,
+        suggestion_type: str,
+        entity_type: str,
+        proposed_content: dict,
+    ) -> bool:
+        resolved = resolve_evidence(item.get("evidence_text"), chunks)
+        if resolved is None:
+            logger.warning(
+                "Discarded %s because its evidence did not resolve to a chunk",
+                suggestion_type,
+            )
+            return False
+        idempotency_key = suggestion_key(revision.id, suggestion_type, resolved)
+        existing = await session.scalar(
+            select(ExtractionSuggestion.id).where(
+                ExtractionSuggestion.idempotency_key == idempotency_key
             )
         )
-        if existing_sugg.scalars().first():
-            continue
+        if existing is not None:
+            return False
 
-        locator = SourceLocator(
-            tenant_id=parsed_doc.tenant_id,
+        locator = make_locator(
+            parsed_document=parsed_document,
             matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
-            parsed_document_id=parsed_document_id,
-            page_number=1,
-            text_snippet=ev.get("provenance", "Snippet not available"),
-            text_hash=hashlib.sha256(
-                str(ev.get("provenance", "")).encode()
-            ).hexdigest(),
-            parser_version=parsed_doc.parser_used,
+            resolved=resolved,
         )
         session.add(locator)
         await session.flush()
-
         suggestion = ExtractionSuggestion(
-            tenant_id=parsed_doc.tenant_id,
+            tenant_id=parsed_document.tenant_id,
             matter_id=matter_id,
-            document_id=parsed_doc.document_id,
-            document_revision_id=parsed_doc.revision_id,
+            document_id=document.id,
+            document_revision_id=revision.id,
             source_locator_id=locator.id,
-            suggestion_type="EVIDENCE_SUGGESTION",
-            payload={"description": ev["description"], "relevance": ev["relevance"]},
-            extractor_name="adapter",
-            extractor_version="1.0.0",
-            prompt_version="1.0",
-            parser_version=parsed_doc.parser_used,
-            idempotency_key=ik,
+            suggestion_type=suggestion_type,
+            payload=proposed_content,
+            extractor_name=type(adapter).__name__,
+            extractor_version=str(item.get("version", "unknown")),
+            prompt_version="not-applicable",
+            parser_version=parsed_document.parser_used,
+            confidence_category=(
+                "high" if float(item.get("confidence", 0.0)) >= 0.8 else "medium"
+            ),
+            idempotency_key=idempotency_key,
         )
         session.add(suggestion)
         await session.flush()
+        session.add(
+            ReviewItem(
+                tenant_id=parsed_document.tenant_id,
+                matter_id=matter_id,
+                entity_type=entity_type,
+                entity_id=f"proposal-{uuid6.uuid7()}",
+                suggestion_id=suggestion.id,
+                proposed_content=proposed_content,
+                status=ReviewState.PENDING,
+            )
+        )
+        return True
 
-        review_item = ReviewItem(
-            tenant_id=parsed_doc.tenant_id,
-            matter_id=matter_id,
+    for item in party_data:
+        if await create_review(
+            item=item,
+            suggestion_type="PARTY_SUGGESTION",
+            entity_type="party",
+            proposed_content={
+                "name": item["name"],
+                "role": item["role"],
+                "type": item["type"],
+            },
+        ):
+            created_counts["parties"] += 1
+    for item in claim_data:
+        if await create_review(
+            item=item,
+            suggestion_type="CLAIM_SUGGESTION",
+            entity_type="claim",
+            proposed_content={
+                "description": item["description"],
+                "confidence": item.get("confidence", 0.0),
+            },
+        ):
+            created_counts["claims"] += 1
+    for item in event_data:
+        if await create_review(
+            item=item,
+            suggestion_type="DEADLINE_TRIGGER_SUGGESTION",
+            entity_type="deadline",
+            proposed_content={
+                "trigger_event": item["trigger_event"],
+                "rule_name": item["rule_name"],
+                "offset_days": item["offset_days"],
+                "description": item["description"],
+            },
+        ):
+            created_counts["events"] += 1
+    for item in evidence_data:
+        if await create_review(
+            item=item,
+            suggestion_type="EVIDENCE_SUGGESTION",
             entity_type="evidence",
-            entity_id=f"draft_evidence_{uuid6.uuid7()}",
-            suggestion_id=suggestion.id,
-            proposed_content=suggestion.payload,
-            status=ReviewState.PENDING,
-        )
-        session.add(review_item)
+            proposed_content={
+                "description": item["description"],
+                "relevance": item["relevance"],
+            },
+        ):
+            created_counts["evidence"] += 1
 
-    from apps.api.models.audit import AuditEvent, Notification
-
-    # Audit Event
-    audit = AuditEvent(
-        tenant_id=parsed_doc.tenant_id,
-        action="EXTRACTION_COMPLETED",
-        entity_type="parsed_document",
-        entity_id=parsed_document_id,
-        changes={
-            "parties": len(parties_data),
-            "claims": len(claims_data),
-            "events": len(events_data),
-            "evidence": len(evidence_data),
-        },
-    )
-    session.add(audit)
-
-    from apps.api.models.domain import Membership, Role
-
-    # Notification (send to firm admins)
-    user_res = await session.execute(
-        select(Membership.user_id).where(
-            Membership.firm_id == parsed_doc.tenant_id,
-            Membership.role == Role.FIRM_ADMIN,
+    revision.scan_status = DocumentState.READY
+    session.add(
+        AuditEvent(
+            tenant_id=parsed_document.tenant_id,
+            action="EXTRACTION_COMPLETED",
+            entity_type="parsed_document",
+            entity_id=parsed_document.id,
+            changes=created_counts,
         )
     )
-    admin_ids = user_res.scalars().all()
-    for admin_id in admin_ids:
-        notification = Notification(
-            tenant_id=parsed_doc.tenant_id,
-            user_id=admin_id,
-            title="Extraction Complete",
-            message=f"Review queue updated for document {parsed_document_id}",
+    member_ids = (
+        await session.execute(
+            select(MatterMember.user_id).where(
+                MatterMember.tenant_id == parsed_document.tenant_id,
+                MatterMember.matter_id == matter_id,
+            )
         )
-        session.add(notification)
-
-    await session.commit()
-    logger.info(
-        f"Extraction completed for ParsedDocument {parsed_document_id}. Added suggestions to ReviewQueue."
-    )
+    ).scalars()
+    for member_id in set(member_ids.all()):
+        session.add(
+            Notification(
+                tenant_id=parsed_document.tenant_id,
+                user_id=member_id,
+                title="Extraction complete",
+                message=f"Review queue updated for document {document.title}",
+            )
+        )
+    logger.info("Exact-source extraction completed for %s", parsed_document.id)

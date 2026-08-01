@@ -100,6 +100,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
       })
     }
     if (method === 'GET' && pathname === '/api/v1/deadlines') return json(route, [])
+    if (method === 'GET' && pathname === '/api/v1/documents') return json(route, [])
     if (method === 'GET' && pathname === '/api/v1/reviews') {
       if (!matterCreated) return json(route, [])
       reviewStatusForFixture = reviewStatus
@@ -292,19 +293,19 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
     return json(route, { detail: `Unexpected Law-side stub request: ${method} ${pathname}` }, 500)
   })
 
-  await page.goto('/login')
+  await page.goto('/en/login')
   await expect(page.getByRole('button', { name: 'Sign in with Keycloak' })).toBeVisible()
 
   authenticated = true
   await page.reload()
-  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page).toHaveURL(/\/en\/dashboard$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Dosyalar', exact: true }).click()
-  await page.getByRole('button', { name: 'New Matter' }).click()
+  await page.getByRole('link', { name: 'Matters', exact: true }).click()
+  await page.getByRole('button', { name: 'New matter' }).click()
   await page.getByLabel('Matter Name').fill(matter.title)
   await page.getByLabel('Parties (comma separated)').fill('Acme, Globex')
-  await page.getByRole('button', { name: 'Check Conflicts & Create' }).click()
+  await page.getByRole('button', { name: 'Check and create' }).click()
   await expect(page.getByText(matter.title)).toBeVisible()
   await page.getByText(matter.title).click()
 
@@ -315,7 +316,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   await page.getByRole('button', { name: 'Save binding and run preflight' }).click()
   await expect(page.getByText('PENDING_PREFLIGHT')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Belgeler', exact: true }).last().click()
+  await page.getByRole('link', { name: 'Documents', exact: true }).last().click()
   await page.locator('input[type="file"]').setInputFiles({
     name: 'contract.pdf',
     mimeType: 'application/pdf',
@@ -323,21 +324,21 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   })
   await expect(page.getByText('contract.pdf')).toBeVisible()
 
-  await page.getByRole('link', { name: 'İnceleme Merkezi', exact: true }).click()
+  await page.getByRole('link', { name: 'Review Center', exact: true }).click()
   await expect(page.getByText('Acme must pay Invoice 42 within 30 days.')).toBeVisible()
-  await page.getByRole('button', { name: 'Onayla', exact: true }).click()
-  await page.getByLabel('İnceleme durumu').selectOption('PUBLISHING')
-  await expect(page.getByText('PUBLISHING').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Approve', exact: true }).click()
+  await page.getByLabel('Review status').selectOption('PUBLISHING')
+  await expect(page.getByRole('button', { name: /PUBLISHING/ })).toBeVisible()
 
-  await page.goto(`/matters/${matterId}/qa`)
-  await page.getByPlaceholder('Örneğin: Sözleşmedeki fesih koşulları hangi belgelerde yer alıyor?').fill(
+  await page.goto(`/en/matters/${matterId}/qa`)
+  await page.getByPlaceholder('For example: Which documents contain the termination terms?').fill(
     'What payment obligation is verified?',
   )
-  await page.getByRole('button', { name: 'Kaynaklarda ara' }).click()
+  await page.getByRole('button', { name: 'Search sources' }).click()
   await expect(page.getByText('Acme must pay Invoice 42.')).toBeVisible()
-  await expect(page.getByText('Sayfa 2')).toBeVisible()
+  await expect(page.getByText('Page 2')).toBeVisible()
   await expect(page.getByText('Acme must pay Invoice 42 within 30 days.')).toBeVisible()
 
-  await page.goto(`/matters/${matterId}/research`)
-  await expect(page.getByRole('heading', { name: 'External legal research unavailable' })).toBeVisible()
+  await page.goto(`/en/matters/${matterId}/research`)
+  await expect(page.getByRole('heading', { name: 'External legal research is unavailable' })).toBeVisible()
 })

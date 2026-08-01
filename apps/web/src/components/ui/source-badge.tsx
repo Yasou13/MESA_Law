@@ -1,4 +1,7 @@
+"use client"
+
 import { FileWarning, ShieldCheck } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -8,6 +11,7 @@ export function SourceBadge({ lowProvenance, label, className }: {
   label?: string
   className?: string
 }) {
+  const t = useTranslations('Common')
   const Icon = lowProvenance ? FileWarning : ShieldCheck
   return (
     <Badge
@@ -20,7 +24,7 @@ export function SourceBadge({ lowProvenance, label, className }: {
       )}
     >
       <Icon className="size-3" aria-hidden="true" />
-      {label ?? (lowProvenance ? 'Düşük provenance' : 'Doğrulanmış kaynak')}
+      {label ?? (lowProvenance ? t('lowProvenance') : t('verifiedSource'))}
     </Badge>
   )
 }

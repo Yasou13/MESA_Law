@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react'
 import Link from 'next/link'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef } from 'react'
 
@@ -20,18 +20,14 @@ import { cn } from '@/lib/utils'
 import { localizedHref, pathnameWithoutLocale } from '@/lib/navigation'
 
 const navigation = [
-  { label: { tr: 'Gösterge Paneli', en: 'Dashboard' }, href: '/dashboard', icon: Gauge },
-  { label: { tr: 'Dosyalar', en: 'Matters' }, href: '/matters', icon: BriefcaseBusiness },
-  { label: { tr: 'Belgeler', en: 'Documents' }, href: '/documents', icon: FileStack },
-  { label: { tr: 'İnceleme Merkezi', en: 'Review Center' }, href: '/reviews', icon: BookOpenCheck },
-  { label: { tr: 'Ask MESA', en: 'Ask MESA' }, href: '/ask-mesa', icon: MessageSquareText },
-  { label: { tr: 'Operasyonlar', en: 'Operations' }, href: '/operations', icon: ShieldCheck },
-  { label: { tr: 'Ayarlar', en: 'Settings' }, href: '/settings/profile', icon: Settings },
+  { key: 'dashboard', href: '/dashboard', icon: Gauge },
+  { key: 'matters', href: '/matters', icon: BriefcaseBusiness },
+  { key: 'documents', href: '/documents', icon: FileStack },
+  { key: 'review_center', href: '/reviews', icon: BookOpenCheck },
+  { key: 'askMesa', href: '/ask-mesa', icon: MessageSquareText },
+  { key: 'operations', href: '/operations', icon: ShieldCheck },
+  { key: 'settings', href: '/settings/profile', icon: Settings },
 ] as const
-
-function navigationLabel(item: (typeof navigation)[number], locale: 'tr' | 'en') {
-  return locale === 'tr' ? item.label.tr : item.label.en
-}
 
 interface SidebarProps {
   mobileOpen: boolean
@@ -41,6 +37,8 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
   const locale = useLocale() as 'tr' | 'en'
+  const navigationT = useTranslations('Navigation')
+  const sidebarT = useTranslations('Sidebar')
   const routePath = pathnameWithoutLocale(pathname)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -73,13 +71,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           type="button"
           onClick={onMobileClose}
           className="flex size-10 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-white lg:hidden"
-          aria-label={locale === 'tr' ? 'Menüyü kapat' : 'Close menu'}
+          aria-label={sidebarT('close')}
         >
           <X className="size-5" />
         </button>
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5" aria-label={locale === 'tr' ? 'Ana navigasyon' : 'Main navigation'}>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5" aria-label={sidebarT('mainNavigation')}>
         {navigation.map((item) => {
           const active = item.href === '/dashboard'
             ? routePath === item.href
@@ -99,13 +97,13 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               )}
             >
               <item.icon className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
-              <span className="truncate lg:hidden xl:inline">{navigationLabel(item, locale)}</span>
+              <span className="truncate lg:hidden xl:inline">{navigationT(item.key)}</span>
             </Link>
           )
           return (
             <Tooltip key={item.href}>
               <TooltipTrigger render={link} />
-              <TooltipContent side="right" className="hidden lg:block xl:hidden">{navigationLabel(item, locale)}</TooltipContent>
+              <TooltipContent side="right" className="hidden lg:block xl:hidden">{navigationT(item.key)}</TooltipContent>
             </Tooltip>
           )
         })}
@@ -113,7 +111,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
       <div className="border-t border-sidebar-border px-4 py-4 text-xs leading-5 text-sidebar-foreground lg:hidden xl:block">
         <p className="font-medium text-white">MESA Law</p>
-        <p>{locale === 'tr' ? 'Kaynak odaklı hukuk çalışma alanı' : 'Source-focused legal workspace'}</p>
+        <p>{sidebarT('tagline')}</p>
       </div>
     </>
   )
@@ -127,14 +125,14 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
             type="button"
-            aria-label={locale === 'tr' ? 'Menüyü kapat' : 'Close menu'}
+            aria-label={sidebarT('close')}
             className="absolute inset-0 bg-neutral-950/50"
             onClick={onMobileClose}
           />
           <aside
             role="dialog"
             aria-modal="true"
-            aria-label={locale === 'tr' ? 'Ana navigasyon' : 'Main navigation'}
+            aria-label={sidebarT('mainNavigation')}
             className="relative flex h-full w-[min(20rem,88vw)] flex-col bg-sidebar shadow-md"
           >
             {content}

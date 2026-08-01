@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
+import { useTranslations } from 'next-intl'
 
 import { InlineAlert } from '@/components/ui/inline-alert'
 
@@ -31,6 +32,7 @@ export default function PdfDocumentSurface({
   highlight,
   onPageCount,
 }: PdfDocumentSurfaceProps) {
+  const t = useTranslations('Viewer')
   const containerRef = useRef<HTMLDivElement>(null)
   const [renderWidth, setRenderWidth] = useState(720)
   const [viewport, setViewport] = useState<{ width: number; height: number } | null>(null)
@@ -49,8 +51,8 @@ export default function PdfDocumentSurface({
   if (loadError) {
     return (
       <div className="p-6">
-        <InlineAlert tone="danger" title="PDF önizlemesi yüklenemedi">
-          <p>Güvenli indirme bağlantısı süresi dolmuş veya belge PDF.js tarafından açılamamış olabilir.</p>
+        <InlineAlert tone="danger" title={t('pdfLoadError')}>
+          <p>{t('pdfLoadErrorDescription')}</p>
         </InlineAlert>
       </div>
     )
@@ -72,12 +74,12 @@ export default function PdfDocumentSurface({
         file={file}
         loading={
           <div className="flex min-h-96 items-center justify-center gap-2 text-foreground-secondary" role="status">
-            <Loader2 className="size-5 animate-spin" aria-hidden="true" /> PDF hazırlanıyor
+            <Loader2 className="size-5 animate-spin" aria-hidden="true" />{t('pdfPreparing')}
           </div>
         }
         error={
           <div className="flex min-h-96 items-center justify-center gap-2 text-danger">
-            <AlertTriangle className="size-5" aria-hidden="true" /> PDF açılamadı
+            <AlertTriangle className="size-5" aria-hidden="true" />{t('pdfOpenError')}
           </div>
         }
         onLoadSuccess={({ numPages }) => {
@@ -100,7 +102,7 @@ export default function PdfDocumentSurface({
           />
           {highlightStyle && (
             <div
-              aria-label="Doğrulanmış kaynak vurgusu"
+              aria-label={t('verifiedHighlight')}
               className="pointer-events-none absolute border-2 border-warning bg-warning/25 shadow-sm"
               style={highlightStyle}
             />

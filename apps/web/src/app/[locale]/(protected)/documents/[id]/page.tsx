@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
 import {
   AlertTriangle,
   ArrowLeft,
@@ -32,12 +33,13 @@ import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
 import { SourceBadge } from '@/components/ui/source-badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { ApiError } from '@/lib/api/client'
+import { localizedHref, type AppLocale } from '@/lib/navigation'
 
 const PdfDocumentSurface = dynamic(
   () => import('@/features/documents/components/PdfDocumentSurface'),
   {
     ssr: false,
-    loading: () => <LoadingState label="PDF.js yükleniyor" />,
+    loading: () => <LoadingState label="PDF.js" />,
   },
 )
 
@@ -103,8 +105,9 @@ function ParsedTextSurface({
   end: number | null
   canHighlight: boolean
 }) {
+  const t = useTranslations('Viewer')
   if (!page) {
-    return <InlineAlert tone="warning" title="Parsed metin henüz hazır değil" />
+    return <InlineAlert tone="warning" title={t('parsedNotReady')} />
   }
   const text = page.text_content
   const validSpan =
@@ -131,6 +134,8 @@ function ParsedTextSurface({
 }
 
 export default function DocumentViewerPage() {
+  const t = useTranslations('Viewer')
+  const locale = useLocale() as AppLocale
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -190,12 +195,12 @@ export default function DocumentViewerPage() {
     router.replace(`?${next.toString()}`, { scroll: false })
   }
 
-  if (contextQuery.isLoading) return <LoadingState label="Belge bağlamı yükleniyor" />
+  if (contextQuery.isLoading) return <LoadingState label={t('contextLoading')} />
   if (contextQuery.isError) {
     const error = contextQuery.error
     return (
       <ErrorState
-        title="Belge açılamadı"
+        title={t('openError')}
         description={error.message}
         referenceId={error.referenceId}
         onRetry={() => contextQuery.refetch()}
@@ -208,7 +213,7 @@ export default function DocumentViewerPage() {
     <div className="-m-4 flex min-h-[calc(100dvh-4rem)] flex-col border border-border bg-background md:-m-6 lg:-m-8">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Button render={<Link href="/documents" />} variant="ghost" size="icon-sm" aria-label="Belgelere dön">
+          <Button render={<Link href={localizedHref(locale, '/documents')} />} variant="ghost" size="icon-sm" aria-label={t('back')}>
             <ArrowLeft />
           </Button>
           <FileText className="size-5 shrink-0 text-primary" aria-hidden="true" />
@@ -221,7 +226,7 @@ export default function DocumentViewerPage() {
           <StatusBadge status={context.document.status} label={context.document.status} />
           {downloadQuery.data?.presigned_url && (
             <Button render={<a href={downloadQuery.data.presigned_url} download />} variant="outline" size="sm">
-              <Download /> Orijinal
+              <Download />{t('original')}
             </Button>
           )}
         </div>
@@ -230,17 +235,17 @@ export default function DocumentViewerPage() {
       {focusRequested && !focusVerified && (
         <InlineAlert
           tone="warning"
-          title="Kaynak vurgusu doğrulanamadı"
+          title={t('focusMismatch')}
           className="m-3"
         >
-          <p>URL’deki revision, sayfa veya metin aralığı canonical parsed kayıtla eşleşmedi. Yapay vurgu üretilmedi.</p>
+          <p>{t('focusMismatchDescription')}</p>
         </InlineAlert>
       )}
 
       <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[11rem_minmax(0,1fr)_21rem]">
-        <aside className="border-b border-border bg-surface xl:border-b-0 xl:border-r" aria-label="Sayfalar">
+        <aside className="border-b border-border bg-surface xl:border-b-0 xl:border-r" aria-label={t('pages')}>
           <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">Sayfalar</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{t('pages')}</span>
             <span className="tabular-nums text-xs text-foreground-muted">{pageCount}</span>
           </div>
           <div className="flex max-h-36 gap-2 overflow-auto p-3 xl:max-h-[calc(100dvh-10rem)] xl:flex-col">
@@ -252,7 +257,7 @@ export default function DocumentViewerPage() {
                 aria-current={selectedPage === page ? 'page' : undefined}
                 className="flex min-w-20 items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-subtle aria-[current=page]:border-primary aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary xl:w-full"
               >
-                <span>Sayfa</span><span className="tabular-nums font-semibold">{page}</span>
+                <span>{t('page')}</span><span className="tabular-nums font-semibold">{page}</span>
               </button>
             ))}
           </div>
@@ -260,9 +265,9 @@ export default function DocumentViewerPage() {
 
         <main className="min-h-[32rem] min-w-0 overflow-hidden bg-surface-subtle">
           <div className="flex items-center justify-center gap-2 border-b border-border bg-surface px-3 py-2">
-            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.max(1, selectedPage - 1))} disabled={selectedPage <= 1} aria-label="Önceki sayfa"><ChevronLeft /></Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.max(1, selectedPage - 1))} disabled={selectedPage <= 1} aria-label={t('previousPage')}><ChevronLeft /></Button>
             <span className="tabular-nums text-sm">{selectedPage} / {pageCount}</span>
-            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.min(pageCount, selectedPage + 1))} disabled={selectedPage >= pageCount} aria-label="Sonraki sayfa"><ChevronRight /></Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.min(pageCount, selectedPage + 1))} disabled={selectedPage >= pageCount} aria-label={t('nextPage')}><ChevronRight /></Button>
           </div>
           <div className="h-[calc(100%-3rem)] overflow-auto p-4">
             {isPdf && downloadQuery.data?.presigned_url ? (
@@ -273,15 +278,15 @@ export default function DocumentViewerPage() {
                 onPageCount={setPdfPageCount}
               />
             ) : isPdf && downloadQuery.isLoading ? (
-              <LoadingState label="Güvenli PDF bağlantısı hazırlanıyor" />
+              <LoadingState label={t('securePdfLoading')} />
             ) : isPdf ? (
-              <InlineAlert tone="warning" title="PDF önizlemesi kullanılamıyor">
-                <p>Canonical revision veya kısa ömürlü indirme bağlantısı henüz hazır değil.</p>
+              <InlineAlert tone="warning" title={t('pdfUnavailable')}>
+                <p>{t('pdfUnavailableDescription')}</p>
               </InlineAlert>
             ) : (
               <div className="space-y-3">
-                <InlineAlert tone="warning" title="Düşük provenance parsed-text modu">
-                  <p>DOCX/TXT için gerçek PDF sayfası ve bbox doğrulanamaz; bu görünüm sayfa citation’ı değildir.</p>
+                <InlineAlert tone="warning" title={t('lowMode')}>
+                  <p>{t('lowModeDescription')}</p>
                 </InlineAlert>
                 <ParsedTextSurface
                   page={selectedParsedPage}
@@ -294,15 +299,15 @@ export default function DocumentViewerPage() {
           </div>
         </main>
 
-        <aside className="space-y-3 border-t border-border bg-background p-3 xl:border-l xl:border-t-0" aria-label="Belge ve kaynak bilgisi">
+        <aside className="space-y-3 border-t border-border bg-background p-3 xl:border-l xl:border-t-0" aria-label={t('sourceInfo')}>
           <Panel>
-            <PanelHeader><h2 className="text-sm font-semibold">Canonical revision</h2></PanelHeader>
+            <PanelHeader><h2 className="text-sm font-semibold">{t('canonicalRevision')}</h2></PanelHeader>
             <PanelBody className="space-y-3 text-sm">
               {revision ? (
                 <>
-                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">Revision</span><span className="technical-id">v{revision.version} · {revision.id.slice(0, 8)}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">{t('revision')}</span><span className="technical-id">v{revision.version} · {revision.id.slice(0, 8)}</span></div>
                   <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">MIME</span><span>{revision.mime_type}</span></div>
-                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">Boyut</span><span className="tabular-nums">{revision.size_bytes ? `${(revision.size_bytes / 1024).toFixed(1)} KB` : 'Bilinmiyor'}</span></div>
+                  <div className="flex items-center justify-between gap-2"><span className="text-foreground-muted">{t('size')}</span><span className="tabular-nums">{revision.size_bytes ? `${(revision.size_bytes / 1024).toFixed(1)} KB` : t('unknown')}</span></div>
                   <SourceBadge
                     lowProvenance={revision.provenance_state === 'LOW_PROVENANCE'}
                     label={revision.provenance_state}
@@ -310,45 +315,45 @@ export default function DocumentViewerPage() {
                   {revision.sha256 && <p className="technical-id break-all text-xs text-foreground-muted"><Hash className="mr-1 inline size-3" />{revision.sha256}</p>}
                 </>
               ) : (
-                <p className="text-sm text-foreground-muted">Canonical revision henüz oluşmadı.</p>
+                <p className="text-sm text-foreground-muted">{t('revisionMissing')}</p>
               )}
             </PanelBody>
           </Panel>
 
           <Panel>
-            <PanelHeader><h2 className="text-sm font-semibold">Parsing zinciri</h2></PanelHeader>
+            <PanelHeader><h2 className="text-sm font-semibold">{t('parsingChain')}</h2></PanelHeader>
             <PanelBody className="space-y-2 text-sm">
               {parsedDocument ? (
                 <>
                   <p><span className="text-foreground-muted">Parser:</span> {parsedDocument.parser}</p>
-                  <p><span className="text-foreground-muted">Parsing revision:</span> {parsedDocument.parsing_revision}</p>
-                  <p><span className="text-foreground-muted">Pipeline:</span> {parsedDocument.pipeline_version ?? 'Bilinmiyor'}</p>
-                  <p><span className="text-foreground-muted">OCR:</span> {parsedDocument.ocr_version ?? 'Kullanılmadı'}</p>
+                  <p><span className="text-foreground-muted">{t('parsingRevision')}:</span> {parsedDocument.parsing_revision}</p>
+                  <p><span className="text-foreground-muted">Pipeline:</span> {parsedDocument.pipeline_version ?? t('unknown')}</p>
+                  <p><span className="text-foreground-muted">OCR:</span> {parsedDocument.ocr_version ?? t('notUsed')}</p>
                   <StatusBadge status={parsedDocument.status} label={parsedDocument.status} />
                 </>
-              ) : <p className="text-foreground-muted">Parsed document henüz yok.</p>}
+              ) : <p className="text-foreground-muted">{t('parsedMissing')}</p>}
             </PanelBody>
           </Panel>
 
           {focusRequested && (
             <Panel>
-              <PanelHeader><h2 className="text-sm font-semibold">Citation odağı</h2>{focusVerified && <ShieldCheck className="size-4 text-verified" />}</PanelHeader>
+              <PanelHeader><h2 className="text-sm font-semibold">{t('citationFocus')}</h2>{focusVerified && <ShieldCheck className="size-4 text-verified" />}</PanelHeader>
               <PanelBody className="space-y-2 text-xs">
-                <p><span className="text-foreground-muted">Revision:</span> <span className="technical-id">{focus.revisionId ?? '—'}</span></p>
+                <p><span className="text-foreground-muted">{t('revision')}:</span> <span className="technical-id">{focus.revisionId ?? '—'}</span></p>
                 <p><span className="text-foreground-muted">Chunk:</span> <span className="technical-id">{focus.chunkId ?? '—'}</span></p>
-                <p><span className="text-foreground-muted">Metin aralığı:</span> <span className="tabular-nums">{focus.textStart ?? '—'}–{focus.textEnd ?? '—'}</span></p>
+                <p><span className="text-foreground-muted">{t('textRange')}:</span> <span className="tabular-nums">{focus.textStart ?? '—'}–{focus.textEnd ?? '—'}</span></p>
               </PanelBody>
             </Panel>
           )}
 
           {context.document.failure_reason && (
-            <InlineAlert tone="danger" title="İşleme hatası"><p>{context.document.failure_reason}</p></InlineAlert>
+            <InlineAlert tone="danger" title={t('processingError')}><p>{context.document.failure_reason}</p></InlineAlert>
           )}
           {downloadQuery.isError && (
-            <InlineAlert tone="danger" title="İndirme bağlantısı alınamadı"><p>{downloadQuery.error.message}</p></InlineAlert>
+            <InlineAlert tone="danger" title={t('downloadError')}><p>{downloadQuery.error.message}</p></InlineAlert>
           )}
           {parsedPagesQuery.isError && (
-            <InlineAlert tone="warning" title="Parsed sayfalar alınamadı"><p>Kaynak vurgusu devre dışı bırakıldı.</p></InlineAlert>
+            <InlineAlert tone="warning" title={t('pagesError')}><p>{t('highlightDisabled')}</p></InlineAlert>
           )}
           {!canonicalReady && <AlertTriangle className="size-4 text-warning" aria-hidden="true" />}
         </aside>

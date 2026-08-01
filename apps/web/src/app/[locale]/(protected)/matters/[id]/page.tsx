@@ -1,7 +1,7 @@
 'use client'
 
 import { AlertTriangle, Database, FileCheck2, UsersRound } from 'lucide-react'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { use, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
@@ -24,7 +24,6 @@ import { InlineAlert } from '@/components/ui/inline-alert'
 import { Input } from '@/components/ui/input'
 import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ApiError } from '@/lib/api/client'
 
 function readableError(error: unknown, fallback: string): string {
@@ -57,6 +56,7 @@ function updateBinding(form: MesaBindingCreate, field: BindingField, value: stri
 export default function MatterOverviewPage({ params }: { params: Promise<{ id: string }> }) {
   const matterId = use(params).id
   const locale = useLocale() as 'tr' | 'en'
+  const t = useTranslations('MatterOverview')
   const { data: matter } = useGetMatter(matterId)
   const { data: parties = [], isLoading: partiesLoading } = useListMatterParties(matterId)
   const { data: claims = [], isLoading: claimsLoading } = useListClaims(matterId)
@@ -64,40 +64,40 @@ export default function MatterOverviewPage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="space-y-6">
-      <MesaBindingCard matterId={matterId} canEdit={matter?.access_scope !== 'read'} locale={locale} />
+      <MesaBindingCard matterId={matterId} canEdit={matter?.access_scope !== 'read'} />
 
       <div className="grid gap-6 xl:grid-cols-2">
         <OverviewPanel
-          title={locale === 'tr' ? 'Taraflar' : 'Parties'}
+          title={t('parties')}
           icon={UsersRound}
           loading={partiesLoading}
           empty={parties.length === 0}
-          emptyText={locale === 'tr' ? 'Bu dosyada henüz taraf kaydı bulunmuyor.' : 'No parties are recorded for this matter.'}
-          headers={locale === 'tr' ? ['Ad', 'Rol', 'Tür'] : ['Name', 'Role', 'Type']}
+          emptyText={t('partiesEmpty')}
+          headers={[t('name'), t('role'), t('type')]}
           rows={parties.map((party) => [party.name, party.role, party.type])}
         />
         <OverviewPanel
-          title={locale === 'tr' ? 'Canonical iddialar' : 'Canonical claims'}
+          title={t('claims')}
           icon={FileCheck2}
           loading={claimsLoading}
           empty={claims.length === 0}
-          emptyText={locale === 'tr' ? 'İncelenmiş canonical iddia bulunmuyor.' : 'No reviewed canonical claim is available.'}
-          headers={locale === 'tr' ? ['Açıklama', 'Durum', 'İnceleme'] : ['Description', 'Status', 'Review']}
+          emptyText={t('claimsEmpty')}
+          headers={[t('description'), t('state'), t('review')]}
           rows={claims.map((claim) => [claim.description, claim.status, claim.review_status])}
         />
       </div>
 
       <OverviewPanel
-        title={locale === 'tr' ? 'Manuel süreler' : 'Manual deadlines'}
+        title={t('deadlines')}
         icon={AlertTriangle}
         loading={deadlinesLoading}
         empty={deadlines.length === 0}
-        emptyText={locale === 'tr' ? 'Bu dosyada manuel süre kaydı bulunmuyor.' : 'No manual deadline is recorded for this matter.'}
-        headers={locale === 'tr' ? ['Son tarih', 'Açıklama', 'Durum'] : ['Due date', 'Description', 'State']}
+        emptyText={t('deadlinesEmpty')}
+        headers={[t('dueDate'), t('description'), t('state')]}
         rows={deadlines.map((deadline) => [
-          new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB').format(new Date(deadline.due_date)),
+          new Intl.DateTimeFormat(locale).format(new Date(deadline.due_date)),
           deadline.description,
-          deadline.is_completed ? (locale === 'tr' ? 'Tamamlandı' : 'Completed') : (locale === 'tr' ? 'Açık' : 'Open'),
+          deadline.is_completed ? t('completed') : t('open'),
         ])}
       />
     </div>
@@ -113,6 +113,7 @@ function OverviewPanel({ title, icon: Icon, loading, empty, emptyText, headers, 
   headers: string[]
   rows: string[][]
 }) {
+  const [firstHeader, secondHeader, thirdHeader] = headers
   return (
     <Panel className="overflow-hidden">
       <PanelHeader>
@@ -123,36 +124,43 @@ function OverviewPanel({ title, icon: Icon, loading, empty, emptyText, headers, 
       ) : empty ? (
         <PanelBody><NoDataState title={title} description={emptyText} /></PanelBody>
       ) : (
-        <Table>
-          <TableHeader><TableRow>{headers.map((header) => <TableHead key={header}>{header}</TableHead>)}</TableRow></TableHeader>
-          <TableBody>{rows.map((row, rowIndex) => <TableRow key={`${title}-${rowIndex}`}>{row.map((cell, cellIndex) => <TableCell key={`${rowIndex}-${cellIndex}`}>{cell}</TableCell>)}</TableRow>)}</TableBody>
-        </Table>
+        <div className="divide-y divide-border-subtle">
+          {rows.map(([firstCell, secondCell, thirdCell], rowIndex) => (
+            <dl key={`${title}-${rowIndex}`} className="grid gap-2 px-4 py-3 sm:grid-cols-3">
+              <div className="min-w-0"><dt className="text-[11px] font-medium text-foreground-muted">{firstHeader}</dt><dd className="mt-0.5 truncate text-sm">{firstCell}</dd></div>
+              <div className="min-w-0"><dt className="text-[11px] font-medium text-foreground-muted">{secondHeader}</dt><dd className="mt-0.5 truncate text-sm">{secondCell}</dd></div>
+              <div className="min-w-0"><dt className="text-[11px] font-medium text-foreground-muted">{thirdHeader}</dt><dd className="mt-0.5 truncate text-sm">{thirdCell}</dd></div>
+            </dl>
+          ))}
+        </div>
       )}
     </Panel>
   )
 }
 
-function MesaBindingCard({ matterId, canEdit, locale }: { matterId: string; canEdit: boolean; locale: 'tr' | 'en' }) {
+function MesaBindingCard({ matterId, canEdit }: { matterId: string; canEdit: boolean }) {
+  const t = useTranslations('MatterOverview')
+  const common = useTranslations('Common')
   const queryClient = useQueryClient()
   const [form, setForm] = useState<MesaBindingCreate>({ mesa_tenant_id: '', workspace_id: '', dataset_id: '', agent_id: '' })
   const { data: binding, isLoading, error } = useGetMesaBinding<MesaBindingResponse, ApiError>(matterId, { query: { retry: false } })
   const createBinding = useCreateMesaBinding<ApiError>({
     mutation: {
       onSuccess: async () => {
-        toast.success(locale === 'tr' ? 'MESA kapsamı kaydedildi; yetki kontrolü kuyruğa alındı' : 'Binding saved; MESA permission preflight queued')
+        toast.success(t('bindingSaved'))
         await queryClient.invalidateQueries({ queryKey: getGetMesaBindingQueryKey(matterId) })
       },
-      onError: (mutationError) => toast.error(readableError(mutationError, locale === 'tr' ? 'MESA kapsamı kaydedilemedi' : 'Binding failed')),
+      onError: (mutationError) => toast.error(readableError(mutationError, t('bindingFailed'))),
     },
   })
 
-  if (isLoading) return <Panel><PanelBody><LoadingState label={locale === 'tr' ? 'MESA kapsamı yükleniyor' : 'Loading MESA binding'} /></PanelBody></Panel>
+  if (isLoading) return <Panel><PanelBody><LoadingState label={t('bindingLoading')} /></PanelBody></Panel>
 
   if (binding) {
     return (
       <Panel>
         <PanelHeader>
-          <div><h2 className="text-sm font-semibold">MESA Core v4</h2><p className="mt-0.5 text-xs text-foreground-secondary">{locale === 'tr' ? 'Önceden hazırlanmış çalışma alanı kapsamı' : 'Pre-provisioned workspace scope'}</p></div>
+          <div><h2 className="text-sm font-semibold">MESA Core v4</h2><p className="mt-0.5 text-xs text-foreground-secondary">{t('bindingScope')}</p></div>
           <StatusBadge status={binding.provisioning_status === 'READY' ? 'verified' : binding.last_error ? 'danger' : 'processing'} label={binding.provisioning_status} />
         </PanelHeader>
         <PanelBody className="space-y-3">
@@ -161,20 +169,20 @@ function MesaBindingCard({ matterId, canEdit, locale }: { matterId: string; canE
             <div><dt className="text-foreground-muted">Dataset</dt><dd className="technical-id mt-1 break-all text-foreground">{binding.dataset_id}</dd></div>
             <div><dt className="text-foreground-muted">Agent</dt><dd className="technical-id mt-1 break-all text-foreground">{binding.agent_id}</dd></div>
           </dl>
-          {binding.last_error && <InlineAlert tone="danger" title={locale === 'tr' ? 'MESA yetki kontrolü başarısız' : 'MESA preflight failed'}>{binding.last_error}</InlineAlert>}
-          <p className="text-xs text-foreground-secondary">{locale === 'tr' ? 'Law yalnız preflight yapar; ACL hazırlığı harici mesa-v4-admin onboarding sorumluluğudur.' : 'Law performs preflight only; ACL provisioning remains an external mesa-v4-admin onboarding task.'}</p>
+          {binding.last_error && <InlineAlert tone="danger" title={t('preflightFailed')}>{binding.last_error}</InlineAlert>}
+          <p className="text-xs text-foreground-secondary">{t('preflightNote')}</p>
         </PanelBody>
       </Panel>
     )
   }
 
   if (!(error instanceof ApiError && error.status === 404)) {
-    return <InlineAlert tone="danger" title={locale === 'tr' ? 'MESA kapsam durumu yüklenemedi' : 'MESA binding could not be loaded'}>{readableError(error, 'Unknown error')}</InlineAlert>
+    return <InlineAlert tone="danger" title={t('bindingLoadError')}>{readableError(error, t('unknownError'))}</InlineAlert>
   }
 
   return (
     <Panel>
-      <PanelHeader><div><h2 className="flex items-center gap-2 text-sm font-semibold"><Database className="size-4" />{locale === 'tr' ? 'MESA Core v4 kapsamını bağla' : 'Bind MESA Core v4 scope'}</h2><p className="mt-0.5 text-xs text-foreground-secondary">{locale === 'tr' ? 'Yalnız mesa-v4-admin tarafından önceden hazırlanmış kimlikleri girin.' : 'Enter identifiers already provisioned by mesa-v4-admin.'}</p></div></PanelHeader>
+      <PanelHeader><div><h2 className="flex items-center gap-2 text-sm font-semibold"><Database className="size-4" />{t('bindTitle')}</h2><p className="mt-0.5 text-xs text-foreground-secondary">{t('bindDescription')}</p></div></PanelHeader>
       <PanelBody>
         <div className="grid gap-4 md:grid-cols-2">
           {(['mesa_tenant_id', 'workspace_id', 'dataset_id', 'agent_id'] as const).map((field) => (
@@ -186,11 +194,11 @@ function MesaBindingCard({ matterId, canEdit, locale }: { matterId: string; canE
         </div>
         <Button
           className="mt-4"
-          aria-label="Save binding and run preflight"
+          aria-label={t('saveBindingLabel')}
           disabled={!canEdit || createBinding.isPending || Object.values(form).some((value) => !value.trim())}
           onClick={() => createBinding.mutate({ matterId, data: form })}
         >
-          {createBinding.isPending ? (locale === 'tr' ? 'Kaydediliyor…' : 'Saving…') : (locale === 'tr' ? 'Kapsamı kaydet ve kontrol et' : 'Save binding and run preflight')}
+          {createBinding.isPending ? common('saving') : t('saveBinding')}
         </Button>
       </PanelBody>
     </Panel>

@@ -1,31 +1,31 @@
 'use client'
 
-import { useLocale } from 'next-intl'
-import { use } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { useLocale, useTranslations } from 'next-intl'
+import { use, useMemo } from 'react'
 
 import { useListJobs } from '@/api/endpoints/operations/operations'
-import { ErrorState, LoadingState, NoDataState } from '@/components/ui/async-state'
+import type { JobResponse } from '@/api/models'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { DataTable, SortableHeader } from '@/components/ui/data-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { Panel } from '@/components/ui/panel'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import type { AppLocale } from '@/lib/navigation'
 
 export default function MatterOperationsPage({ params }: { params: Promise<{ id: string }> }) {
   const matterId = use(params).id
-  const locale = useLocale()
-  const { data: jobs = [], isLoading, isError, refetch } = useListJobs({ limit: 100 })
-  const matterJobs = jobs.filter((job) => job.matter_id === matterId)
-
-  return (
-    <div className="space-y-5">
-      <PageHeader title={locale === 'tr' ? 'Dosya operasyonları' : 'Matter operations'} description={locale === 'tr' ? 'Belge işleme ve MESA yayın kuyruğunun bu dosyaya ait görünümü.' : 'Matter-scoped document processing and MESA publication queue.'} />
-      {isLoading ? <LoadingState /> : isError ? (
-        <ErrorState title={locale === 'tr' ? 'Operasyonlar yüklenemedi' : 'Operations could not be loaded'} description={locale === 'tr' ? 'Arka plan işleri çalışmaya devam edebilir; yeniden deneyin.' : 'Background work may continue; try again.'} onRetry={() => refetch()} />
-      ) : matterJobs.length === 0 ? (
-        <NoDataState title={locale === 'tr' ? 'Operasyon bulunmuyor' : 'No operations found'} description={locale === 'tr' ? 'Bu dosya için henüz arka plan işi oluşturulmadı.' : 'No background job has been created for this matter.'} />
-      ) : (
-        <Panel className="overflow-hidden"><Table><TableHeader><TableRow><TableHead>{locale === 'tr' ? 'İşlem' : 'Operation'}</TableHead><TableHead>{locale === 'tr' ? 'Durum' : 'Status'}</TableHead><TableHead>{locale === 'tr' ? 'Deneme' : 'Attempts'}</TableHead><TableHead>{locale === 'tr' ? 'Güncelleme' : 'Updated'}</TableHead><TableHead>Correlation ID</TableHead></TableRow></TableHeader><TableBody>{matterJobs.map((job) => <TableRow key={job.id}><TableCell className="font-medium">{job.type}</TableCell><TableCell><StatusBadge status={job.status} label={job.status} /></TableCell><TableCell>{job.retries}/{job.max_retries}</TableCell><TableCell><time>{new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(job.updated_at))}</time></TableCell><TableCell className="technical-id">{job.id.slice(0, 12)}…</TableCell></TableRow>)}</TableBody></Table></Panel>
-      )}
-    </div>
-  )
+  const t = useTranslations('Operations')
+  const common = useTranslations('Common')
+  const tableCopy = useTranslations('DataTable')
+  const locale = useLocale() as AppLocale
+  const jobsQuery = useListJobs({ limit: 100 })
+  const jobs = (jobsQuery.data ?? []).filter((job) => job.matter_id === matterId)
+  const columns = useMemo<ColumnDef<JobResponse, unknown>[]>(() => [
+    { accessorKey: 'type', header: ({ column }) => <SortableHeader label={t('job')} column={column} />, cell: ({ row }) => <span className="font-medium">{row.original.type.replaceAll('_', ' ')}</span> },
+    { accessorKey: 'status', header: ({ column }) => <SortableHeader label={common('status')} column={column} />, cell: ({ row }) => <StatusBadge status={row.original.status} label={row.original.status} /> },
+    { accessorKey: 'retries', header: t('attempt'), cell: ({ row }) => `${row.original.retries + 1} / ${row.original.max_retries}` },
+    { accessorKey: 'updated_at', header: ({ column }) => <SortableHeader label={common('updatedAt')} column={column} />, cell: ({ row }) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(row.original.updated_at)) },
+    { accessorKey: 'id', header: 'Correlation ID', cell: ({ row }) => <span className="technical-id">{row.original.id.slice(0, 12)}</span> },
+  ], [common, locale, t])
+  return <div className="space-y-6"><PageHeader title={t('matterTitle')} description={t('matterDescription')} />{jobsQuery.isLoading ? <LoadingState label={common('loading')} /> : jobsQuery.isError ? <ErrorState title={t('matterLoadError')} description={t('matterLoadErrorDescription')} onRetry={() => jobsQuery.refetch()} /> : <DataTable columns={columns} data={jobs} getRowId={(row) => row.id} copy={{ search: t('search'), emptyTitle: t('emptyTitle'), emptyDescription: t('matterEmptyDescription'), previous: tableCopy('previous'), next: tableCopy('next'), page: (current, total) => tableCopy('page', { current, total }), rows: (visible, total) => tableCopy('rows', { visible, total }) }} />}</div>
 }

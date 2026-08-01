@@ -1,79 +1,42 @@
-import { useListTimelineEvents } from '@/api/endpoints/default/default';
-import { Loader2, AlertCircle, Clock } from 'lucide-react';
+'use client'
 
-export function Timeline({ matterId = "1" }: { matterId?: string }) {
-  const { data: timelineResponse, isLoading: loading, error, refetch } = useListTimelineEvents(matterId);
-  const events = timelineResponse ?? [];
+import { CalendarDays, FileText } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 
-  if (loading) {
-    return (
-      <div className="p-8 animate-pulse space-y-6">
-        <div className="h-4 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded w-1/4"></div>
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex gap-4">
-              <div className="w-2 h-full bg-[var(--bg-surface)] rounded"></div>
-              <div className="h-16 bg-[var(--bg-surface)] rounded w-full"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+import { useListTimelineEvents } from '@/api/endpoints/default/default'
+import { ErrorState, LoadingState, NoDataState } from '@/components/ui/async-state'
+import { StatusBadge } from '@/components/ui/status-badge'
+import type { AppLocale } from '@/lib/navigation'
 
-  if (error) {
-    return (
-      <div className="p-8 bg-[var(--color-semantic-error)]/10 border border-[var(--color-semantic-error)] rounded-xl text-[var(--color-semantic-error)]">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle className="w-5 h-5" />
-          <h3 className="font-semibold">Failed to load timeline</h3>
-        </div>
-        <p className="text-sm opacity-80 mb-4">Could not load the chronological timeline. Please try again.</p>
-        <button onClick={() => refetch()} className="text-sm bg-[var(--color-semantic-error)]/20 hover:bg-[var(--color-semantic-error)]/30 px-4 py-2 rounded-lg font-medium transition-colors">Retry</button>
-      </div>
-    );
-  }
+export function Timeline({ matterId }: { matterId: string }) {
+  const t = useTranslations('Timeline')
+  const common = useTranslations('Common')
+  const locale = useLocale() as AppLocale
+  const timelineQuery = useListTimelineEvents(matterId)
+  const events = timelineQuery.data ?? []
+
+  if (timelineQuery.isLoading) return <LoadingState label={common('loading')} />
+  if (timelineQuery.isError) return <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => timelineQuery.refetch()} />
+  if (events.length === 0) return <NoDataState title={t('emptyTitle')} description={t('emptyDescription')} />
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
-        <h2 className="text-xl font-semibold text-[var(--foreground)]">Chronological Timeline</h2>
-        <div className="flex items-center gap-2 text-sm text-[var(--color-anthracite-400)]">
-          <Clock className="w-4 h-4" />
-          {events.length} Events
-        </div>
-      </div>
-      
-      <div className="relative border-l-2 border-[var(--border-surface)] ml-3 space-y-10">
-        {events.map((evt) => (
-          <div key={evt.id} className="pl-8 relative group">
-            <div className="absolute w-4 h-4 bg-[var(--color-lila-500)] rounded-full -left-[9px] top-1.5 ring-4 ring-[var(--background)] group-hover:scale-125 transition-transform"></div>
-            
-            <div className="bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-xl p-5 shadow-sm group-hover:shadow-md transition-shadow relative">
-              {/* Arrow */}
-              <div className="absolute w-3 h-3 bg-[var(--bg-surface)] border-l border-b border-[var(--border-surface)] rotate-45 -left-[7px] top-2"></div>
-              
-              <div className="text-sm font-medium text-[var(--color-lila-400)] mb-2">{new Date(evt.date).toLocaleDateString()}</div>
-              <div className="text-[var(--foreground)] font-medium text-lg mb-3">{evt.title}</div>
-              
-              <div className="flex items-center gap-3">
-                <span className="text-xs px-2.5 py-1 bg-[var(--bg-surface-hover)] text-[var(--color-anthracite-300)] rounded-md border border-[var(--border-surface)] flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-anthracite-400)]"></span>
-                  Source: {evt.source}
-                </span>
-                <span className={`text-xs px-2.5 py-1 rounded-md border font-medium ${evt.confidence === 'high' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
-                  Confidence: {evt.confidence}
-                </span>
+    <div>
+      <p className="mb-5 flex items-center gap-2 text-xs text-foreground-secondary"><CalendarDays className="size-4" />{t('events', { count: events.length })}</p>
+      <ol className="relative ml-2 space-y-5 border-l border-border-strong">
+        {events.map((event) => (
+          <li key={event.id} className="relative pl-7">
+            <span className="absolute -left-[5px] top-2 size-2.5 rounded-full border-2 border-surface bg-primary" aria-hidden="true" />
+            <article className="rounded-lg border border-border bg-surface p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0"><time dateTime={event.date} className="text-xs font-medium text-primary">{new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(event.date))}</time><h2 className="mt-1 break-words font-semibold">{event.title}</h2></div>
+                <StatusBadge status={event.confidence.toLowerCase() === 'high' ? 'verified' : 'warning'} label={`${t('confidence')}: ${event.confidence}`} />
               </div>
-            </div>
-          </div>
+              {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground-secondary">{event.description}</p>}
+              <p className="mt-3 flex items-center gap-2 text-xs text-foreground-muted"><FileText className="size-3.5" />{t('source')}: <span className="technical-id break-all">{event.source}</span></p>
+            </article>
+          </li>
         ))}
-        {events.length === 0 && (
-          <div className="pl-8 text-[var(--color-anthracite-400)] text-sm italic">
-            No events found for this matter.
-          </div>
-        )}
-      </div>
+      </ol>
     </div>
-  );
+  )
 }

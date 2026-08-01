@@ -1,6 +1,6 @@
 'use client'
 
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -12,23 +12,21 @@ import { cn } from '@/lib/utils'
 import { localizedHref, pathnameWithoutLocale } from '@/lib/navigation'
 
 const tabs = [
-  { slug: '', tr: 'Genel Bakış', en: 'Overview' },
-  { slug: 'timeline', tr: 'Timeline', en: 'Timeline' },
-  { slug: 'parties', tr: 'Taraflar', en: 'Parties' },
-  { slug: 'documents', tr: 'Belgeler', en: 'Documents' },
-  { slug: 'evidence', tr: 'İddialar ve Deliller', en: 'Claims and Evidence' },
-  { slug: 'research', tr: 'Hukuki Kaynaklar', en: 'Legal Sources' },
-  { slug: 'qa', tr: 'Ask MESA', en: 'Ask MESA' },
-  { slug: 'reviews', tr: 'İncelemeler', en: 'Reviews' },
-  { slug: 'operations', tr: 'Operasyonlar', en: 'Operations' },
+  { slug: '', key: 'overview' },
+  { slug: 'timeline', key: 'timeline' },
+  { slug: 'parties', key: 'parties' },
+  { slug: 'documents', key: 'documents' },
+  { slug: 'evidence', key: 'evidence' },
+  { slug: 'research', key: 'research' },
+  { slug: 'qa', key: 'qa' },
+  { slug: 'reviews', key: 'reviews' },
+  { slug: 'operations', key: 'operations' },
 ] as const
-
-function tabLabel(tab: (typeof tabs)[number], locale: 'tr' | 'en') {
-  return locale === 'tr' ? tab.tr : tab.en
-}
 
 export function MatterWorkspaceShell({ matterId, children }: { matterId: string; children: React.ReactNode }) {
   const locale = useLocale() as 'tr' | 'en'
+  const t = useTranslations('Shell')
+  const navigationT = useTranslations('Navigation')
   const pathname = pathnameWithoutLocale(usePathname())
   const { data: matter, isLoading, isError, refetch } = useGetMatter(matterId)
   const { data: deadlines = [] } = useListDeadlines({ matter_id: matterId })
@@ -36,12 +34,12 @@ export function MatterWorkspaceShell({ matterId, children }: { matterId: string;
     .filter((item) => !item.is_completed && new Date(item.due_date).getTime() >= Date.now())
     .sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
 
-  if (isLoading) return <LoadingState label={locale === 'tr' ? 'Dosya yükleniyor' : 'Loading matter'} />
+  if (isLoading) return <LoadingState label={t('matterLoading')} />
   if (isError || !matter) {
     return (
       <ErrorState
-        title={locale === 'tr' ? 'Dosya yüklenemedi' : 'Matter could not be loaded'}
-        description={locale === 'tr' ? 'Erişim yetkinizi ve bağlantınızı kontrol edin.' : 'Check your access and connection.'}
+        title={t('matterLoadError')}
+        description={t('matterLoadErrorDescription')}
         onRetry={() => refetch()}
       />
     )
@@ -55,10 +53,10 @@ export function MatterWorkspaceShell({ matterId, children }: { matterId: string;
         locale={locale}
         uploadHref={localizedHref(locale, `${base}/documents?upload=1`)}
         nextDeadline={nextDeadline
-          ? `${new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB').format(new Date(nextDeadline.due_date))} · ${nextDeadline.description}`
+          ? `${new Intl.DateTimeFormat(locale).format(new Date(nextDeadline.due_date))} · ${nextDeadline.description}`
           : null}
       />
-      <nav className="overflow-x-auto border-b border-border bg-surface px-3 md:px-5" aria-label={locale === 'tr' ? 'Dosya bölümleri' : 'Matter sections'}>
+      <nav className="overflow-x-auto border-b border-border bg-surface px-3 md:px-5" aria-label={t('matterSections')}>
         <div className="flex min-w-max gap-1">
           {tabs.map((tab) => {
             const href = tab.slug ? `${base}/${tab.slug}` : base
@@ -73,7 +71,7 @@ export function MatterWorkspaceShell({ matterId, children }: { matterId: string;
                   active && 'text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-primary',
                 )}
               >
-                {tabLabel(tab, locale)}
+                {tab.key === 'qa' ? navigationT('askMesa') : t(tab.key)}
               </Link>
             )
           })}

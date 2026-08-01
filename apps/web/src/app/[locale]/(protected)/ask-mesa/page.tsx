@@ -2,7 +2,7 @@
 
 import { ArrowRight, BriefcaseBusiness, MessageSquareText } from 'lucide-react'
 import Link from 'next/link'
-import { useLocale } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 
 import { useListMatters } from '@/api/endpoints/default/default'
 import { ErrorState, LoadingState, NoDataState } from '@/components/ui/async-state'
@@ -12,29 +12,28 @@ import { localizedHref } from '@/lib/navigation'
 
 export default function AskMesaEntryPage() {
   const locale = useLocale() as 'tr' | 'en'
+  const t = useTranslations('AskMesaEntry')
   const { data: matters = [], isLoading, isError, refetch } = useListMatters()
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ask MESA"
-        description={locale === 'tr'
-          ? 'Kaynaklı soru-cevap yalnızca seçtiğiniz dosyanın doğrulanmış belge kapsamı içinde çalışır.'
-          : 'Sourced Q&A only works within the verified document scope of the matter you select.'}
+        title={t('title')}
+        description={t('description')}
       />
 
       {isLoading ? (
-        <LoadingState label={locale === 'tr' ? 'Dosyalar yükleniyor' : 'Loading matters'} />
+        <LoadingState label={t('loading')} />
       ) : isError ? (
         <ErrorState
-          title={locale === 'tr' ? 'Dosyalar yüklenemedi' : 'Matters could not be loaded'}
-          description={locale === 'tr' ? 'Verileriniz korunuyor. Yeniden deneyebilirsiniz.' : 'Your data remains safe. You can try again.'}
+          title={t('loadError')}
+          description={t('loadErrorDescription')}
           onRetry={() => refetch()}
         />
       ) : matters.length === 0 ? (
         <NoDataState
-          title={locale === 'tr' ? 'Soru sorulacak dosya bulunmuyor' : 'No matter is available for Q&A'}
-          description={locale === 'tr' ? 'Önce erişiminiz olan bir dosya oluşturun.' : 'Create a matter you can access first.'}
+          title={t('emptyTitle')}
+          description={t('emptyDescription')}
         />
       ) : (
         <Panel className="divide-y divide-border-subtle overflow-hidden">
@@ -50,12 +49,12 @@ export default function AskMesaEntryPage() {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{matter.title}</span>
                 <span className="mt-0.5 block truncate text-xs text-foreground-secondary">
-                  {matter.internal_reference ?? (locale === 'tr' ? 'Dosya numarası belirtilmedi' : 'No matter reference')}
+                  {matter.internal_reference ?? t('noReference')}
                 </span>
               </span>
               <span className="hidden items-center gap-2 text-xs font-medium text-primary sm:flex">
                 <MessageSquareText className="size-4" />
-                {locale === 'tr' ? 'Dosyada sor' : 'Ask in matter'}
+                {t('ask')}
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
               </span>
             </Link>

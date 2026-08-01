@@ -1,34 +1,28 @@
 'use client'
 
-import { Search, UsersRound } from 'lucide-react'
-import { useLocale } from 'next-intl'
-import { use, useMemo, useState } from 'react'
+import type { ColumnDef } from '@tanstack/react-table'
+import { UsersRound } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { use, useMemo } from 'react'
 
 import { useListMatterParties } from '@/api/endpoints/default/default'
-import { ErrorState, LoadingState, NoDataState } from '@/components/ui/async-state'
-import { Input } from '@/components/ui/input'
+import type { MatterPartyResponse } from '@/api/models'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { DataTable, SortableHeader } from '@/components/ui/data-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { Panel } from '@/components/ui/panel'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export default function MatterPartiesPage({ params }: { params: Promise<{ id: string }> }) {
   const matterId = use(params).id
-  const locale = useLocale()
-  const [search, setSearch] = useState('')
-  const { data: parties = [], isLoading, isError, refetch } = useListMatterParties(matterId)
-  const visible = useMemo(() => parties.filter((party) => `${party.name} ${party.role} ${party.type}`.toLocaleLowerCase().includes(search.toLocaleLowerCase())), [parties, search])
+  const t = useTranslations('Parties')
+  const common = useTranslations('Common')
+  const tableCopy = useTranslations('DataTable')
+  const partiesQuery = useListMatterParties(matterId)
+  const columns = useMemo<ColumnDef<MatterPartyResponse, unknown>[]>(() => [
+    { accessorKey: 'name', header: ({ column }) => <SortableHeader label={t('name')} column={column} />, cell: ({ row }) => <span className="inline-flex max-w-80 items-center gap-2 truncate font-medium"><UsersRound className="size-4 shrink-0 text-foreground-muted" />{row.original.name}</span> },
+    { accessorKey: 'role', header: ({ column }) => <SortableHeader label={t('role')} column={column} /> },
+    { accessorKey: 'type', header: ({ column }) => <SortableHeader label={t('type')} column={column} /> },
+    { accessorKey: 'id', header: 'ID', cell: ({ row }) => <span className="technical-id">{row.original.id.slice(0, 12)}</span> },
+  ], [t])
 
-  return (
-    <div className="space-y-5">
-      <PageHeader title={locale === 'tr' ? 'Taraflar' : 'Parties'} description={locale === 'tr' ? 'Dosyayla ilişkili kişi ve kurum kayıtları.' : 'People and organisations associated with this matter.'} />
-      <div className="relative max-w-sm"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-foreground-muted" /><Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9" placeholder={locale === 'tr' ? 'Taraflarda ara' : 'Search parties'} /></div>
-      {isLoading ? <LoadingState /> : isError ? (
-        <ErrorState title={locale === 'tr' ? 'Taraflar yüklenemedi' : 'Parties could not be loaded'} description={locale === 'tr' ? 'Verileriniz korunuyor.' : 'Your data remains safe.'} onRetry={() => refetch()} />
-      ) : visible.length === 0 ? (
-        <NoDataState title={locale === 'tr' ? 'Taraf bulunmuyor' : 'No parties found'} description={search ? (locale === 'tr' ? 'Arama ölçütünü değiştirin.' : 'Change the search criteria.') : (locale === 'tr' ? 'Bu dosyada taraf kaydı bulunmuyor.' : 'This matter has no party records.')} />
-      ) : (
-        <Panel className="overflow-hidden"><Table><TableHeader><TableRow><TableHead>{locale === 'tr' ? 'Ad' : 'Name'}</TableHead><TableHead>{locale === 'tr' ? 'Rol' : 'Role'}</TableHead><TableHead>{locale === 'tr' ? 'Tür' : 'Type'}</TableHead><TableHead>ID</TableHead></TableRow></TableHeader><TableBody>{visible.map((party) => <TableRow key={party.id}><TableCell className="font-medium"><span className="inline-flex items-center gap-2"><UsersRound className="size-4 text-foreground-muted" />{party.name}</span></TableCell><TableCell>{party.role}</TableCell><TableCell>{party.type}</TableCell><TableCell className="technical-id">{party.id.slice(0, 12)}…</TableCell></TableRow>)}</TableBody></Table></Panel>
-      )}
-    </div>
-  )
+  return <div className="space-y-6"><PageHeader title={t('title')} description={t('description')} />{partiesQuery.isLoading ? <LoadingState label={common('loading')} /> : partiesQuery.isError ? <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => partiesQuery.refetch()} /> : <DataTable columns={columns} data={partiesQuery.data ?? []} getRowId={(row) => row.id} copy={{ search: t('search'), emptyTitle: t('emptyTitle'), emptyDescription: t('emptyDescription'), previous: tableCopy('previous'), next: tableCopy('next'), page: (current, total) => tableCopy('page', { current, total }), rows: (visible, total) => tableCopy('rows', { visible, total }) }} />}</div>
 }

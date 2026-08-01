@@ -1,94 +1,72 @@
 'use client'
 
+import type { ColumnDef } from '@tanstack/react-table'
+import { Shield, UserRound } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useMemo } from 'react'
+
 import { useListFirmMembers } from '@/api/endpoints/default/default'
-import { Users, Shield, User as UserIcon, Loader2, AlertCircle, Mail } from 'lucide-react'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import type { FirmMemberResponse } from '@/api/models'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { DataTable, SortableHeader } from '@/components/ui/data-table'
+import { PageHeader } from '@/components/ui/page-header'
 import { StatusBadge } from '@/components/ui/status-badge'
 
-
 export default function MembersPage() {
-  const { data: members = [], isLoading, isError } = useListFirmMembers()
+  const t = useTranslations('Members')
+  const common = useTranslations('Common')
+  const tableCopy = useTranslations('DataTable')
+  const membersQuery = useListFirmMembers()
+
+  const columns = useMemo<ColumnDef<FirmMemberResponse, unknown>[]>(() => [
+    {
+      accessorKey: 'full_name',
+      header: ({ column }) => <SortableHeader label={t('user')} column={column} />,
+      cell: ({ row }) => (
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-subtle font-semibold text-primary" aria-hidden="true">
+            {row.original.full_name?.charAt(0)?.toUpperCase() || <UserRound className="size-4" />}
+          </div>
+          <div className="min-w-0"><p className="truncate font-medium">{row.original.full_name || t('unnamed')}</p><p className="truncate text-xs text-foreground-muted">{row.original.email}</p></div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'role',
+      header: ({ column }) => <SortableHeader label={t('role')} column={column} />,
+      cell: ({ row }) => <span className="inline-flex items-center gap-2 capitalize"><Shield className="size-4 text-foreground-muted" />{row.original.role}</span>,
+    },
+    {
+      accessorKey: 'is_active',
+      header: common('status'),
+      cell: ({ row }) => <StatusBadge status={row.original.is_active ? 'success' : 'danger'} label={row.original.is_active ? 'ACTIVE' : 'INACTIVE'} />,
+    },
+    {
+      id: 'access',
+      header: () => <span className="sr-only">{common('actions')}</span>,
+      cell: () => <span className="text-xs text-foreground-muted">{t('readOnly')}</span>,
+    },
+  ], [common, t])
 
   return (
-    <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Organization Members</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Manage access and roles for your firm.</p>
-        </div>
-        <Button className="gap-2" disabled title="Membership mutation is not exposed by the MVP API">
-          <Mail className="w-4 h-4" /> Invite unavailable
-        </Button>
-      </div>
-
-      <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
-            <Loader2 className="animate-spin h-8 w-8 text-[var(--color-lila-500)]" />
-            <p className="text-[var(--color-anthracite-500)] animate-pulse">Loading members...</p>
-          </div>
-        ) : isError ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4">
-            <AlertCircle className="w-12 h-12 text-[var(--color-semantic-error)]" />
-            <h3 className="text-xl font-bold text-[var(--foreground)]">Failed to load members</h3>
-            <p className="text-[var(--color-anthracite-500)]">Please try again later.</p>
-          </div>
-        ) : members.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 border-dashed border-2 border-[var(--border-surface)] m-4 rounded-2xl">
-            <div className="w-16 h-16 rounded-full bg-[var(--bg-surface-hover)] flex items-center justify-center mb-4">
-              <Users className="w-8 h-8 text-[var(--color-anthracite-400)]" />
-            </div>
-            <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">No Members Found</h3>
-            <p className="text-[var(--color-anthracite-500)]">Invite colleagues to your firm to get started.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader className="bg-[var(--bg-surface-hover)]">
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((member) => (
-                <TableRow key={member.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[var(--bg-surface)] border border-[var(--border-surface)] flex items-center justify-center shrink-0 text-[var(--color-lila-500)] font-bold">
-                        {member.full_name?.charAt(0)?.toUpperCase() || <UserIcon className="w-4 h-4" />}
-                      </div>
-                      <div>
-                        <div className="font-medium text-[var(--foreground)]">{member.full_name || 'Unnamed User'}</div>
-                        <div className="text-sm text-[var(--color-anthracite-500)]">{member.email}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-[var(--color-anthracite-400)]">
-                      {member.role === 'admin' ? (
-                        <Shield className="w-4 h-4 text-[var(--color-lila-500)]" />
-                      ) : (
-                        <UserIcon className="w-4 h-4" />
-                      )}
-                      <span className="capitalize">{member.role}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge 
-                      status={member.is_active ? 'success' : 'error'} 
-                      label={member.is_active ? 'ACTIVE' : 'INACTIVE'} 
-                    />
-                  </TableCell>
-                  <TableCell className="text-right text-xs text-[var(--color-anthracite-500)]">Read-only</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={t('title')} description={t('description')} />
+      {membersQuery.isLoading ? <LoadingState label={common('loading')} /> : membersQuery.isError ? (
+        <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => membersQuery.refetch()} />
+      ) : (
+        <DataTable
+          columns={columns}
+          data={membersQuery.data ?? []}
+          getRowId={(row) => row.id}
+          copy={{
+            search: t('search'), emptyTitle: t('emptyTitle'), emptyDescription: t('emptyDescription'),
+            previous: tableCopy('previous'), next: tableCopy('next'),
+            page: (current, total) => tableCopy('page', { current, total }),
+            rows: (visible, total) => tableCopy('rows', { visible, total }),
+          }}
+        />
+      )}
+      <p className="text-xs text-foreground-muted">{t('inviteUnavailable')}</p>
     </div>
   )
 }

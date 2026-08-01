@@ -1,5 +1,6 @@
 import { CalendarClock, FileText, Landmark, Scale, Upload, UserRound } from 'lucide-react'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
 import { type MatterResponse } from '@/api/models'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,7 @@ export function MatterContextHeader({
   nextDeadline?: string | null
   locale: 'tr' | 'en'
 }) {
+  const t = useTranslations('Shell')
   const isActive = ['open', 'active'].includes(matter.status.toLowerCase())
 
   return (
@@ -30,33 +32,33 @@ export function MatterContextHeader({
           </div>
           <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-foreground-secondary sm:text-sm">
             {matter.internal_reference && (
-              <div className="flex items-center gap-1.5"><FileText className="size-4" /><dt className="sr-only">{locale === 'tr' ? 'Dosya numarası' : 'Reference'}</dt><dd className="tabular-nums">{matter.internal_reference}</dd></div>
+              <div className="flex items-center gap-1.5"><FileText className="size-4" /><dt className="sr-only">{t('reference')}</dt><dd className="tabular-nums">{matter.internal_reference}</dd></div>
             )}
             {matter.client_name && (
-              <div className="flex items-center gap-1.5"><UserRound className="size-4" /><dt className="sr-only">{locale === 'tr' ? 'Müvekkil' : 'Client'}</dt><dd>{matter.client_name}</dd></div>
+              <div className="flex items-center gap-1.5"><UserRound className="size-4" /><dt className="sr-only">{t('client')}</dt><dd>{matter.client_name}</dd></div>
             )}
             {matter.jurisdiction && (
-              <div className="flex items-center gap-1.5"><Landmark className="size-4" /><dt className="sr-only">{locale === 'tr' ? 'Yargı çevresi' : 'Jurisdiction'}</dt><dd>{matter.jurisdiction}</dd></div>
+              <div className="flex items-center gap-1.5"><Landmark className="size-4" /><dt className="sr-only">{t('jurisdiction')}</dt><dd>{matter.jurisdiction}</dd></div>
             )}
             {matter.case_type && (
-              <div className="flex items-center gap-1.5"><Scale className="size-4" /><dt className="sr-only">{locale === 'tr' ? 'Dosya türü' : 'Case type'}</dt><dd>{matter.case_type}</dd></div>
+              <div className="flex items-center gap-1.5"><Scale className="size-4" /><dt className="sr-only">{t('caseType')}</dt><dd>{matter.case_type}</dd></div>
             )}
             {nextDeadline && (
-              <div className="flex items-center gap-1.5 text-warning"><CalendarClock className="size-4" /><dt className="sr-only">{locale === 'tr' ? 'Yaklaşan süre' : 'Next deadline'}</dt><dd>{nextDeadline}</dd></div>
+              <div className="flex items-center gap-1.5 text-warning"><CalendarClock className="size-4" /><dt className="sr-only">{t('nextDeadline')}</dt><dd>{nextDeadline}</dd></div>
             )}
           </dl>
         </div>
         {matter.access_scope !== 'read' && (
           <Button render={<Link href={uploadHref} />}>
-            <Upload className="size-4" />{locale === 'tr' ? 'Belge yükle' : 'Upload document'}
+            <Upload className="size-4" />{t('upload')}
           </Button>
         )}
       </div>
 
       <dl className="grid gap-2 text-xs text-foreground-secondary sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
-        <div><dt className="font-medium text-foreground-muted">{locale === 'tr' ? 'Gizlilik' : 'Confidentiality'}</dt><dd className="mt-0.5 text-foreground">{matter.confidentiality_level}</dd></div>
-        <div><dt className="font-medium text-foreground-muted">{locale === 'tr' ? 'AI işleme politikası' : 'AI processing policy'}</dt><dd className="mt-0.5 text-foreground">{matter.ai_processing_policy}</dd></div>
-        {matter.opened_at && <div><dt className="font-medium text-foreground-muted">{locale === 'tr' ? 'Açılış tarihi' : 'Opened'}</dt><dd className="mt-0.5 text-foreground tabular-nums">{new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB').format(new Date(matter.opened_at))}</dd></div>}
+        <div><dt className="font-medium text-foreground-muted">{t('confidentiality')}</dt><dd className="mt-0.5 text-foreground">{matter.confidentiality_level}</dd></div>
+        <div><dt className="font-medium text-foreground-muted">{t('aiPolicy')}</dt><dd className="mt-0.5 text-foreground">{matter.ai_processing_policy}</dd></div>
+        {matter.opened_at && <div><dt className="font-medium text-foreground-muted">{t('opened')}</dt><dd className="mt-0.5 text-foreground tabular-nums">{new Intl.DateTimeFormat(locale).format(new Date(matter.opened_at))}</dd></div>}
       </dl>
     </header>
   )

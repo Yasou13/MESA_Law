@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
+import { useLocale, useTranslations } from 'next-intl'
 
 import { useGetDocumentViewerContext } from '@/api/endpoints/default/default'
 import {
@@ -39,12 +40,13 @@ import { SourceBadge } from '@/components/ui/source-badge'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api/client'
+import { localizedHref, type AppLocale } from '@/lib/navigation'
 
 type ReviewFilter = 'ALL' | 'PROPOSED' | 'PUBLISHING' | 'PUBLISHED' | 'REJECTED'
 
-function errorMessage(error: ApiError): string {
-  if (error.status === 409) return 'Bu inceleme başka bir kullanıcı tarafından güncellendi. Güncel sürüm yüklendi.'
-  return error.referenceId ? `${error.message} · Referans ${error.referenceId}` : error.message
+function errorMessage(error: ApiError, stale: string, reference: string): string {
+  if (error.status === 409) return stale
+  return error.referenceId ? `${error.message} · ${reference} ${error.referenceId}` : error.message
 }
 
 function queryForSource(source: NonNullable<ReviewContextResponse['source']>): string {
@@ -65,9 +67,10 @@ function ReviewPayloadEditor({
   onChange: (next: Record<string, unknown>) => void
   disabled: boolean
 }) {
+  const t = useTranslations('Review')
   const update = (key: string, nextValue: unknown) => onChange({ ...value, [key]: nextValue })
   const entries = Object.entries(value)
-  if (entries.length === 0) return <p className="text-sm text-foreground-muted">Öneri alanı bulunmuyor.</p>
+  if (entries.length === 0) return <p className="text-sm text-foreground-muted">{t('noFields')}</p>
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -112,6 +115,8 @@ function ReviewPayloadEditor({
 }
 
 export function ReviewWorkspace({ matterId }: { matterId?: string }) {
+  const t = useTranslations('Review')
+  const locale = useLocale() as AppLocale
   const queryClient = useQueryClient()
   const queryParams = matterId ? { matter_id: matterId } : undefined
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -181,13 +186,13 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
     ])
   }
   const onMutationError = async (error: ApiError) => {
-    toast.error(errorMessage(error))
+    toast.error(errorMessage(error, t('stale'), t('reference')))
     if (error.status === 409 && selectedId) await invalidate(selectedId)
   }
   const approveMutation = useApproveReview<ApiError>({
     mutation: {
       onSuccess: async (_, variables) => {
-        toast.success('İnceleme onaylandı; yayın kuyruğuna alındı.')
+        toast.success(t('approved'))
         await invalidate(variables.reviewId)
       },
       onError: onMutationError,
@@ -196,7 +201,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
   const correctMutation = useCorrectReview<ApiError>({
     mutation: {
       onSuccess: async (_, variables) => {
-        toast.success('Düzeltme kaydedildi; yayın kuyruğuna alındı.')
+        toast.success(t('corrected'))
         await invalidate(variables.reviewId)
       },
       onError: onMutationError,
@@ -205,7 +210,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
   const rejectMutation = useRejectReview<ApiError>({
     mutation: {
       onSuccess: async (_, variables) => {
-        toast.success('İnceleme reddedildi.')
+        toast.success(t('rejectedToast'))
         await invalidate(variables.reviewId)
       },
       onError: onMutationError,
@@ -219,11 +224,11 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
     setSelectedId(filteredReviews[currentIndex + 1]?.id ?? filteredReviews[0]?.id ?? null)
   }
 
-  if (reviewsQuery.isLoading) return <LoadingState label="İnceleme kuyruğu yükleniyor" />
+  if (reviewsQuery.isLoading) return <LoadingState label={t('queueLoading')} />
   if (reviewsQuery.isError) {
     return (
       <ErrorState
-        title="İnceleme kuyruğu alınamadı"
+        title={t('queueError')}
         description={reviewsQuery.error.message}
         referenceId={reviewsQuery.error.referenceId}
         onRetry={() => reviewsQuery.refetch()}
@@ -234,35 +239,35 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">İnceleme Merkezi</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t('title')}</h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          Canonical kayda yalnız gerçek belge kaynağıyla eşleşen onaylı veya düzeltilmiş öneriler girer.
+          {t('description')}
         </p>
       </div>
 
       <div className="grid min-h-[42rem] grid-cols-1 overflow-hidden rounded-lg border border-border bg-surface xl:grid-cols-[18rem_minmax(0,1fr)_22rem]">
-        <aside className="border-b border-border xl:border-b-0 xl:border-r" aria-label="İnceleme kuyruğu">
+        <aside className="border-b border-border xl:border-b-0 xl:border-r" aria-label={t('queue')}>
           <div className="space-y-3 border-b border-border p-3">
             <label className="relative block">
               <Search className="absolute left-3 top-2.5 size-4 text-foreground-muted" aria-hidden="true" />
-              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Kuyrukta ara" className="pl-9" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={t('search')} className="pl-9" />
             </label>
             <select
               value={filter}
               onChange={(event) => setFilter(event.target.value as ReviewFilter)}
               className="h-9 w-full rounded-md border border-border bg-surface px-3 text-sm"
-              aria-label="İnceleme durumu"
+              aria-label={t('status')}
             >
-              <option value="PROPOSED">Önerilen</option>
-              <option value="PUBLISHING">Onaylanan / yayınlanan</option>
-              <option value="PUBLISHED">Yayınlandı</option>
-              <option value="REJECTED">Reddedildi</option>
-              <option value="ALL">Tümü</option>
+              <option value="PROPOSED">{t('proposed')}</option>
+              <option value="PUBLISHING">{t('publishing')}</option>
+              <option value="PUBLISHED">{t('published')}</option>
+              <option value="REJECTED">{t('rejected')}</option>
+              <option value="ALL">{t('all')}</option>
             </select>
           </div>
           <div className="max-h-72 overflow-auto xl:max-h-[calc(100dvh-17rem)]">
             {filteredReviews.length === 0 ? (
-              <NoDataState title="Bu kuyruk boş" description="Seçili filtrede inceleme bulunmuyor." />
+              <NoDataState title={t('emptyQueue')} description={t('emptyQueueDescription')} />
             ) : (
               filteredReviews.map((review) => (
                 <button
@@ -287,12 +292,12 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
 
         <main className="min-w-0 border-b border-border p-4 xl:border-b-0 xl:border-r xl:p-6">
           {!selectedReview ? (
-            <NoDataState title="İnceleme seçilmedi" description="Kaynak ve öneri ayrıntısını görmek için kuyruktan kayıt seçin." />
+            <NoDataState title={t('noneSelected')} description={t('noneSelectedDescription')} />
           ) : contextQuery.isLoading ? (
-            <LoadingState label="İnceleme kaynağı doğrulanıyor" />
+            <LoadingState label={t('sourceVerifying')} />
           ) : contextQuery.isError ? (
             <ErrorState
-              title="İnceleme bağlamı alınamadı"
+              title={t('contextError')}
               description={contextQuery.error.message}
               referenceId={contextQuery.error.referenceId}
               onRetry={() => contextQuery.refetch()}
@@ -301,16 +306,16 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
             <div className="space-y-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">Öneri şeması</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{t('schema')}</p>
                   <h2 className="mt-1 text-lg font-semibold">{reviewContext?.suggestion?.suggestion_type ?? selectedReview.entity_type}</h2>
-                  <p className="technical-id mt-1 text-xs text-foreground-muted">İnceleme {selectedReview.id} · v{selectedReview.version_id}</p>
+                  <p className="technical-id mt-1 text-xs text-foreground-muted">{t('review')} {selectedReview.id} · v{selectedReview.version_id}</p>
                 </div>
                 <StatusBadge status={selectedReview.status} label={selectedReview.status} />
               </div>
 
               {!sourceReady && selectedReview.status === 'PROPOSED' && (
-                <InlineAlert tone="warning" title="Karar işlemleri fail-closed durumda">
-                  <p>Kaynak context yüklenmeden, locator eksiksiz olmadan ve canonical revision eşleşmeden onay, düzeltme veya red yapılamaz.</p>
+                <InlineAlert tone="warning" title={t('failClosed')}>
+                  <p>{t('failClosedDescription')}</p>
                 </InlineAlert>
               )}
 
@@ -322,18 +327,18 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
 
               {selectedReview.status === 'PROPOSED' && (
                 <label className="block space-y-1.5">
-                  <span className="text-sm font-medium">Karar gerekçesi</span>
+                  <span className="text-sm font-medium">{t('reason')}</span>
                   <Textarea
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
-                    placeholder="Düzeltme ve red için en az 3 karakter zorunludur."
+                    placeholder={t('reasonPlaceholder')}
                     disabled={!sourceReady}
                   />
                 </label>
               )}
 
               {selectedReview.decision_reason && (
-                <InlineAlert tone="info" title="Kaydedilmiş karar gerekçesi"><p>{selectedReview.decision_reason}</p></InlineAlert>
+                <InlineAlert tone="info" title={t('savedReason')}><p>{selectedReview.decision_reason}</p></InlineAlert>
               )}
 
               <div className="flex flex-wrap gap-2 border-t border-border pt-4">
@@ -343,7 +348,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
                       onClick={() => approveMutation.mutate({ reviewId: selectedReview.id, data: { expected_version: selectedReview.version_id } })}
                       disabled={!canDecide || pending}
                     >
-                      {approveMutation.isPending ? <Loader2 className="animate-spin" /> : <Check />} Onayla
+                      {approveMutation.isPending ? <Loader2 className="animate-spin" /> : <Check />}{t('approve')}
                     </Button>
                     <Button
                       variant="outline"
@@ -357,64 +362,64 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
                       })}
                       disabled={!canDecide || reason.trim().length < 3 || pending}
                     >
-                      Düzelt ve onayla
+                      {t('correctApprove')}
                     </Button>
                     <Button
                       variant="destructive"
                       onClick={() => rejectMutation.mutate({ reviewId: selectedReview.id, data: { expected_version: selectedReview.version_id, reason: reason.trim() } })}
                       disabled={!canDecide || reason.trim().length < 3 || pending}
                     >
-                      <X /> Reddet
+                      <X />{t('reject')}
                     </Button>
                   </>
                 )}
-                <Button variant="ghost" onClick={chooseNext}>Daha sonra incele</Button>
+                <Button variant="ghost" onClick={chooseNext}>{t('later')}</Button>
               </div>
             </div>
           )}
         </main>
 
-        <aside className="space-y-4 bg-background p-4" aria-label="Belge kaynağı">
+        <aside className="space-y-4 bg-background p-4" aria-label={t('documentSource')}>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">Belge kaynağı</p>
-            <h2 className="mt-1 text-base font-semibold">Evidence ve provenance</h2>
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{t('documentSource')}</p>
+            <h2 className="mt-1 text-base font-semibold">{t('evidenceTitle')}</h2>
           </div>
           {contextQuery.isLoading || viewerQuery.isLoading ? (
-            <LoadingState label="Canonical revision doğrulanıyor" />
+            <LoadingState label={t('canonicalVerifying')} />
           ) : !source ? (
-            <InlineAlert tone="warning" title="Legacy kaynak eksikliği">
-              <p>Bu önerinin SourceLocator kaydı yok. Kaynak `null`; karar işlemleri kapalı.</p>
+            <InlineAlert tone="warning" title={t('legacyMissing')}>
+              <p>{t('legacyMissingDescription')}</p>
             </InlineAlert>
           ) : (
             <>
               {!revisionMatches && (
-                <InlineAlert tone="danger" title="Revision uyuşmazlığı">
-                  <p>Önerinin revision kimliği belgenin canonical revision’ı ile eşleşmiyor.</p>
+                <InlineAlert tone="danger" title={t('revisionMismatch')}>
+                  <p>{t('revisionMismatchDescription')}</p>
                 </InlineAlert>
               )}
               {!locatorComplete && (
-                <InlineAlert tone="warning" title="Eksik locator">
-                  <p>Chunk, metin aralığı veya evidence hash eksik olduğu için karar verilemez.</p>
+                <InlineAlert tone="warning" title={t('locatorMissing')}>
+                  <p>{t('locatorMissingDescription')}</p>
                 </InlineAlert>
               )}
               <Panel>
                 <PanelHeader><h3 className="truncate text-sm font-semibold">{source.document_title}</h3></PanelHeader>
                 <PanelBody className="space-y-3 text-sm">
                   <SourceBadge lowProvenance={source.provenance_state === 'LOW_PROVENANCE'} label={source.provenance_state} />
-                  <p><span className="text-foreground-muted">Sayfa:</span> {source.page_number ?? 'Doğrulanmamış'}</p>
-                  <p><span className="text-foreground-muted">Metin aralığı:</span> <span className="tabular-nums">{source.text_start ?? '—'}–{source.text_end ?? '—'}</span></p>
+                  <p><span className="text-foreground-muted">{t('page')}:</span> {source.page_number ?? t('unverified')}</p>
+                  <p><span className="text-foreground-muted">{t('textRange')}:</span> <span className="tabular-nums">{source.text_start ?? '—'}–{source.text_end ?? '—'}</span></p>
                   <p className="technical-id break-all text-xs text-foreground-muted">Chunk {source.chunk_id ?? '—'}</p>
                   <blockquote className="legal-reading border-l-2 border-primary pl-3 text-sm leading-6">
-                    {source.evidence_text ?? 'Evidence metni yok.'}
+                    {source.evidence_text ?? t('noEvidenceText')}
                   </blockquote>
                   {source.evidence_sha256 && <p className="technical-id break-all text-[0.7rem] text-foreground-muted">SHA-256 {source.evidence_sha256}</p>}
                   <Button
-                    render={<Link href={`/documents/${source.document_id}?${queryForSource(source)}`} />}
+                    render={<Link href={localizedHref(locale, `/documents/${source.document_id}?${queryForSource(source)}`)} />}
                     variant="outline"
                     size="sm"
                     className="w-full"
                   >
-                    Kaynakta aç
+                    {t('openSource')}
                   </Button>
                 </PanelBody>
               </Panel>
@@ -427,20 +432,20 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
               <PanelBody className="space-y-2 text-xs">
                 <p>{reviewContext.suggestion.extractor_name} · {reviewContext.suggestion.extractor_version}</p>
                 <p>Parser {reviewContext.suggestion.parser_version}</p>
-                <p>Confidence category: {reviewContext.suggestion.confidence_category}</p>
+                <p>{t('confidence')}: {reviewContext.suggestion.confidence_category}</p>
               </PanelBody>
             </Panel>
           )}
 
           {reviewContext?.history && reviewContext.history.length > 0 && (
             <Panel>
-              <PanelHeader><h3 className="flex items-center gap-2 text-sm font-semibold"><History className="size-4" /> Audit geçmişi</h3></PanelHeader>
+              <PanelHeader><h3 className="flex items-center gap-2 text-sm font-semibold"><History className="size-4" />{t('auditHistory')}</h3></PanelHeader>
               <PanelBody>
                 <ol className="space-y-3 text-xs">
                   {reviewContext.history.map((entry) => (
                     <li key={entry.id} className="border-l border-border pl-3">
                       <p className="font-medium">{entry.action}</p>
-                      <p className="technical-id text-foreground-muted">{entry.user_id} · {new Date(entry.created_at).toLocaleString('tr-TR')}</p>
+                      <p className="technical-id text-foreground-muted">{entry.user_id} · {new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(entry.created_at))}</p>
                     </li>
                   ))}
                 </ol>
@@ -448,7 +453,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
             </Panel>
           )}
           {viewerQuery.isError && (
-            <InlineAlert tone="danger" title="Canonical belge doğrulanamadı"><p>{viewerQuery.error.message}</p></InlineAlert>
+            <InlineAlert tone="danger" title={t('documentUnverified')}><p>{viewerQuery.error.message}</p></InlineAlert>
           )}
           {!sourceReady && source && <AlertTriangle className="size-4 text-warning" aria-hidden="true" />}
         </aside>

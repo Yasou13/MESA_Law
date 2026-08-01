@@ -1,117 +1,69 @@
 'use client'
 
-import { AlertTriangle, CheckCircle2, Clock, Database, Loader2, Shield } from 'lucide-react'
+import { Clock3, Database, Shield } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 
 import { useGetSystemSettings } from '@/api/endpoints/system/system'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
+import { StatusBadge } from '@/components/ui/status-badge'
 
 export default function AdminSettingsPage() {
-  const { data: settings, isLoading, isError } = useGetSystemSettings()
+  const t = useTranslations('SystemSettings')
+  const common = useTranslations('Common')
+  const settingsQuery = useGetSystemSettings()
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[400px] flex-1 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--color-lila-500)]" />
-      </div>
-    )
-  }
+  if (settingsQuery.isLoading) return <LoadingState label={common('loading')} />
+  if (settingsQuery.isError || !settingsQuery.data) return <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => settingsQuery.refetch()} />
 
-  if (isError || !settings) {
-    return (
-      <div className="mx-auto max-w-4xl p-8">
-        <div className="flex gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-5 text-red-400">
-          <AlertTriangle className="h-5 w-5 shrink-0" /> System settings could not be loaded.
-        </div>
-      </div>
-    )
-  }
-
+  const settings = settingsQuery.data
   const features = [
-    ['Document scanning and extraction', settings.features.document_ocr_enabled],
-    ['MESA rebuild', settings.features.mesa_rebuild_enabled],
-    ['External legal research', settings.features.external_research_enabled],
-    ['AI draft generation', settings.features.drafting_ai_enabled],
-    ['Deadline AI', settings.features.deadline_ai_enabled],
+    [t('documentScanning'), settings.features.document_ocr_enabled],
+    [t('mesaRebuild'), settings.features.mesa_rebuild_enabled],
+    [t('externalResearch'), settings.features.external_research_enabled],
+    [t('drafting'), settings.features.drafting_ai_enabled],
+    [t('deadlineAi'), settings.features.deadline_ai_enabled],
   ] as const
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 p-6 lg:p-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">Runtime configuration</h1>
-        <p className="mt-1 text-[var(--color-anthracite-500)]">
-          Read-only effective settings. Runtime mutation is intentionally unavailable in this MVP.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={t('title')} description={t('description')} />
 
-      <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          <Database className="h-5 w-5 text-[var(--color-lila-500)]" /> Feature availability
-        </h2>
-        <div className="mt-5 divide-y divide-[var(--border-surface)]">
+      <Panel>
+        <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Database className="size-4 text-primary" />{t('features')}</h2></PanelHeader>
+        <PanelBody className="divide-y divide-border-subtle py-0">
           {features.map(([name, enabled]) => (
-            <div key={name} className="flex items-center justify-between gap-4 py-4">
-              <div>
-                <p className="font-medium">{name}</p>
-                {!enabled && (
-                  <p className="mt-1 text-xs text-[var(--color-anthracite-500)]">
-                    Unavailable; the UI will not queue or simulate this capability.
-                  </p>
-                )}
-              </div>
-              <span
-                className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                  enabled
-                    ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
-                    : 'border-amber-500/20 bg-amber-500/10 text-amber-500'
-                }`}
-              >
-                {enabled ? 'ENABLED' : 'UNAVAILABLE'}
-              </span>
+            <div key={name} className="flex items-start justify-between gap-4 py-4">
+              <div><p className="font-medium">{name}</p>{!enabled && <p className="mt-1 text-xs text-foreground-muted">{t('unavailableNote')}</p>}</div>
+              <StatusBadge status={enabled ? 'success' : 'degraded'} label={enabled ? t('enabled') : t('unavailable')} />
             </div>
           ))}
-        </div>
-      </section>
+        </PanelBody>
+      </Panel>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Shield className="h-5 w-5 text-[var(--color-lila-500)]" /> Authentication policy
-          </h2>
-          <dl className="mt-5 space-y-4 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--color-anthracite-400)]">MFA required</dt>
-              <dd className="flex items-center gap-1 font-medium">
-                {settings.security.require_mfa && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
-                {settings.security.require_mfa ? 'Yes' : 'No'}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--color-anthracite-400)]">Session timeout</dt>
-              <dd className="font-medium">{settings.security.session_timeout_minutes} minutes</dd>
-            </div>
-          </dl>
-          <p className="mt-5 text-xs leading-relaxed text-[var(--color-anthracite-500)]">
-            Identity policy is administered in Keycloak. This page does not claim certification or cryptographic controls beyond what the running deployment reports.
-          </p>
-        </section>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Panel>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Shield className="size-4 text-primary" />{t('authPolicy')}</h2></PanelHeader>
+          <PanelBody>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('mfa')}</dt><dd className="font-medium">{settings.security.require_mfa ? t('yes') : t('no')}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('sessionTimeout')}</dt><dd className="font-medium">{t('minutes', { value: settings.security.session_timeout_minutes })}</dd></div>
+            </dl>
+            <p className="mt-5 text-xs leading-5 text-foreground-muted">{t('authNote')}</p>
+          </PanelBody>
+        </Panel>
 
-        <section className="glass-card rounded-xl border border-[var(--border-surface)] p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold">
-            <Clock className="h-5 w-5 text-[var(--color-lila-500)]" /> Retention values
-          </h2>
-          <dl className="mt-5 space-y-4 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--color-anthracite-400)]">Audit log</dt>
-              <dd className="font-medium">{settings.retention.audit_log_days} days</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-[var(--color-anthracite-400)]">Deleted document marker</dt>
-              <dd className="font-medium">{settings.retention.deleted_document_days} days</dd>
-            </div>
-          </dl>
-          <p className="mt-5 text-xs leading-relaxed text-[var(--color-anthracite-500)]">
-            These are effective configuration values, not evidence that a scheduled deletion job has run.
-          </p>
-        </section>
+        <Panel>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Clock3 className="size-4 text-primary" />{t('retention')}</h2></PanelHeader>
+          <PanelBody>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('auditLog')}</dt><dd className="font-medium">{t('days', { value: settings.retention.audit_log_days })}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('deletedMarker')}</dt><dd className="font-medium">{t('days', { value: settings.retention.deleted_document_days })}</dd></div>
+            </dl>
+            <p className="mt-5 text-xs leading-5 text-foreground-muted">{t('retentionNote')}</p>
+          </PanelBody>
+        </Panel>
       </div>
     </div>
   )

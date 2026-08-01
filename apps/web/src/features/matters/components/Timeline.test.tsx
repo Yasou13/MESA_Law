@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { Timeline } from './Timeline'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { NextIntlClientProvider } from 'next-intl'
+import messages from '../../../../messages/en.json'
 
 const queryClient = new QueryClient()
 
@@ -35,7 +37,9 @@ describe('Timeline component', () => {
   it('renders timeline events correctly', () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <Timeline matterId="1" />
+        <NextIntlClientProvider locale="en" messages={messages}>
+          <Timeline matterId="1" />
+        </NextIntlClientProvider>
       </QueryClientProvider>
     )
     

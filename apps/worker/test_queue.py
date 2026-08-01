@@ -1,7 +1,10 @@
 """Database-independent queue schema contract tests."""
 
+from typing import cast
+
 from apps.api.models.queue import Job, JobStatus
 from apps.worker.jobs import validate_job_payload
+from sqlalchemy import Table
 
 
 def test_job_statuses_are_explicit_and_terminal_states_are_distinct() -> None:
@@ -15,10 +18,9 @@ def test_job_statuses_are_explicit_and_terminal_states_are_distinct() -> None:
 
 
 def test_idempotency_index_is_unique_and_null_safe() -> None:
+    table = cast(Table, Job.__table__)
     index = next(
-        item
-        for item in Job.__table__.indexes
-        if item.name == "uq_legal_jobs_idempotency"
+        item for item in table.indexes if item.name == "uq_legal_jobs_idempotency"
     )
     sql = str(index.dialect_options["postgresql"]["where"])
     assert index.unique is True

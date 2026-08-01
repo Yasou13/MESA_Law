@@ -355,21 +355,21 @@ class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
         )
 
     async def ingest(self, item: IngestionItem) -> bool:
-        if not all((item.session_id, item.dataset_id, item.chunk_id, item.source_ref)):
+        session_id = item.session_id
+        dataset_id = item.dataset_id
+        chunk_id = item.chunk_id
+        source_ref = item.source_ref
+        if not session_id or not dataset_id or not chunk_id or not source_ref:
             raise MesaContractError("Legacy ingestion item lacks MESA v4 scope")
-        assert item.session_id is not None
-        assert item.dataset_id is not None
-        assert item.chunk_id is not None
-        assert item.source_ref is not None
         await self.insert_memory(
             MemoryInsertRequest(
-                session_id=item.session_id,
-                dataset_id=item.dataset_id,
+                session_id=session_id,
+                dataset_id=dataset_id,
                 document_id=item.document_id,
                 revision_id=item.revision_id,
-                chunk_id=item.chunk_id,
+                chunk_id=chunk_id,
                 title=item.source_name,
-                source_ref=item.source_ref,
+                source_ref=source_ref,
                 content=item.text_content,
                 evidence_span=item.evidence_span,
                 chunk_ordinal=item.chunk_ordinal,

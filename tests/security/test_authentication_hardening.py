@@ -58,14 +58,10 @@ def patch_jwt_decode(monkeypatch):
     # Patch get_jwks to return mock kid
     from apps.api.dependencies import auth
 
-    def mock_get_jwks(force_refresh=False):
+    async def mock_get_jwks(force_refresh=False):
         return {"keys": [{"kid": "mock_kid"}]}
 
-    async def inline_to_thread(function, *args):
-        return function(*args)
-
     monkeypatch.setattr(auth, "get_jwks", mock_get_jwks)
-    monkeypatch.setattr(auth.asyncio, "to_thread", inline_to_thread)
 
 
 @pytest.mark.asyncio

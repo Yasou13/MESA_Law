@@ -18,27 +18,18 @@ async def test_api_integration_e2e_flow():
 
     mock_session = AsyncMock()
 
-    class MockMatter:
-        id = "matter-123"
-        title = "E2E Integration Matter"
-        status = "open"
-
-    class MockDoc:
-        id = "doc-123"
-
-    class MockRev:
-        id = "rev-123"
-        s3_key = "test/key"
-
     async def override_get_db():
         yield mock_session
 
     app.dependency_overrides[get_db] = override_get_db
 
     mock_scalars = MagicMock()
-    mock_scalars.all.return_value = [MockMatter()]
+    mock_scalars.first.return_value = type(
+        "MatterMember", (), {"access_scope": "admin"}
+    )()
     mock_result = MagicMock()
     mock_result.scalars.return_value = mock_scalars
+    mock_result.all.return_value = []
     mock_session.execute = AsyncMock(return_value=mock_result)
 
     async def mock_refresh(instance):
@@ -55,7 +46,9 @@ async def test_api_integration_e2e_flow():
         # Phase 6: Removed test_auth_enabled bypass, using actual jwt.decode mock
         with (
             patch("apps.api.dependencies.auth.jwt.decode") as mock_jwt_decode,
-            patch("apps.api.dependencies.auth.get_jwks") as mock_get_jwks,
+            patch(
+                "apps.api.dependencies.auth.get_jwks", new_callable=AsyncMock
+            ) as mock_get_jwks,
             patch(
                 "apps.api.dependencies.auth.jwt.get_unverified_header"
             ) as mock_header,

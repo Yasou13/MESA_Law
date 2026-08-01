@@ -1,11 +1,9 @@
-import asyncio
-import json
 import logging
 import time
-import urllib.request
 from collections.abc import AsyncIterator
 from typing import Any, TypedDict
 
+import httpx
 from apps.api.core.config import settings
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
@@ -30,17 +28,19 @@ class JwksCache(TypedDict):
 _jwks_cache: JwksCache = {"keys": [], "expires_at": 0.0}
 
 
-def get_jwks(force_refresh: bool = False) -> JwksCache:
+async def get_jwks(force_refresh: bool = False) -> JwksCache:
     global _jwks_cache
     now = time.time()
     if not force_refresh and _jwks_cache["keys"] and now < _jwks_cache["expires_at"]:
         return _jwks_cache
     try:
-        with urllib.request.urlopen(settings.keycloak_jwks_url, timeout=5) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            _jwks_cache = {"keys": data.get("keys", []), "expires_at": now + 300}
-            return _jwks_cache
-    except (OSError, TimeoutError, ValueError):
+        async with httpx.AsyncClient(timeout=5, follow_redirects=False) as client:
+            response = await client.get(settings.keycloak_jwks_url)
+            response.raise_for_status()
+            data = response.json()
+        _jwks_cache = {"keys": data.get("keys", []), "expires_at": now + 300}
+        return _jwks_cache
+    except (httpx.HTTPError, ValueError):
         if _jwks_cache["keys"]:
             return _jwks_cache
         return {"keys": [], "expires_at": now + 30}
@@ -53,7 +53,8 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Authentication required")
 
     token = credentials.credentials
-    if token == "dev-mock-token":
+    # This known credential is accepted only by the explicit test-only branch.
+    if token == "dev-mock-token":  # nosec B105
         if not settings.test_auth_enabled or settings.env != "test":
             raise HTTPException(
                 status_code=401, detail="Invalid authentication credentials"
@@ -66,11 +67,11 @@ async def get_current_user(
         }
 
     try:
-        jwks = await asyncio.to_thread(get_jwks)
+        jwks = await get_jwks()
         unverified_header = jwt.get_unverified_header(token)
         kid = unverified_header.get("kid")
         if kid and not any(key.get("kid") == kid for key in jwks.get("keys", [])):
-            jwks = await asyncio.to_thread(get_jwks, True)
+            jwks = await get_jwks(True)
 
         payload = jwt.decode(
             token,

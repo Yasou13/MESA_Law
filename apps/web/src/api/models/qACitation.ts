@@ -13,6 +13,7 @@ export interface QACitation {
   low_provenance: boolean;
   page_number: number | null;
   provenance_state: string;
+  relevance_score?: number | null;
   revision_id: string;
   text_end: number;
   text_start: number;

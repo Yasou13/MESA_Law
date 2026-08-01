@@ -1,11 +1,12 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.policies import MatterAccessPolicy, ReviewAccessPolicy
 from apps.api.core.utils import utc_now
 from apps.api.dependencies.auth import setup_tenant_context
-from apps.api.models.domain import MatterMember
+from apps.api.models.document import Document
+from apps.api.models.domain import MatterMember, SourceLocator
 from apps.api.models.queue import Job
 from apps.api.models.review import (
     AuditLog,
@@ -57,6 +58,46 @@ class ReviewMutationResponse(BaseModel):
     publication_job_id: str | None = None
 
 
+class ReviewSuggestionContext(BaseModel):
+    id: str
+    suggestion_type: str
+    extractor_name: str
+    extractor_version: str
+    parser_version: str
+    confidence_category: str
+
+
+class ReviewSourceContext(BaseModel):
+    document_id: str
+    document_title: str
+    revision_id: str
+    page_number: int | None = None
+    chunk_id: str | None = None
+    text_start: int | None = None
+    text_end: int | None = None
+    bbox: dict[str, float] | None = None
+    evidence_text: str | None = None
+    evidence_sha256: str | None = None
+    parser_version: str | None = None
+    extraction_version: str | None = None
+    provenance_state: str
+
+
+class ReviewAuditEntry(BaseModel):
+    id: str
+    action: str
+    user_id: str
+    created_at: datetime
+    details: dict
+
+
+class ReviewContextResponse(BaseModel):
+    review: ReviewItemResponse
+    suggestion: ReviewSuggestionContext | None = None
+    source: ReviewSourceContext | None = None
+    history: list[ReviewAuditEntry] = Field(default_factory=list)
+
+
 async def _load_review(
     db: AsyncSession, context: RequestContext, review_id: str
 ) -> ReviewItem:
@@ -69,6 +110,21 @@ async def _load_review(
     if review is None:
         raise HTTPException(status_code=404, detail="Review item not found")
     await ReviewAccessPolicy.can_approve(context, db, review.matter_id)
+    return review
+
+
+async def _load_review_for_read(
+    db: AsyncSession, context: RequestContext, review_id: str
+) -> ReviewItem:
+    review = await db.scalar(
+        select(ReviewItem).where(
+            ReviewItem.id == review_id,
+            ReviewItem.tenant_id == context.tenant_id,
+        )
+    )
+    if review is None:
+        raise HTTPException(status_code=404, detail="Review item not found")
+    await MatterAccessPolicy.can_read(context, db, review.matter_id)
     return review
 
 
@@ -164,6 +220,124 @@ async def list_draft_reviews(
     if entity_type:
         query = query.where(ReviewItem.entity_type == entity_type)
     return (await db.execute(query.order_by(ReviewItem.created_at))).scalars().all()
+
+
+@router.get(
+    "/{review_id}/context",
+    response_model=ReviewContextResponse,
+    operation_id="getReviewContext",
+)
+async def get_review_context(
+    review_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db),
+):
+    review = await _load_review_for_read(db, context, review_id)
+    suggestion = None
+    source = None
+    if review.suggestion_id:
+        suggestion = await db.scalar(
+            select(ExtractionSuggestion).where(
+                ExtractionSuggestion.id == review.suggestion_id,
+                ExtractionSuggestion.tenant_id == context.tenant_id,
+                ExtractionSuggestion.matter_id == review.matter_id,
+            )
+        )
+
+    if suggestion and suggestion.source_locator_id:
+        source_row = (
+            await db.execute(
+                select(SourceLocator, Document)
+                .join(Document, SourceLocator.document_id == Document.id)
+                .where(
+                    SourceLocator.id == suggestion.source_locator_id,
+                    SourceLocator.tenant_id == context.tenant_id,
+                    SourceLocator.matter_id == review.matter_id,
+                    SourceLocator.document_id == suggestion.document_id,
+                    SourceLocator.document_revision_id
+                    == suggestion.document_revision_id,
+                    Document.tenant_id == context.tenant_id,
+                    Document.matter_id == review.matter_id,
+                )
+            )
+        ).one_or_none()
+        if source_row:
+            locator, document = source_row
+            bbox_values = (
+                locator.bbox_x0,
+                locator.bbox_y0,
+                locator.bbox_x1,
+                locator.bbox_y1,
+            )
+            bbox = None
+            if all(value is not None for value in bbox_values):
+                bbox = {
+                    "x0": locator.bbox_x0,
+                    "y0": locator.bbox_y0,
+                    "x1": locator.bbox_x1,
+                    "y1": locator.bbox_y1,
+                }
+            source = ReviewSourceContext(
+                document_id=document.id,
+                document_title=document.title,
+                revision_id=suggestion.document_revision_id,
+                page_number=locator.page_number,
+                chunk_id=locator.chunk_id,
+                text_start=locator.character_start,
+                text_end=locator.character_end,
+                bbox=bbox,
+                evidence_text=locator.evidence_text or locator.text_snippet,
+                evidence_sha256=locator.evidence_sha256 or locator.text_hash,
+                parser_version=locator.parser_version,
+                extraction_version=locator.extraction_version,
+                provenance_state=locator.provenance_state,
+            )
+
+    history = (
+        (
+            await db.execute(
+                select(AuditLog)
+                .where(
+                    AuditLog.tenant_id == context.tenant_id,
+                    AuditLog.matter_id == review.matter_id,
+                    AuditLog.entity_type == review.entity_type,
+                    AuditLog.entity_id == review.entity_id,
+                    AuditLog.action.in_(
+                        ("APPROVE_REVIEW", "CORRECT_REVIEW", "REJECT_REVIEW")
+                    ),
+                )
+                .order_by(AuditLog.created_at.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return ReviewContextResponse(
+        review=ReviewItemResponse.model_validate(review),
+        suggestion=(
+            ReviewSuggestionContext(
+                id=suggestion.id,
+                suggestion_type=suggestion.suggestion_type,
+                extractor_name=suggestion.extractor_name,
+                extractor_version=suggestion.extractor_version,
+                parser_version=suggestion.parser_version,
+                confidence_category=suggestion.confidence_category,
+            )
+            if suggestion
+            else None
+        ),
+        source=source,
+        history=[
+            ReviewAuditEntry(
+                id=entry.id,
+                action=entry.action,
+                user_id=entry.user_id,
+                created_at=entry.created_at,
+                details=entry.details,
+            )
+            for entry in history
+        ],
+    )
 
 
 @router.post(

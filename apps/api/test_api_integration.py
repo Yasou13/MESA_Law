@@ -100,6 +100,9 @@ async def test_api_integration_e2e_flow():
                 assert matter_resp.status_code == 201
                 matter_data = matter_resp.json()
                 assert "id" in matter_data
+                assert matter_data["created_at"]
+                assert matter_data["updated_at"]
+                assert "responsible_attorney" in matter_data
                 matter_id = matter_data["id"]
 
                 # 2. Upload Intent for a Document

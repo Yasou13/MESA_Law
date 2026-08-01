@@ -24,6 +24,25 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiResponseMetadata {
+  traceId?: string
+  requestId?: string
+  correlationId?: string
+}
+
+const responseMetadata = new WeakMap<object, ApiResponseMetadata>()
+
+function responseHeader(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+export function getApiResponseMetadata(value: unknown): ApiResponseMetadata | undefined {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return undefined
+  }
+  return responseMetadata.get(value)
+}
+
 function apiOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL?.trim()
   if (!configured) return ''
@@ -99,7 +118,17 @@ export const customInstance = <T>(
     ...options?.headers,
   }
   return AXIOS_INSTANCE.request<T>({ ...config, ...options, headers }).then(
-    (response) => response.data,
+    (response) => {
+      const data = response.data
+      if ((typeof data === 'object' && data !== null) || typeof data === 'function') {
+        responseMetadata.set(data, {
+          traceId: responseHeader(response.headers['x-trace-id']),
+          requestId: responseHeader(response.headers['x-request-id']),
+          correlationId: responseHeader(response.headers['x-correlation-id']),
+        })
+      }
+      return data
+    },
   )
 }
 

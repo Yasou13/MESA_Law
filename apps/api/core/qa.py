@@ -1,5 +1,7 @@
 import hashlib
 import logging
+from time import perf_counter
+from typing import Literal
 
 from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
 from apps.api.core.observability import increment_metric
@@ -29,6 +31,18 @@ class QACitation(BaseModel):
     text_end: int
     evidence_excerpt: str
     evidence_sha256: str
+    relevance_score: float | None = None
+
+
+class QARetrievalMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scope: Literal["MATTER", "DOCUMENT"]
+    engine: Literal["MESA", "LOCAL_FALLBACK", "NONE"]
+    dataset_id: str | None = None
+    verified_document_count: int = 0
+    verified_citation_count: int = 0
+    duration_ms: int = 0
 
 
 class QAResponse(BaseModel):
@@ -38,6 +52,9 @@ class QAResponse(BaseModel):
     status: str
     citations: list[QACitation] = Field(default_factory=list)
     degraded_reason: str | None = None
+    retrieval: QARetrievalMetadata = Field(
+        default_factory=lambda: QARetrievalMetadata(scope="MATTER", engine="NONE")
+    )
 
 
 class QuestionRequest(BaseModel):
@@ -57,6 +74,7 @@ def _citation_from_local_chunk(
     chunk: DocumentChunk,
     page: ParsedPage,
     revision: DocumentRevision,
+    relevance_score: float | None = None,
 ) -> QACitation | None:
     if (
         not revision.is_canonical
@@ -88,6 +106,7 @@ def _citation_from_local_chunk(
         text_end=chunk.character_end,
         evidence_excerpt=evidence[:500],
         evidence_sha256=digest,
+        relevance_score=relevance_score,
     )
 
 
@@ -103,7 +122,12 @@ async def _lexical_citations(
     query_vector = func.plainto_tsquery("turkish", question)
     rank = func.ts_rank_cd(DocumentChunk.fts_vector, query_vector)
     statement = (
-        select(DocumentChunk, ParsedPage, DocumentRevision)
+        select(
+            DocumentChunk,
+            ParsedPage,
+            DocumentRevision,
+            rank.label("relevance_score"),
+        )
         .join(ParsedPage, DocumentChunk.page_id == ParsedPage.id)
         .join(ParsedDocument, ParsedPage.parsed_document_id == ParsedDocument.id)
         .join(Document, DocumentChunk.document_id == Document.id)
@@ -122,8 +146,13 @@ async def _lexical_citations(
         statement = statement.where(Document.id == document_id)
     rows = (await session.execute(statement)).all()
     citations = []
-    for chunk, page, revision in rows:
-        citation = _citation_from_local_chunk(chunk, page, revision)
+    for chunk, page, revision, relevance_score in rows:
+        citation = _citation_from_local_chunk(
+            chunk,
+            page,
+            revision,
+            float(relevance_score) if relevance_score is not None else None,
+        )
         if citation is not None:
             citations.append(citation)
     return citations
@@ -210,6 +239,7 @@ async def _verify_mesa_evidence(
             "text_end": locator.character_end,
             "evidence_excerpt": local_evidence[:500],
             "evidence_sha256": locator.evidence_sha256,
+            "relevance_score": evidence.score,
         }
     )
 
@@ -291,6 +321,25 @@ async def ask_matter_question(
     document_id: str | None,
     question: str,
 ) -> QAResponse:
+    started_at = perf_counter()
+    scope = "DOCUMENT" if document_id else "MATTER"
+
+    def retrieval_metadata(
+        engine: Literal["MESA", "LOCAL_FALLBACK", "NONE"],
+        citations: list[QACitation],
+        dataset_id: str | None,
+    ) -> QARetrievalMetadata:
+        return QARetrievalMetadata(
+            scope=scope,
+            engine=engine,
+            dataset_id=dataset_id,
+            verified_document_count=len(
+                {citation.document_id for citation in citations}
+            ),
+            verified_citation_count=len(citations),
+            duration_ms=max(0, round((perf_counter() - started_at) * 1000)),
+        )
+
     binding = await session.scalar(
         select(MesaScopeBinding).where(
             MesaScopeBinding.tenant_id == tenant_id,
@@ -313,6 +362,7 @@ async def ask_matter_question(
                 answer=_extractive_answer(question, citations),
                 status="ANSWERED",
                 citations=citations,
+                retrieval=retrieval_metadata("MESA", citations, binding.dataset_id),
             )
     else:
         degraded_reason = "MESA_SCOPE_NOT_READY"
@@ -330,6 +380,11 @@ async def ask_matter_question(
             status="DEGRADED",
             citations=lexical,
             degraded_reason=degraded_reason or "MESA_NO_VERIFIED_EVIDENCE",
+            retrieval=retrieval_metadata(
+                "LOCAL_FALLBACK",
+                lexical,
+                binding.dataset_id if binding is not None else None,
+            ),
         )
     return QAResponse(
         answer=(
@@ -339,4 +394,7 @@ async def ask_matter_question(
         status="ABSTAIN",
         citations=[],
         degraded_reason=degraded_reason or "NO_VERIFIED_EVIDENCE",
+        retrieval=retrieval_metadata(
+            "NONE", [], binding.dataset_id if binding is not None else None
+        ),
     )

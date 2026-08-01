@@ -29,6 +29,7 @@ import type {
   ConflictCheckRequest,
   ConflictCheckResponse,
   DocumentResponse,
+  DocumentViewerContextResponse,
   DownloadResponse,
   ElevateRoleParams,
   EvidenceResponse,
@@ -651,6 +652,98 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getDownloadDocumentQueryOptions(documentId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Get Document Viewer Context
+ */
+export const getDocumentViewerContext = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<DocumentViewerContextResponse>(
+      {url: `/api/v1/documents/${documentId}/viewer-context`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetDocumentViewerContextQueryKey = (documentId: string,) => {
+    return [
+    `/api/v1/documents/${documentId}/viewer-context`
+    ] as const;
+    }
+
+
+export const getGetDocumentViewerContextQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentViewerContextQueryKey(documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentViewerContext>>> = ({ signal }) => getDocumentViewerContext(documentId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetDocumentViewerContextQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentViewerContext>>>
+export type GetDocumentViewerContextQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentViewerContext>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentViewerContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentViewerContext>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentViewerContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Document Viewer Context
+ */
+
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDocumentViewerContextQueryOptions(documentId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

@@ -41,6 +41,9 @@ class MatterResponse(BaseModel):
     opened_at: str | None = None
     closed_at: str | None = None
     access_scope: str | None = None
+    responsible_attorney: str | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class UploadIntentRequest(BaseModel):
@@ -73,6 +76,34 @@ class DocumentResponse(BaseModel):
     provenance_state: str
     failure_reason: str | None = None
     created_at: datetime
+
+
+class DocumentRevisionViewerResponse(BaseModel):
+    id: str
+    version: int
+    mime_type: str
+    size_bytes: int | None = None
+    sha256: str | None = None
+    immutable_at: datetime | None = None
+    scan_status: str
+    provenance_state: str
+
+
+class ParsedDocumentViewerResponse(BaseModel):
+    id: str
+    revision_id: str
+    parser: str
+    parsing_revision: int
+    ocr_version: str | None = None
+    pipeline_version: str | None = None
+    status: str
+    provenance_state: str
+
+
+class DocumentViewerContextResponse(BaseModel):
+    document: DocumentResponse
+    revision: DocumentRevisionViewerResponse | None = None
+    parsed_document: ParsedDocumentViewerResponse | None = None
 
 
 class UploadCompleteResponse(BaseModel):

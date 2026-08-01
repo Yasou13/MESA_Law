@@ -418,6 +418,105 @@
         "title": "DocumentResponse",
         "type": "object"
       },
+      "DocumentRevisionViewerResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "immutable_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Immutable At"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "provenance_state": {
+            "title": "Provenance State",
+            "type": "string"
+          },
+          "scan_status": {
+            "title": "Scan Status",
+            "type": "string"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size Bytes"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "mime_type",
+          "scan_status",
+          "provenance_state"
+        ],
+        "title": "DocumentRevisionViewerResponse",
+        "type": "object"
+      },
+      "DocumentViewerContextResponse": {
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/DocumentResponse"
+          },
+          "parsed_document": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParsedDocumentViewerResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DocumentRevisionViewerResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "document"
+        ],
+        "title": "DocumentViewerContextResponse",
+        "type": "object"
+      },
       "DownloadResponse": {
         "properties": {
           "expires_in_seconds": {
@@ -1129,6 +1228,11 @@
             "title": "Confidentiality Level",
             "type": "string"
           },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -1166,12 +1270,28 @@
             ],
             "title": "Opened At"
           },
+          "responsible_attorney": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Attorney"
+          },
           "status": {
             "title": "Status",
             "type": "string"
           },
           "title": {
             "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
             "type": "string"
           }
         },
@@ -1180,7 +1300,9 @@
           "title",
           "status",
           "confidentiality_level",
-          "ai_processing_policy"
+          "ai_processing_policy",
+          "created_at",
+          "updated_at"
         ],
         "title": "MatterResponse",
         "type": "object"
@@ -1439,6 +1561,66 @@
         "title": "ParsedDocumentResponse",
         "type": "object"
       },
+      "ParsedDocumentViewerResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ocr_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocr Version"
+          },
+          "parser": {
+            "title": "Parser",
+            "type": "string"
+          },
+          "parsing_revision": {
+            "title": "Parsing Revision",
+            "type": "integer"
+          },
+          "pipeline_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pipeline Version"
+          },
+          "provenance_state": {
+            "title": "Provenance State",
+            "type": "string"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "revision_id",
+          "parser",
+          "parsing_revision",
+          "status",
+          "provenance_state"
+        ],
+        "title": "ParsedDocumentViewerResponse",
+        "type": "object"
+      },
       "ParsedPageResponse": {
         "properties": {
           "id": {
@@ -1511,6 +1693,17 @@
           "provenance_state": {
             "title": "Provenance State",
             "type": "string"
+          },
+          "relevance_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relevance Score"
           },
           "revision_id": {
             "title": "Revision Id",
@@ -1597,6 +1790,9 @@
             ],
             "title": "Degraded Reason"
           },
+          "retrieval": {
+            "$ref": "#/components/schemas/QARetrievalMetadata"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1607,6 +1803,60 @@
           "status"
         ],
         "title": "QAResponse",
+        "type": "object"
+      },
+      "QARetrievalMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "dataset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Id"
+          },
+          "duration_ms": {
+            "default": 0,
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "engine": {
+            "enum": [
+              "MESA",
+              "LOCAL_FALLBACK",
+              "NONE"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "MATTER",
+              "DOCUMENT"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "verified_citation_count": {
+            "default": 0,
+            "title": "Verified Citation Count",
+            "type": "integer"
+          },
+          "verified_document_count": {
+            "default": 0,
+            "title": "Verified Document Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scope",
+          "engine"
+        ],
+        "title": "QARetrievalMetadata",
         "type": "object"
       },
       "QuestionRequest": {
@@ -1698,6 +1948,80 @@
           "deleted_document_days"
         ],
         "title": "RetentionSettings",
+        "type": "object"
+      },
+      "ReviewAuditEntry": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action",
+          "user_id",
+          "created_at",
+          "details"
+        ],
+        "title": "ReviewAuditEntry",
+        "type": "object"
+      },
+      "ReviewContextResponse": {
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewAuditEntry"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewItemResponse"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewSourceContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReviewSuggestionContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "review"
+        ],
+        "title": "ReviewContextResponse",
         "type": "object"
       },
       "ReviewItemResponse": {
@@ -1837,6 +2161,136 @@
         "title": "ReviewMutationResponse",
         "type": "object"
       },
+      "ReviewSourceContext": {
+        "properties": {
+          "bbox": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "number"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bbox"
+          },
+          "chunk_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "document_title": {
+            "title": "Document Title",
+            "type": "string"
+          },
+          "evidence_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Sha256"
+          },
+          "evidence_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Text"
+          },
+          "extraction_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Version"
+          },
+          "page_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Number"
+          },
+          "parser_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parser Version"
+          },
+          "provenance_state": {
+            "title": "Provenance State",
+            "type": "string"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "text_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text End"
+          },
+          "text_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text Start"
+          }
+        },
+        "required": [
+          "document_id",
+          "document_title",
+          "revision_id",
+          "provenance_state"
+        ],
+        "title": "ReviewSourceContext",
+        "type": "object"
+      },
       "ReviewState": {
         "enum": [
           "PROPOSED",
@@ -1849,6 +2303,44 @@
         ],
         "title": "ReviewState",
         "type": "string"
+      },
+      "ReviewSuggestionContext": {
+        "properties": {
+          "confidence_category": {
+            "title": "Confidence Category",
+            "type": "string"
+          },
+          "extractor_name": {
+            "title": "Extractor Name",
+            "type": "string"
+          },
+          "extractor_version": {
+            "title": "Extractor Version",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "parser_version": {
+            "title": "Parser Version",
+            "type": "string"
+          },
+          "suggestion_type": {
+            "title": "Suggestion Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "suggestion_type",
+          "extractor_name",
+          "extractor_version",
+          "parser_version",
+          "confidence_category"
+        ],
+        "title": "ReviewSuggestionContext",
+        "type": "object"
       },
       "Role": {
         "enum": [
@@ -2703,6 +3195,45 @@
           }
         },
         "summary": "Download Document"
+      }
+    },
+    "/api/v1/documents/{document_id}/viewer-context": {
+      "get": {
+        "operationId": "getDocumentViewerContext",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentViewerContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Document Viewer Context"
       }
     },
     "/api/v1/draft-studio/drafts": {
@@ -4414,6 +4945,48 @@
           }
         },
         "summary": "Approve Review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{review_id}/context": {
+      "get": {
+        "operationId": "getReviewContext",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewContextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Review Context",
         "tags": [
           "reviews"
         ]

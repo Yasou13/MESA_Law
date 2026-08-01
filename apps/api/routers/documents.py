@@ -9,9 +9,11 @@ from apps.api.core.storage import storage_service
 from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.document import Document, DocumentRevision, DocumentState
 from apps.api.models.domain import MatterMember
+from apps.api.models.parser import ParsedDocument
 from apps.api.models.queue import Job
 from apps.api.schemas.api import (
     DocumentResponse,
+    DocumentViewerContextResponse,
     DownloadResponse,
     UploadCompleteResponse,
     UploadIntentRequest,
@@ -44,6 +46,14 @@ def _document_response(
         provenance_state=provenance_state,
         failure_reason=revision.failure_reason if revision else None,
         created_at=document.created_at,
+    )
+
+
+def _revision_provenance(revision: DocumentRevision) -> str:
+    if not revision.is_canonical or revision.scan_status != DocumentState.READY:
+        return "PENDING_VERIFICATION"
+    return (
+        "VERIFIED_PDF" if revision.mime_type == "application/pdf" else "LOW_PROVENANCE"
     )
 
 
@@ -195,6 +205,77 @@ async def list_all_documents(
         latest_rev = rev_res.scalars().first()
         res.append(_document_response(d, latest_rev))
     return res
+
+
+@router.get(
+    "/{document_id}/viewer-context",
+    response_model=DocumentViewerContextResponse,
+    operation_id="getDocumentViewerContext",
+)
+@limiter.limit("60/minute")
+async def get_document_viewer_context(
+    request: Request,
+    document_id: str,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db),
+):
+    document = await db.get(Document, document_id)
+    if not document or document.tenant_id != context.tenant_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+    await DocumentAccessPolicy.can_read(context, db, document.matter_id)
+
+    revision = await db.scalar(
+        select(DocumentRevision)
+        .where(
+            DocumentRevision.document_id == document.id,
+            DocumentRevision.tenant_id == context.tenant_id,
+            DocumentRevision.is_canonical.is_(True),
+        )
+        .order_by(DocumentRevision.version.desc())
+    )
+    if revision is None:
+        return DocumentViewerContextResponse(
+            document=_document_response(document, None),
+            revision=None,
+            parsed_document=None,
+        )
+
+    parsed_document = await db.scalar(
+        select(ParsedDocument)
+        .where(
+            ParsedDocument.document_id == document.id,
+            ParsedDocument.revision_id == revision.id,
+            ParsedDocument.tenant_id == context.tenant_id,
+        )
+        .order_by(ParsedDocument.parsing_revision.desc())
+    )
+    return DocumentViewerContextResponse(
+        document=_document_response(document, revision),
+        revision={
+            "id": revision.id,
+            "version": revision.version,
+            "mime_type": revision.mime_type,
+            "size_bytes": revision.size_bytes,
+            "sha256": revision.file_hash,
+            "immutable_at": revision.immutable_at,
+            "scan_status": revision.scan_status.value,
+            "provenance_state": _revision_provenance(revision),
+        },
+        parsed_document=(
+            {
+                "id": parsed_document.id,
+                "revision_id": parsed_document.revision_id,
+                "parser": parsed_document.parser_used,
+                "parsing_revision": parsed_document.parsing_revision,
+                "ocr_version": parsed_document.ocr_version,
+                "pipeline_version": parsed_document.pipeline_version,
+                "status": parsed_document.status,
+                "provenance_state": parsed_document.provenance_state,
+            }
+            if parsed_document
+            else None
+        ),
+    )
 
 
 @router.get(

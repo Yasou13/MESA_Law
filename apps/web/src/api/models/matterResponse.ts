@@ -12,10 +12,13 @@ export interface MatterResponse {
   client_name?: string | null;
   closed_at?: string | null;
   confidentiality_level: string;
+  created_at: string;
   id: string;
   internal_reference?: string | null;
   jurisdiction?: string | null;
   opened_at?: string | null;
+  responsible_attorney?: string | null;
   status: string;
   title: string;
+  updated_at: string;
 }

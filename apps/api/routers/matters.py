@@ -2,8 +2,9 @@ from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.policies import AdminAccessPolicy, MatterAccessPolicy
 from apps.api.core.ratelimit import limiter
+from apps.api.core.utils import utc_now
 from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
-from apps.api.models.domain import Matter
+from apps.api.models.domain import Matter, User
 from apps.api.schemas.api import MatterCreate, MatterResponse
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -11,6 +12,28 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
+
+
+def _matter_response(
+    matter: Matter, access_scope: str, responsible_attorney: str | None
+) -> dict:
+    return {
+        "id": matter.id,
+        "title": matter.title,
+        "internal_reference": matter.internal_reference,
+        "status": matter.status,
+        "client_name": matter.client_name,
+        "jurisdiction": matter.jurisdiction,
+        "case_type": matter.case_type,
+        "confidentiality_level": matter.confidentiality_level,
+        "ai_processing_policy": matter.ai_processing_policy,
+        "opened_at": matter.opened_at.isoformat() if matter.opened_at else None,
+        "closed_at": matter.closed_at.isoformat() if matter.closed_at else None,
+        "access_scope": access_scope,
+        "responsible_attorney": responsible_attorney,
+        "created_at": matter.created_at,
+        "updated_at": matter.updated_at,
+    }
 
 
 @router.get("", response_model=list[MatterResponse], operation_id="listMatters")
@@ -24,7 +47,7 @@ async def list_matters(
     from apps.api.models.domain import MatterMember
 
     stmt = (
-        select(Matter, MatterMember.access_scope)
+        select(Matter, MatterMember.access_scope, User.full_name)
         .join(
             MatterMember,
             (Matter.id == MatterMember.matter_id)
@@ -34,29 +57,14 @@ async def list_matters(
             Matter.tenant_id == context.tenant_id,
             MatterMember.tenant_id == context.tenant_id,
         )
+        .outerjoin(User, Matter.responsible_attorney_id == User.id)
         .order_by(Matter.created_at.desc())
     )
 
     result = await db.execute(stmt)
     rows = result.all()
 
-    return [
-        {
-            "id": m.id,
-            "title": m.title,
-            "internal_reference": m.internal_reference,
-            "status": m.status,
-            "client_name": m.client_name,
-            "jurisdiction": m.jurisdiction,
-            "case_type": m.case_type,
-            "confidentiality_level": m.confidentiality_level,
-            "ai_processing_policy": m.ai_processing_policy,
-            "opened_at": m.opened_at.isoformat() if m.opened_at else None,
-            "closed_at": m.closed_at.isoformat() if m.closed_at else None,
-            "access_scope": scope,
-        }
-        for m, scope in rows
-    ]
+    return [_matter_response(m, scope, attorney) for m, scope, attorney in rows]
 
 
 from apps.api.core.idempotency import check_idempotency, complete_idempotency
@@ -89,21 +97,13 @@ async def get_matter(
     )
     res = await db.execute(stmt)
     scope = res.scalar_one()
+    responsible_attorney = None
+    if matter.responsible_attorney_id:
+        responsible_attorney = await db.scalar(
+            select(User.full_name).where(User.id == matter.responsible_attorney_id)
+        )
 
-    return {
-        "id": matter.id,
-        "title": matter.title,
-        "internal_reference": matter.internal_reference,
-        "status": matter.status,
-        "client_name": matter.client_name,
-        "jurisdiction": matter.jurisdiction,
-        "case_type": matter.case_type,
-        "confidentiality_level": matter.confidentiality_level,
-        "ai_processing_policy": matter.ai_processing_policy,
-        "opened_at": matter.opened_at.isoformat() if matter.opened_at else None,
-        "closed_at": matter.closed_at.isoformat() if matter.closed_at else None,
-        "access_scope": scope,
-    }
+    return _matter_response(matter, scope, responsible_attorney)
 
 
 @router.post(
@@ -123,6 +123,7 @@ async def create_matter(
             return cached.response_body
 
     await MatterAccessPolicy.can_create(context)
+    now = utc_now()
     matter = Matter(
         title=matter_data.title,
         internal_reference=matter_data.internal_reference,
@@ -133,9 +134,9 @@ async def create_matter(
         confidentiality_level=matter_data.confidentiality_level,
         ai_processing_policy=matter_data.ai_processing_policy,
         responsible_attorney_id=context.principal_id,
-        opened_at=__import__("datetime").datetime.now(
-            __import__("datetime").timezone.utc
-        ),
+        opened_at=now,
+        created_at=now,
+        updated_at=now,
     )
     db.add(matter)
     await db.flush()
@@ -153,20 +154,12 @@ async def create_matter(
     await db.commit()
     await db.refresh(matter)
 
-    resp = {
-        "id": matter.id,
-        "title": matter.title,
-        "internal_reference": matter.internal_reference,
-        "status": matter.status,
-        "client_name": matter.client_name,
-        "jurisdiction": matter.jurisdiction,
-        "case_type": matter.case_type,
-        "confidentiality_level": matter.confidentiality_level,
-        "ai_processing_policy": matter.ai_processing_policy,
-        "opened_at": matter.opened_at.isoformat() if matter.opened_at else None,
-        "closed_at": matter.closed_at.isoformat() if matter.closed_at else None,
-        "access_scope": "admin",
-    }
+    responsible_attorney = await db.scalar(
+        select(User.full_name).where(User.id == context.principal_id)
+    )
+    if not isinstance(responsible_attorney, str):
+        responsible_attorney = None
+    resp = _matter_response(matter, "admin", responsible_attorney)
 
     if idem_key:
         await complete_idempotency(db, idem_key, 201, resp)

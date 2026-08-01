@@ -40,11 +40,18 @@ async def test_test_environment_does_not_fabricate_a_qa_answer() -> None:
     assert response.citations == []
     assert response.degraded_reason == "MESA_SCOPE_NOT_READY"
     assert "doğrulanmış kaynak bulunamadı" in response.answer
+    assert response.retrieval.scope == "MATTER"
+    assert response.retrieval.engine == "NONE"
+    assert response.retrieval.verified_document_count == 0
 
 
 @pytest.mark.asyncio
 async def test_mesa_failure_degrades_only_to_verified_local_evidence() -> None:
-    binding = type("Binding", (), {"provisioning_status": "READY"})()
+    binding = type(
+        "Binding",
+        (),
+        {"provisioning_status": "READY", "dataset_id": "dataset-1"},
+    )()
     session = AsyncMock()
     session.scalar.return_value = binding
     citation = verified_citation()
@@ -69,6 +76,9 @@ async def test_mesa_failure_degrades_only_to_verified_local_evidence() -> None:
     assert response.degraded_reason == "MESA_UNAVAILABLE:MesaUnavailableError"
     assert response.citations == [citation]
     assert citation.evidence_excerpt in response.answer
+    assert response.retrieval.engine == "LOCAL_FALLBACK"
+    assert response.retrieval.verified_document_count == 1
+    assert response.retrieval.verified_citation_count == 1
 
 
 class TestLLMClient:

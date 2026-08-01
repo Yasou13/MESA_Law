@@ -413,6 +413,7 @@ async def test_mesa_provenance_must_match_local_locator_hash_and_scope() -> None
             "source_locator_id": locator.id,
             "evidence_sha256": locator.evidence_sha256,
         },
+        score=0.87,
     )
     citation = await _verify_mesa_evidence(
         session,
@@ -423,6 +424,7 @@ async def test_mesa_provenance_must_match_local_locator_hash_and_scope() -> None
         evidence=evidence,
     )
     assert citation is not None
+    assert citation.relevance_score == 0.87
     evidence.metadata["evidence_sha256"] = "0" * 64
     assert (
         await _verify_mesa_evidence(

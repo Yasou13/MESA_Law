@@ -28,6 +28,7 @@ import type {
   HTTPValidationError,
   ListReviewsParams,
   RejectReviewRequest,
+  ReviewContextResponse,
   ReviewItemResponse,
   ReviewMutationRequest,
   ReviewMutationResponse
@@ -215,6 +216,98 @@ export const useApproveReview = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getApproveReviewMutationOptions(options), queryClient);
     }
     /**
+ * @summary Get Review Context
+ */
+export const getReviewContext = (
+    reviewId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ReviewContextResponse>(
+      {url: `/api/v1/reviews/${reviewId}/context`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetReviewContextQueryKey = (reviewId: string,) => {
+    return [
+    `/api/v1/reviews/${reviewId}/context`
+    ] as const;
+    }
+
+
+export const getGetReviewContextQueryOptions = <TData = Awaited<ReturnType<typeof getReviewContext>>, TError = ErrorType<HTTPValidationError>>(reviewId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewContextQueryKey(reviewId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewContext>>> = ({ signal }) => getReviewContext(reviewId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: reviewId !== null && reviewId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetReviewContextQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewContext>>>
+export type GetReviewContextQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetReviewContext<TData = Awaited<ReturnType<typeof getReviewContext>>, TError = ErrorType<HTTPValidationError>>(
+ reviewId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewContext>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReviewContext<TData = Awaited<ReturnType<typeof getReviewContext>>, TError = ErrorType<HTTPValidationError>>(
+ reviewId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getReviewContext>>,
+          TError,
+          Awaited<ReturnType<typeof getReviewContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetReviewContext<TData = Awaited<ReturnType<typeof getReviewContext>>, TError = ErrorType<HTTPValidationError>>(
+ reviewId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Review Context
+ */
+
+export function useGetReviewContext<TData = Awaited<ReturnType<typeof getReviewContext>>, TError = ErrorType<HTTPValidationError>>(
+ reviewId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getReviewContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetReviewContextQueryOptions(reviewId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
  * @summary Correct Review
  */
 export const correctReview = (

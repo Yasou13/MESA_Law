@@ -5,10 +5,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { QACitation } from './qACitation';
+import type { QARetrievalMetadata } from './qARetrievalMetadata';
 
 export interface QAResponse {
   answer: string;
   citations?: QACitation[];
   degraded_reason?: string | null;
+  retrieval?: QARetrievalMetadata;
   status: string;
 }

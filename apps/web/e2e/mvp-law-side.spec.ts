@@ -219,7 +219,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   await expect(page).toHaveURL(/\/dashboard$/)
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
 
-  await page.getByRole('link', { name: 'Matters', exact: true }).click()
+  await page.getByRole('link', { name: 'Dosyalar', exact: true }).click()
   await page.getByRole('button', { name: 'New Matter' }).click()
   await page.getByLabel('Matter Name').fill(matter.title)
   await page.getByLabel('Parties (comma separated)').fill('Acme, Globex')
@@ -234,7 +234,7 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   await page.getByRole('button', { name: 'Save binding and run preflight' }).click()
   await expect(page.getByText('PENDING_PREFLIGHT')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Documents', exact: true }).click()
+  await page.getByRole('link', { name: 'Belgeler', exact: true }).last().click()
   await page.locator('input[type="file"]').setInputFiles({
     name: 'contract.pdf',
     mimeType: 'application/pdf',
@@ -242,13 +242,14 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   })
   await expect(page.getByText('contract.pdf')).toBeVisible()
 
-  await page.getByRole('link', { name: 'Reviews', exact: true }).click()
-  await expect(page.getByText('version 7')).toBeVisible()
-  await page.getByRole('button', { name: 'Approve' }).click()
+  await page.getByRole('link', { name: 'İnceleme Merkezi', exact: true }).click()
+  const reviewRow = page.getByRole('row', { name: /CONTRACT_OBLIGATION 7 PROPOSED/ })
+  await expect(reviewRow).toBeVisible()
+  await reviewRow.getByRole('button', { name: 'Approve' }).click()
+  await page.getByRole('tab', { name: 'Approved / publishing' }).click()
   await expect(page.getByText(/PUBLISHING/)).toBeVisible()
 
-  await page.goto(`/matters/${matterId}`)
-  await page.getByRole('button', { name: 'Sourced Q&A' }).click()
+  await page.goto(`/matters/${matterId}/qa`)
   await page.getByPlaceholder('Ask a question about verified matter evidence…').fill(
     'What payment obligation is verified?',
   )
@@ -257,6 +258,6 @@ test('Keycloak entry to bound matter, immutable upload, review and sourced QA', 
   await expect(page.getByText('page 2')).toBeVisible()
   await expect(page.getByText('Acme must pay Invoice 42 within 30 days.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Research', exact: true }).click()
+  await page.goto(`/matters/${matterId}/research`)
   await expect(page.getByRole('heading', { name: 'External legal research unavailable' })).toBeVisible()
 })

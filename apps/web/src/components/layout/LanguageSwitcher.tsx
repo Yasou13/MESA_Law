@@ -19,8 +19,8 @@ export function LanguageSwitcher() {
       segments.splice(1, 1);
     }
 
-    // For non-default locale, add the prefix
-    const newPath = newLocale === 'en'
+    // Turkish is the product default; English keeps an explicit prefix.
+    const newPath = newLocale === 'tr'
       ? segments.join('/') || '/'
       : `/${newLocale}${segments.join('/') || '/'}`;
 

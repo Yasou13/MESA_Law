@@ -5,8 +5,9 @@ import type { NextFetchEvent, NextRequest } from 'next/server'
 const locales = ['en', 'tr']
 const intlMiddleware = createMiddleware({
   locales,
-  defaultLocale: 'en',
+  defaultLocale: 'tr',
   localePrefix: 'as-needed',
+  localeDetection: false,
 })
 
 function isLoginPath(pathname: string): boolean {

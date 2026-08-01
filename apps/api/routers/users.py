@@ -77,7 +77,7 @@ async def grant_support_access(
     db: AsyncSession = Depends(get_db)
 ):
     from apps.api.core.policies import AdminAccessPolicy
-    AdminAccessPolicy.can_admin_firm(context)
+    AdminAccessPolicy.can_manage_firm(context)
 
     from datetime import datetime, timedelta
     

@@ -15,12 +15,24 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 # Context variables for structured logging
-trace_id_cv = contextvars.ContextVar("trace_id", default=None)
-tenant_id_cv = contextvars.ContextVar("tenant_id", default=None)
-principal_id_cv = contextvars.ContextVar("principal_id", default=None)
-matter_id_cv = contextvars.ContextVar("matter_id", default=None)
-operation_id_cv = contextvars.ContextVar("operation_id", default=None)
-job_id_cv = contextvars.ContextVar("job_id", default=None)
+trace_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "trace_id", default=None
+)
+tenant_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "tenant_id", default=None
+)
+principal_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "principal_id", default=None
+)
+matter_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "matter_id", default=None
+)
+operation_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "operation_id", default=None
+)
+job_id_cv: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "job_id", default=None
+)
 
 
 def add_contextvars(logger, method_name, event_dict):
@@ -66,8 +78,10 @@ def setup_structlog():
 
 def setup_opentelemetry(service_name: str = "mesa-law-api"):
     """Configures OpenTelemetry Tracing and Metrics."""
-    otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317")
-    
+    otlp_endpoint = os.getenv(
+        "OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4317"
+    )
+
     # Check if we are in testing to avoid OTLP overhead
     env = os.getenv("MESA_LAW_ENVIRONMENT", "development")
     if env == "test":
@@ -93,14 +107,17 @@ def setup_opentelemetry(service_name: str = "mesa-law-api"):
 def get_meter(name: str):
     return metrics.get_meter(name)
 
+
 def setup_observability(app=None, service_name: str = "mesa-law-api"):
     """Initialize both Structlog and OpenTelemetry, and optionally instrument a FastAPI app."""
     setup_structlog()
     setup_opentelemetry(service_name)
-    
+
     # Instrument HTTPX globally
     if not HTTPXClientInstrumentor().is_instrumented_by_opentelemetry:
         HTTPXClientInstrumentor().instrument()
 
     if app is not None:
-        FastAPIInstrumentor.instrument_app(app, tracer_provider=trace.get_tracer_provider())
+        FastAPIInstrumentor.instrument_app(
+            app, tracer_provider=trace.get_tracer_provider()
+        )

@@ -1,7 +1,13 @@
 import NextAuth from "next-auth"
 import KeycloakProvider from "next-auth/providers/keycloak"
-import CredentialsProvider from "next-auth/providers/credentials"
 import type { Provider } from "next-auth/providers/index"
+
+const environment = process.env.MESA_LAW_ENVIRONMENT || "development"
+const secureEnvironment = ["production", "staging", "pilot"].includes(environment)
+
+if (secureEnvironment && (!process.env.NEXTAUTH_SECRET || !process.env.KEYCLOAK_CLIENT_SECRET || !process.env.KEYCLOAK_PUBLIC_ISSUER)) {
+  throw new Error("Secure deployments require NEXTAUTH_SECRET and complete Keycloak configuration")
+}
 
 const providers: Provider[] = [
   KeycloakProvider({
@@ -11,25 +17,6 @@ const providers: Provider[] = [
     authorization: process.env.KEYCLOAK_PUBLIC_ISSUER ? `${process.env.KEYCLOAK_PUBLIC_ISSUER}/protocol/openid-connect/auth` : undefined,
     token: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/token` : undefined,
     userinfo: process.env.KEYCLOAK_INTERNAL_URL ? `${process.env.KEYCLOAK_INTERNAL_URL}/realms/mesa_law/protocol/openid-connect/userinfo` : undefined,
-  }),
-  // Developer backdoor
-  CredentialsProvider({
-    name: "Developer",
-    credentials: {
-      username: { label: "Username", type: "text" },
-      password: { label: "Password", type: "password" }
-    },
-    async authorize(credentials) {
-      if (process.env.NODE_ENV === "development" || true) { // allow backdoor always for now
-        return {
-          id: "dev-user-id",
-          name: "Developer Admin",
-          email: "dev@mesalaw.com",
-          access_token: "dev-mock-token"
-        } as any;
-      }
-      return null;
-    }
   })
 ]
 
@@ -59,4 +46,3 @@ const handler = NextAuth({
 })
 
 export { handler as GET, handler as POST }
-

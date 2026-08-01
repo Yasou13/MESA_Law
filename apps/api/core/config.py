@@ -5,7 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     env: str = Field(
         default="development",
-        validation_alias=AliasChoices("MESA_LAW_ENVIRONMENT", "MESA_LAW_ENV", "ENVIRONMENT", "ENV", "env")
+        validation_alias=AliasChoices(
+            "MESA_LAW_ENVIRONMENT", "MESA_LAW_ENV", "ENVIRONMENT", "ENV", "env"
+        ),
     )
     secret_key: str = "MUST_BE_PROVIDED_IN_ENV"
     api_port: int = 8001
@@ -14,24 +16,69 @@ class Settings(BaseSettings):
     postgres_db: str = "mesa_law"
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    
+
     # If set via MESA_LAW_DATABASE_URL env var, this takes priority
     database_url: str | None = None
-    
+
     algorithm: str = "RS256"
     access_token_expire_minutes: int = 30
     mesa_backend_url: str = "http://localhost:8000"
     mesa_api_key: str = ""
-    redis_url: str = Field(default="redis://localhost:6379/0", validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"))
-    test_auth_enabled: bool = Field(default=False, validation_alias=AliasChoices("MESA_LAW_TEST_AUTH_ENABLED", "TEST_AUTH_ENABLED"))
-    
-    keycloak_client_id: str = Field(default="mesa-client", validation_alias=AliasChoices("KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"))
-    keycloak_client_secret: str = Field(default="mesa-client-secret", validation_alias=AliasChoices("KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"))
-    keycloak_issuer: str = Field(default="http://localhost:8080/realms/mesa_law", validation_alias=AliasChoices("KEYCLOAK_PUBLIC_ISSUER", "KEYCLOAK_ISSUER", "MESA_LAW_KEYCLOAK_ISSUER"))
-    keycloak_jwks_url: str = Field(default="http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs", validation_alias=AliasChoices("KEYCLOAK_JWKS_URL", "MESA_LAW_KEYCLOAK_JWKS_URL"))
-    keycloak_internal_url: str | None = Field(default=None, validation_alias=AliasChoices("KEYCLOAK_INTERNAL_URL", "MESA_LAW_KEYCLOAK_INTERNAL_URL"))
-    
-    model_config = SettingsConfigDict(env_prefix="MESA_LAW_", env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"),
+    )
+    test_auth_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "MESA_LAW_TEST_AUTH_ENABLED", "TEST_AUTH_ENABLED"
+        ),
+    )
+    mesa_rebuild_enabled: bool = False
+    external_research_enabled: bool = False
+    drafting_ai_enabled: bool = False
+    deadline_ai_enabled: bool = False
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"]
+    )
+
+    keycloak_client_id: str = Field(
+        default="mesa-client",
+        validation_alias=AliasChoices(
+            "KEYCLOAK_CLIENT_ID", "MESA_LAW_KEYCLOAK_CLIENT_ID"
+        ),
+    )
+    keycloak_client_secret: str = Field(
+        default="mesa-client-secret",
+        validation_alias=AliasChoices(
+            "KEYCLOAK_CLIENT_SECRET", "MESA_LAW_KEYCLOAK_CLIENT_SECRET"
+        ),
+    )
+    keycloak_issuer: str = Field(
+        default="http://localhost:8080/realms/mesa_law",
+        validation_alias=AliasChoices(
+            "KEYCLOAK_PUBLIC_ISSUER", "KEYCLOAK_ISSUER", "MESA_LAW_KEYCLOAK_ISSUER"
+        ),
+    )
+    keycloak_jwks_url: str = Field(
+        default="http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs",
+        validation_alias=AliasChoices(
+            "KEYCLOAK_JWKS_URL", "MESA_LAW_KEYCLOAK_JWKS_URL"
+        ),
+    )
+    keycloak_internal_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "KEYCLOAK_INTERNAL_URL", "MESA_LAW_KEYCLOAK_INTERNAL_URL"
+        ),
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="MESA_LAW_",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     @property
     def effective_database_url(self) -> str:
@@ -56,13 +103,33 @@ def validate_production_settings():
             "password123",
             "supersecret_dev_key",
             "mesa-client-secret",
-            "supersecret_nextauth_key_for_dev_only"
+            "supersecret_nextauth_key_for_dev_only",
         ]
-        if settings.secret_key in insecure_defaults or settings.keycloak_client_secret in insecure_defaults:
-            raise RuntimeError(f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with insecure default secrets. Startup aborted.")
-    
+        if (
+            settings.secret_key in insecure_defaults
+            or settings.keycloak_client_secret in insecure_defaults
+        ):
+            raise RuntimeError(
+                f"CRITICAL SECURITY ERROR: Secure environment '{settings.env}' detected with insecure default secrets. Startup aborted."
+            )
+        if not settings.keycloak_issuer.startswith(
+            "https://"
+        ) or not settings.keycloak_jwks_url.startswith("https://"):
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: Secure environments require HTTPS Keycloak issuer and JWKS URLs."
+            )
+        if not settings.cors_origins or any(
+            origin == "*" or not origin.startswith("https://")
+            for origin in settings.cors_origins
+        ):
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: Secure environments require an explicit HTTPS CORS allowlist."
+            )
+
     if settings.test_auth_enabled and settings.env != "test":
-        raise RuntimeError(f"CRITICAL SECURITY ERROR: MESA_LAW_TEST_AUTH_ENABLED is set to true but environment is '{settings.env}'. Test auth can only be enabled in 'test' environment. Startup aborted.")
+        raise RuntimeError(
+            f"CRITICAL SECURITY ERROR: MESA_LAW_TEST_AUTH_ENABLED is set to true but environment is '{settings.env}'. Test auth can only be enabled in 'test' environment. Startup aborted."
+        )
+
 
 validate_production_settings()
-

@@ -35,10 +35,10 @@ export function TextField<TValues extends FieldValues>({ form, name, label, desc
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Input type={type} placeholder={placeholder} {...field} {...props} className="bg-[var(--background)] border-[var(--border-surface)]" />
+            <Input type={type} placeholder={placeholder} {...field} {...props} />
           </FormControl>
           {description && <FormDescription>{description}</FormDescription>}
-          <FormMessage className="text-[var(--color-semantic-error)]" />
+          <FormMessage className="text-danger" />
         </FormItem>
       )}
     />
@@ -54,10 +54,10 @@ export function TextAreaField<TValues extends FieldValues>({ form, name, label, 
         <FormItem>
           <FormLabel>{label}</FormLabel>
           <FormControl>
-            <Textarea placeholder={placeholder} {...field} {...props} className="bg-[var(--background)] border-[var(--border-surface)] resize-none" />
+            <Textarea placeholder={placeholder} {...field} {...props} className="resize-none" />
           </FormControl>
           {description && <FormDescription>{description}</FormDescription>}
-          <FormMessage className="text-[var(--color-semantic-error)]" />
+          <FormMessage className="text-danger" />
         </FormItem>
       )}
     />
@@ -79,7 +79,7 @@ export function SelectField<TValues extends FieldValues>({ form, name, label, de
           <FormLabel>{label}</FormLabel>
           <Select onValueChange={field.onChange} defaultValue={field.value}>
             <FormControl>
-              <SelectTrigger className="bg-[var(--background)] border-[var(--border-surface)]">
+              <SelectTrigger>
                 <SelectValue placeholder={placeholder} />
               </SelectTrigger>
             </FormControl>
@@ -92,7 +92,7 @@ export function SelectField<TValues extends FieldValues>({ form, name, label, de
             </SelectContent>
           </Select>
           {description && <FormDescription>{description}</FormDescription>}
-          <FormMessage className="text-[var(--color-semantic-error)]" />
+          <FormMessage className="text-danger" />
         </FormItem>
       )}
     />

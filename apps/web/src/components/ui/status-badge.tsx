@@ -1,5 +1,16 @@
 import { Badge } from "@/components/ui/badge"
-import { LucideIcon } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Circle, CircleAlert, Clock3, type LucideIcon, ShieldCheck } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+export type StatusTone =
+  | "neutral"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
+  | "review"
+  | "verified"
+  | "degraded"
 
 export interface StatusBadgeProps {
   status: string
@@ -8,26 +19,42 @@ export interface StatusBadgeProps {
   className?: string
 }
 
-const statusMap: Record<string, string> = {
-  success: "bg-[var(--color-semantic-success)] text-white hover:bg-[var(--color-semantic-success)]/90",
-  warning: "bg-[var(--color-semantic-warning)] text-white hover:bg-[var(--color-semantic-warning)]/90",
-  error: "bg-[var(--color-semantic-error)] text-white hover:bg-[var(--color-semantic-error)]/90",
-  info: "bg-[var(--color-semantic-info)] text-white hover:bg-[var(--color-semantic-info)]/90",
-  processing: "bg-[var(--color-semantic-processing)] text-white hover:bg-[var(--color-semantic-processing)]/90",
-  "review-required": "bg-[var(--color-semantic-review-required)] text-white hover:bg-[var(--color-semantic-review-required)]/90",
-  "stale-source": "bg-[var(--color-semantic-stale-source)] text-white hover:bg-[var(--color-semantic-stale-source)]/90",
-  "legal-hold": "bg-[var(--color-semantic-legal-hold)] text-white hover:bg-[var(--color-semantic-legal-hold)]/90",
-  degraded: "bg-[var(--color-semantic-degraded)] text-white hover:bg-[var(--color-semantic-degraded)]/90",
-  "manual-review": "bg-[var(--color-semantic-manual-review)] text-white hover:bg-[var(--color-semantic-manual-review)]/90",
-  conflict: "bg-[var(--color-semantic-conflict)] text-white hover:bg-[var(--color-semantic-conflict)]/90",
+const statusMap: Record<string, { classes: string; icon: LucideIcon }> = {
+  neutral: { classes: "border-border bg-surface-subtle text-foreground-secondary", icon: Circle },
+  success: { classes: "border-success/25 bg-success-soft text-success", icon: CheckCircle2 },
+  approved: { classes: "border-success/25 bg-success-soft text-success", icon: CheckCircle2 },
+  published: { classes: "border-success/25 bg-success-soft text-success", icon: CheckCircle2 },
+  warning: { classes: "border-warning/25 bg-warning-soft text-warning", icon: AlertTriangle },
+  error: { classes: "border-danger/25 bg-danger-soft text-danger", icon: CircleAlert },
+  danger: { classes: "border-danger/25 bg-danger-soft text-danger", icon: CircleAlert },
+  rejected: { classes: "border-danger/25 bg-danger-soft text-danger", icon: CircleAlert },
+  conflict: { classes: "border-danger/25 bg-danger-soft text-danger", icon: CircleAlert },
+  info: { classes: "border-info/25 bg-info-soft text-info", icon: Circle },
+  processing: { classes: "border-info/25 bg-info-soft text-info", icon: Clock3 },
+  running: { classes: "border-info/25 bg-info-soft text-info", icon: Clock3 },
+  "review-required": { classes: "border-review/25 bg-review-soft text-review", icon: Clock3 },
+  review: { classes: "border-review/25 bg-review-soft text-review", icon: Clock3 },
+  proposed: { classes: "border-review/25 bg-review-soft text-review", icon: Clock3 },
+  "manual-review": { classes: "border-review/25 bg-review-soft text-review", icon: Clock3 },
+  verified: { classes: "border-verified/25 bg-verified-soft text-verified", icon: ShieldCheck },
+  degraded: { classes: "border-warning/25 bg-warning-soft text-warning", icon: AlertTriangle },
+  "stale-source": { classes: "border-warning/25 bg-warning-soft text-warning", icon: AlertTriangle },
+  "legal-hold": { classes: "border-danger/25 bg-danger-soft text-danger", icon: CircleAlert },
 }
 
 export function StatusBadge({ status, label, icon: Icon, className }: StatusBadgeProps) {
-  const statusClasses = statusMap[status.toLowerCase()] || "bg-[var(--color-semantic-neutral)] text-white hover:bg-[var(--color-semantic-neutral)]/90"
+  const config = statusMap[status.toLowerCase()] ?? statusMap.neutral
+  const StatusIcon = Icon ?? config.icon
 
   return (
-    <Badge className={`${statusClasses} flex items-center gap-1.5 px-2 py-0.5 rounded-full font-medium ${className || ''}`}>
-      {Icon && <Icon className="w-3.5 h-3.5" />}
+    <Badge
+      className={cn(
+        "flex h-6 items-center gap-1.5 rounded-full border px-2 text-xs font-medium",
+        config.classes,
+        className,
+      )}
+    >
+      <StatusIcon className="size-3" aria-hidden="true" />
       {label}
     </Badge>
   )

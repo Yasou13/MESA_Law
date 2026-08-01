@@ -4,6 +4,8 @@ import { Providers } from "./providers";
 import {NextIntlClientProvider} from 'next-intl';
 import {getMessages} from 'next-intl/server';
 import { Toaster } from "react-hot-toast";
+import "@fontsource-variable/ibm-plex-sans";
+import "@fontsource-variable/source-serif-4";
 
 export const metadata: Metadata = {
   title: "MESA Law",
@@ -24,6 +26,7 @@ export default async function RootLayout({
     <html
       lang={locale}
       className="h-full w-full antialiased"
+      suppressHydrationWarning
     >
       <body className="min-h-full w-full flex flex-col" suppressHydrationWarning>
         <NextIntlClientProvider messages={messages}>
@@ -33,13 +36,15 @@ export default async function RootLayout({
               {children}
             </main>
           </div>
-          <Toaster 
+          <Toaster
             position="bottom-right"
             toastOptions={{
               style: {
-                background: '#18181b',
-                color: '#fff',
-                border: '1px solid #27272a',
+                background: 'var(--surface-raised)',
+                color: 'var(--foreground)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-sm)',
               },
             }}
           />

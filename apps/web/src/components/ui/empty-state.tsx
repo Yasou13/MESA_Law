@@ -22,20 +22,19 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className={clsx(
-      "flex flex-col items-center justify-center p-12 text-center",
-      "glass-card border border-[var(--border-surface)] border-dashed rounded-xl",
+      "flex flex-col items-center justify-center rounded-lg border border-dashed border-border-strong bg-surface p-10 text-center",
       className
     )}>
-      <div className="w-16 h-16 rounded-full bg-[var(--bg-surface-hover)] flex items-center justify-center mb-6">
-        <Icon className="w-8 h-8 text-[var(--color-anthracite-400)]" />
+      <div className="mb-5 flex size-10 items-center justify-center rounded-lg bg-surface-subtle">
+        <Icon className="size-5 text-foreground-secondary" aria-hidden="true" />
       </div>
       
-      <h3 className="text-xl font-semibold text-[var(--foreground)] tracking-tight mb-2">
+      <h3 className="mb-1 text-base font-semibold text-foreground">
         {title}
       </h3>
       
       {description && (
-        <p className="text-[var(--color-anthracite-500)] max-w-sm mb-6">
+        <p className="mb-5 max-w-md text-sm text-foreground-secondary">
           {description}
         </p>
       )}
@@ -43,7 +42,6 @@ export function EmptyState({
       {actionLabel && onAction && (
         <Button 
           onClick={onAction}
-          className="bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]"
         >
           {actionLabel}
         </Button>

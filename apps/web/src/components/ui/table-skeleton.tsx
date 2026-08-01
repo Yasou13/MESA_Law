@@ -9,7 +9,7 @@ interface TableSkeletonProps {
 
 export function TableSkeleton({ columns = 4, rows = 5, showAvatar = false }: TableSkeletonProps) {
   return (
-    <div className="rounded-xl border border-[var(--border-surface)] overflow-hidden glass-card">
+    <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <Table>
         <TableHeader className="bg-[var(--bg-surface-hover)]">
           <TableRow>
@@ -27,7 +27,7 @@ export function TableSkeleton({ columns = 4, rows = 5, showAvatar = false }: Tab
                 <TableCell key={colIndex}>
                   <div className="flex items-center gap-3">
                     {colIndex === 0 && showAvatar && (
-                      <Skeleton className="h-8 w-8 rounded-full bg-[var(--border-surface)]" />
+                      <Skeleton className="size-8 rounded-full" />
                     )}
                     <Skeleton className={`h-4 bg-[var(--border-surface)] ${
                       colIndex === 0 ? 'w-32' : colIndex === columns - 1 ? 'w-16 ml-auto' : 'w-24'

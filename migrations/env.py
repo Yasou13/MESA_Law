@@ -19,6 +19,7 @@ import apps.api.core.idempotency
 import apps.api.models.benchmark
 import apps.api.models.document
 import apps.api.models.domain
+import apps.api.models.mesa
 import apps.api.models.parser
 import apps.api.models.queue
 import apps.api.models.review  # noqa
@@ -61,9 +62,8 @@ def run_migrations_offline() -> None:
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    if type_ == "table" and reflected and name not in target_metadata.tables:
-        return False
-    return True
+    return not (type_ == "table" and reflected and name not in target_metadata.tables)
+
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
@@ -80,8 +80,9 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata,
-            include_object=include_object
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

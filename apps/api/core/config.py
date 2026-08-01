@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     mesa_backend_url: str = "http://localhost:8000"
     mesa_api_key: str = ""
+    intelligence_adapter: str = Field(
+        default="mesa_v4",
+        validation_alias=AliasChoices(
+            "MESA_LAW_INTELLIGENCE_ADAPTER", "INTELLIGENCE_ADAPTER"
+        ),
+    )
     redis_url: str = Field(
         default="redis://localhost:6379/0",
         validation_alias=AliasChoices("REDIS_URL", "MESA_LAW_REDIS_URL"),
@@ -124,6 +130,10 @@ def validate_production_settings():
         ):
             raise RuntimeError(
                 "CRITICAL SECURITY ERROR: Secure environments require an explicit HTTPS CORS allowlist."
+            )
+        if settings.intelligence_adapter != "mesa_v4" or not settings.mesa_api_key:
+            raise RuntimeError(
+                "CRITICAL SECURITY ERROR: Secure environments require the MESA v4 adapter and API key."
             )
 
     if settings.test_auth_enabled and settings.env != "test":

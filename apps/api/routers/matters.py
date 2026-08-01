@@ -1,13 +1,10 @@
-from apps.api.core.config import settings
 from apps.api.core.database import get_db
-from apps.api.core.factory import get_intelligence_adapter
 from apps.api.core.models import RequestContext
 from apps.api.core.policies import AdminAccessPolicy, MatterAccessPolicy
 from apps.api.core.ratelimit import limiter
 from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
 from apps.api.models.domain import Matter
 from apps.api.schemas.api import MatterCreate, MatterResponse
-from apps.api.services.mesa_sync import MesaSyncService
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -185,22 +182,13 @@ async def rebuild_matter_mesa(
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db),
 ):
-    if not settings.mesa_rebuild_enabled:
-        from fastapi import HTTPException
-
-        raise HTTPException(
-            status_code=501, detail="MESA Core v4 rebuild is not implemented"
-        )
-    adapter = get_intelligence_adapter()
     AdminAccessPolicy.can_rebuild_mesa(context)
     await MatterAccessPolicy.can_manage_members(context, db, matter_id)
-    service = MesaSyncService(adapter)
-    try:
-        synced = await service.sync_matter(db, context.tenant_id, matter_id)
-        return {"status": "success", "synced_pages": synced}
-    finally:
-        if hasattr(adapter, "close"):
-            await adapter.close()
+    from fastapi import HTTPException
+
+    raise HTTPException(
+        status_code=501, detail="MESA Core v4 rebuild is not implemented"
+    )
 
 
 from apps.api.core.qa import ask_matter_question

@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from typing import Any
+from typing import Any, TypeVar
 
 import httpx
 from apps.api.core.config import settings
@@ -11,170 +12,339 @@ from apps.api.core.ports.intelligence import (
     MesaIntelligencePort,
     OperationState,
 )
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
+from apps.api.core.ports.mesa_v4 import (
+    AdmissionResponse,
+    CapabilityResponse,
+    DatasetRequest,
+    DocumentRequest,
+    MemoryInsertRequest,
+    MesaAuthenticationError,
+    MesaCapacityError,
+    MesaConflictError,
+    MesaContractError,
+    MesaUnavailableError,
+    MesaV4Error,
+    MutationStatusResponse,
+    RevisionRequest,
+    SearchRequest,
+    SearchResponse,
+    SessionResponse,
+    SessionStartRequest,
+    SourceChunkRequest,
+    WorkspaceRequest,
 )
+from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
+ResponseModel = TypeVar("ResponseModel", bound=BaseModel)
+
+MESA_CORE_COMMIT = "c5901881fc414dfd3475c386d2c59bb461e65cd2"
+MESA_CORE_VERSION = "0.7.1"
+
 
 class MesaV4HttpAdapter(MesaIntelligencePort, MesaIngestionPort):
-    def __init__(self, backend_url: str = settings.mesa_backend_url, api_key: str = settings.mesa_api_key):
+    """Typed HTTP boundary for the pinned MESA Core v4 contract."""
+
+    def __init__(
+        self,
+        backend_url: str = settings.mesa_backend_url,
+        api_key: str = settings.mesa_api_key,
+        *,
+        timeout_seconds: float = 10.0,
+        max_attempts: int = 3,
+        client: httpx.AsyncClient | None = None,
+    ) -> None:
         self.backend_url = backend_url.rstrip("/")
         self.api_key = api_key
-        self.headers = {
-            "Content-Type": "application/json",
-            "X-Mesa-Api-Key": self.api_key,
-        }
-        self.client = httpx.AsyncClient(base_url=self.backend_url, headers=self.headers, timeout=30.0)
-        self._capabilities: dict[str, Any] | None = None
+        self.max_attempts = max(1, max_attempts)
+        self.client = client or httpx.AsyncClient(
+            base_url=self.backend_url,
+            headers={"Content-Type": "application/json", "X-API-Key": api_key},
+            timeout=timeout_seconds,
+        )
+        self._owns_client = client is None
 
-    async def _ensure_capabilities(self):
-        if self._capabilities is None:
-            try:
-                response = await self.client.get("/v4/capability")
-                response.raise_for_status()
-                self._capabilities = response.json()
-                logger.info(f"MESA Capabilities loaded: {self._capabilities}")
-            except (httpx.RequestError, httpx.HTTPStatusError) as e:
-                logger.warning(f"Failed to fetch MESA capabilities, assuming degraded mode: {e}")
-                self._capabilities = {}
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)),
-        reraise=True
-    )
-    async def _post_search(self, payload: dict) -> httpx.Response:
-        response = await self.client.post("/v4/search", json=payload)
-        # Raise for 5xx errors to trigger retry. 
-        if response.status_code >= 500:
-            response.raise_for_status()
-        return response
-
-    async def query(self, query: IntelligenceQuery) -> IntelligenceResponse:
-        await self._ensure_capabilities()
-        
-        # MESA Core expects agent_id and session_id
-        # We map tenant_id to agent_id and matter_id to session_id
-        payload = {
-            "query": query.query_text,
-            "agent_id": query.tenant_id,
-            "session_id": query.matter_id or "default-session",
-            "limit": 10
-        }
-        
+    @staticmethod
+    def _detail(response: httpx.Response) -> str:
         try:
-            response = await self._post_search(payload)
-        except (httpx.RequestError, httpx.TimeoutException) as e:
-            logger.error(f"Network error communicating with MESA: {e}")
-            return IntelligenceResponse(
-                state=OperationState.unavailable,
-                error_message="MESA backend is unavailable or timed out."
-            )
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Server error from MESA: {e}")
-            return IntelligenceResponse(
-                state=OperationState.unavailable,
-                error_message="MESA backend returned a server error."
-            )
-            
-        if response.status_code == 401 or response.status_code == 403:
-            logger.error(f"Auth error from MESA: {response.status_code}")
-            return IntelligenceResponse(
-                state=OperationState.unavailable,
-                error_message="Authentication failed with MESA backend."
-            )
-        elif response.status_code == 404:
-            return IntelligenceResponse(state=OperationState.unavailable, error_message="MESA endpoint not found.")
-        elif response.status_code == 202:
-            return IntelligenceResponse(state=OperationState.pending)
-        elif response.status_code != 200:
-            return IntelligenceResponse(state=OperationState.unavailable, error_message=f"Unexpected status: {response.status_code}")
+            body = response.json()
+        except ValueError:
+            return response.text[:500]
+        if isinstance(body, dict):
+            detail = body.get("detail") or body.get("error")
+            if detail is not None:
+                return str(detail)[:500]
+        return str(body)[:500]
 
-        data = response.json()
-        retrieved_nodes = data.get("retrieved_nodes", [])
-        
-        if not retrieved_nodes:
-            return IntelligenceResponse(
-                state=OperationState.no_evidence_retrieved,
-                summary="No evidence could be retrieved for this query."
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        response: httpx.Response | None = None
+        for attempt in range(1, self.max_attempts + 1):
+            try:
+                response = await self.client.request(
+                    method, path, json=json, params=params
+                )
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                if attempt == self.max_attempts:
+                    raise MesaUnavailableError(
+                        "MESA Core is unavailable",
+                        detail=type(exc).__name__,
+                        retryable=True,
+                    ) from exc
+                await asyncio.sleep(0.1 * (2 ** (attempt - 1)))
+                continue
+
+            if response.status_code in {502, 503, 504} and attempt < self.max_attempts:
+                await asyncio.sleep(0.1 * (2 ** (attempt - 1)))
+                continue
+            break
+
+        if response is None:  # pragma: no cover - loop always sets or raises
+            raise MesaUnavailableError("MESA Core request did not execute")
+
+        detail = self._detail(response)
+        if response.status_code in {401, 403}:
+            raise MesaAuthenticationError(
+                "MESA Core authentication or authorization failed",
+                status_code=response.status_code,
+                detail=detail,
             )
-            
-        evidence_list = []
-        for node in retrieved_nodes:
-            doc_id = node.get("node_id", "unknown")
-            page_num = 1
-            
-            locator = node.get("locator")
-            if locator:
-                doc_id = locator.get("document_id", doc_id)
-                page_num = locator.get("page_number") or 1
-                
-            evidence_list.append(Evidence(
-                document_id=doc_id,
-                page_number=page_num,
-                text_snippet=node.get("content_payload", "")
-            ))
-            
-        return IntelligenceResponse(
-            state=OperationState.success,
-            evidence=evidence_list,
-            summary=data.get("context", "Context provided by MESA")
+        if response.status_code == 409:
+            raise MesaConflictError(
+                "MESA Core rejected a conflicting request",
+                status_code=409,
+                detail=detail,
+                retryable="in progress" in detail.lower(),
+            )
+        if response.status_code == 413:
+            raise MesaCapacityError(
+                "MESA Core rejected an oversized queue record",
+                status_code=413,
+                detail=detail,
+            )
+        if response.status_code in {429, 502, 503, 504}:
+            raise MesaUnavailableError(
+                "MESA Core is temporarily unavailable",
+                status_code=response.status_code,
+                detail=detail,
+                retryable=True,
+            )
+        if response.status_code >= 400:
+            raise MesaContractError(
+                "MESA Core returned an unexpected response",
+                status_code=response.status_code,
+                detail=detail,
+            )
+
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise MesaContractError(
+                "MESA Core returned non-JSON data",
+                status_code=response.status_code,
+            ) from exc
+        if not isinstance(data, dict):
+            raise MesaContractError("MESA Core response must be a JSON object")
+        return data
+
+    @staticmethod
+    def _parse(model: type[ResponseModel], data: dict[str, Any]) -> ResponseModel:
+        try:
+            return model.model_validate(data)
+        except ValidationError as exc:
+            raise MesaContractError(
+                f"MESA Core response violated {model.__name__}"
+            ) from exc
+
+    async def capability(self) -> CapabilityResponse:
+        data = await self._request("GET", "/v4/capability")
+        return self._parse(CapabilityResponse, data)
+
+    async def create_workspace(self, request: WorkspaceRequest) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/v4/catalog/workspaces", json=request.model_dump(exclude_none=True)
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((httpx.RequestError, httpx.TimeoutException, httpx.HTTPStatusError)),
-        reraise=True
-    )
-    async def _post_insert(self, payload: dict) -> httpx.Response:
-        response = await self.client.post("/v4/insert", json=payload)
-        if response.status_code >= 500:
-            response.raise_for_status()
-        return response
+    async def list_workspaces(self, tenant_id: str) -> list[dict[str, Any]]:
+        data = await self._request(
+            "GET", "/v4/catalog/workspaces", params={"tenant_id": tenant_id}
+        )
+        workspaces = data.get("workspaces")
+        if not isinstance(workspaces, list):
+            raise MesaContractError("MESA workspace list is malformed")
+        return workspaces
+
+    async def create_dataset(self, request: DatasetRequest) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/v4/catalog/datasets", json=request.model_dump(exclude_none=True)
+        )
+
+    async def list_datasets(
+        self, tenant_id: str, workspace_id: str
+    ) -> list[dict[str, Any]]:
+        data = await self._request(
+            "GET",
+            "/v4/catalog/datasets",
+            params={"tenant_id": tenant_id, "workspace_id": workspace_id},
+        )
+        datasets = data.get("datasets")
+        if not isinstance(datasets, list):
+            raise MesaContractError("MESA dataset list is malformed")
+        return datasets
+
+    async def preflight_scope(
+        self, *, tenant_id: str, workspace_id: str, dataset_id: str
+    ) -> None:
+        capability = await self.capability()
+        if capability.api_version != "v4":
+            raise MesaContractError("MESA Core does not report the v4 capability")
+        workspaces = await self.list_workspaces(tenant_id)
+        if not any(item.get("workspace_id") == workspace_id for item in workspaces):
+            raise MesaAuthenticationError("Provisioned MESA workspace is not visible")
+        datasets = await self.list_datasets(tenant_id, workspace_id)
+        if not any(item.get("dataset_id") == dataset_id for item in datasets):
+            raise MesaAuthenticationError("Provisioned MESA dataset is not visible")
+
+    async def create_document(self, request: DocumentRequest) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/v4/catalog/documents", json=request.model_dump(exclude_none=True)
+        )
+
+    async def create_revision(self, request: RevisionRequest) -> dict[str, Any]:
+        return await self._request(
+            "POST", "/v4/catalog/revisions", json=request.model_dump(exclude_none=True)
+        )
+
+    async def create_source_chunk(self, request: SourceChunkRequest) -> dict[str, Any]:
+        return await self._request(
+            "POST",
+            "/v4/catalog/source-chunks",
+            json=request.model_dump(exclude_none=True),
+        )
+
+    async def start_session(self, request: SessionStartRequest) -> SessionResponse:
+        data = await self._request(
+            "POST", "/v4/sessions/start", json=request.model_dump()
+        )
+        data.pop("status", None)
+        data["status"] = "ACTIVE"
+        return self._parse(SessionResponse, data)
+
+    async def session_context(self, session_id: str) -> dict[str, Any]:
+        return await self._request("GET", f"/v4/sessions/{session_id}/context")
+
+    async def end_session(self, session_id: str) -> dict[str, Any]:
+        return await self._request("POST", f"/v4/sessions/{session_id}/end")
+
+    async def insert_memory(self, request: MemoryInsertRequest) -> AdmissionResponse:
+        if not request.idempotency_key:
+            raise MesaContractError("MESA v4 inserts require an idempotency key")
+        data = await self._request(
+            "POST", "/v4/memory/insert", json=request.model_dump(exclude_none=True)
+        )
+        return self._parse(AdmissionResponse, data)
+
+    async def search_memory(self, request: SearchRequest) -> SearchResponse:
+        data = await self._request(
+            "POST",
+            "/v4/memory/search",
+            json=request.model_dump(exclude_none=True, mode="json"),
+        )
+        return self._parse(SearchResponse, data)
+
+    async def mutation_status(self, mutation_id: str) -> MutationStatusResponse:
+        data = await self._request("GET", f"/v4/mutations/{mutation_id}")
+        return self._parse(MutationStatusResponse, data)
+
+    async def query(self, query: IntelligenceQuery) -> IntelligenceResponse:
+        if not query.session_id or not query.dataset_ids:
+            return IntelligenceResponse(
+                state=OperationState.unavailable,
+                error_message="A provisioned MESA v4 session and dataset scope are required.",
+            )
+        try:
+            response = await self.search_memory(
+                SearchRequest(
+                    session_id=query.session_id,
+                    dataset_ids=query.dataset_ids,
+                    query=query.query_text,
+                )
+            )
+        except MesaV4Error as exc:
+            logger.warning("MESA v4 search unavailable: %s", exc)
+            return IntelligenceResponse(
+                state=OperationState.unavailable,
+                error_message=str(exc),
+            )
+
+        evidence: list[Evidence] = []
+        for result in response.results:
+            for provenance in result.provenance:
+                metadata = provenance.metadata
+                page_number = metadata.get("page_number")
+                evidence_text = metadata.get("evidence_text")
+                evidence.append(
+                    Evidence(
+                        dataset_id=provenance.dataset_id,
+                        document_id=provenance.document_id,
+                        revision_id=provenance.revision_id,
+                        chunk_id=provenance.chunk_id,
+                        source_ref=provenance.source_ref,
+                        evidence_span=provenance.evidence_span,
+                        page_number=page_number
+                        if isinstance(page_number, int)
+                        else None,
+                        text_snippet=evidence_text
+                        if isinstance(evidence_text, str)
+                        else "",
+                        metadata=metadata,
+                        score=result.final_score,
+                    )
+                )
+        if not evidence:
+            return IntelligenceResponse(state=OperationState.no_evidence_retrieved)
+        return IntelligenceResponse(
+            state=OperationState.success,
+            evidence=evidence,
+            summary=f"MESA Core returned {len(response.results)} candidate result(s).",
+        )
 
     async def ingest(self, item: IngestionItem) -> bool:
-        await self._ensure_capabilities()
-        
-        # Build memory insert payload
-        # idempotency_key ensures we don't index same page/revision twice
-        payload = {
-            "agent_id": item.tenant_id,
-            "session_id": item.matter_id or "default-session",
-            "source_name": item.source_name,
-            "source_type": item.source_type,
-            "payload": item.text_content,
-            "idempotency_key": f"{item.document_id}_{item.revision_id}_{item.page_number}",
-            "locator": {
-                "document_id": item.document_id,
-                "chunk_index": item.page_number,
-                "page_number": item.page_number,
-                "version_id": item.revision_id
-            }
-        }
-        
-        try:
-            response = await self._post_insert(payload)
-            response.raise_for_status()
-            return True
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            logger.error(f"Failed to ingest to MESA: {e}")
-            return False
+        if not all((item.session_id, item.dataset_id, item.chunk_id, item.source_ref)):
+            raise MesaContractError("Legacy ingestion item lacks MESA v4 scope")
+        assert item.session_id is not None
+        assert item.dataset_id is not None
+        assert item.chunk_id is not None
+        assert item.source_ref is not None
+        await self.insert_memory(
+            MemoryInsertRequest(
+                session_id=item.session_id,
+                dataset_id=item.dataset_id,
+                document_id=item.document_id,
+                revision_id=item.revision_id,
+                chunk_id=item.chunk_id,
+                title=item.source_name,
+                source_ref=item.source_ref,
+                content=item.text_content,
+                evidence_span=item.evidence_span,
+                chunk_ordinal=item.chunk_ordinal,
+                metadata=item.metadata,
+                idempotency_key=item.idempotency_key,
+            )
+        )
+        return True
 
     async def rebuild_tenant(self, tenant_id: str) -> bool:
-        await self._ensure_capabilities()
-        try:
-            response = await self.client.post("/v4/rebuild", json={"agent_id": tenant_id})
-            response.raise_for_status()
-            return True
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            logger.error(f"Failed to rebuild MESA tenant {tenant_id}: {e}")
-            return False
+        raise MesaContractError(
+            "MESA Core v4 rebuild is not implemented", status_code=501
+        )
 
-    async def close(self):
-        await self.client.aclose()
+    async def close(self) -> None:
+        if self._owns_client:
+            await self.client.aclose()

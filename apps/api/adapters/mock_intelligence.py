@@ -11,11 +11,13 @@ class MockMesaAdapter(MesaIntelligencePort):
     async def query(self, query: IntelligenceQuery) -> IntelligenceResponse:
         # Fixture routing based on query text
         q = query.query_text.lower()
-        
+
         if "pending" in q:
             return IntelligenceResponse(state=OperationState.pending)
         elif "unavailable" in q:
-            return IntelligenceResponse(state=OperationState.unavailable, error_message="Service is offline")
+            return IntelligenceResponse(
+                state=OperationState.unavailable, error_message="Service is offline"
+            )
         elif "delayed" in q:
             return IntelligenceResponse(state=OperationState.projection_delayed)
         elif "no evidence" in q:
@@ -24,12 +26,21 @@ class MockMesaAdapter(MesaIntelligencePort):
             return IntelligenceResponse(state=OperationState.source_set_incomplete)
         elif "stale" in q:
             return IntelligenceResponse(state=OperationState.stale_source)
-            
+
         # Default success
         return IntelligenceResponse(
             state=OperationState.success,
             summary="Mock analysis completed.",
             evidence=[
-                Evidence(document_id="mock-doc-1", page_number=1, text_snippet="Mock evidence 1")
-            ]
+                Evidence(
+                    dataset_id="mock-dataset-1",
+                    document_id="mock-doc-1",
+                    revision_id="mock-revision-1",
+                    chunk_id="mock-chunk-1",
+                    source_ref="mock://mock-doc-1/mock-revision-1/mock-chunk-1",
+                    page_number=1,
+                    text_snippet="Mock evidence 1",
+                    metadata={"fixture": True},
+                )
+            ],
         )

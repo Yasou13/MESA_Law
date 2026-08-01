@@ -68,7 +68,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 md:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenMenu} aria-label={t('openMenu')}>
+      <Button data-testid="mobile-menu-button" variant="ghost" size="icon" className="lg:hidden" onClick={onOpenMenu} aria-label={t('openMenu')}>
         <Menu className="size-5" />
       </Button>
 
@@ -89,7 +89,7 @@ export function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
         <div className="hidden w-[min(22rem,28vw)] lg:block"><CommandMenu /></div>
 
         <div className="relative hidden sm:block">
-          <Button variant="outline" size="sm" onClick={() => setFirmMenuOpen((open) => !open)} aria-expanded={firmMenuOpen}>
+          <Button className="w-48 justify-between" variant="outline" size="sm" onClick={() => setFirmMenuOpen((open) => !open)} aria-expanded={firmMenuOpen}>
             <span className="max-w-36 truncate">{activeFirm?.name ?? t('selectFirm')}</span>
             <ChevronDown className="size-3.5" />
           </Button>

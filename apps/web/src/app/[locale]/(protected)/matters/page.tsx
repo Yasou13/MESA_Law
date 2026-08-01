@@ -78,7 +78,7 @@ export default function MattersPage() {
       header: ({ column }) => <SortableHeader label={t('name')} column={column} />,
       cell: ({ row }) => (
         <div className="min-w-0">
-          <Link href={localizedHref(locale, `/matters/${row.original.id}`)} className="block max-w-[24rem] truncate font-medium text-primary hover:underline">
+          <Link href={localizedHref(locale, `/matters/${row.original.id}`)} className="block max-w-[24rem] truncate font-medium text-primary-content hover:underline">
             {row.original.title}
           </Link>
           <span className="technical-id text-foreground-muted">{row.original.id.slice(0, 12)}</span>

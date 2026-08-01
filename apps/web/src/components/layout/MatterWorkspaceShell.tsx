@@ -56,7 +56,7 @@ export function MatterWorkspaceShell({ matterId, children }: { matterId: string;
           ? `${new Intl.DateTimeFormat(locale).format(new Date(nextDeadline.due_date))} · ${nextDeadline.description}`
           : null}
       />
-      <nav className="overflow-x-auto border-b border-border bg-surface px-3 md:px-5" aria-label={t('matterSections')}>
+      <nav data-testid="matter-tabs" className="overflow-x-auto border-b border-border bg-surface px-3 md:px-5" aria-label={t('matterSections')}>
         <div className="flex min-w-max gap-1">
           {tabs.map((tab) => {
             const href = tab.slug ? `${base}/${tab.slug}` : base
@@ -68,7 +68,7 @@ export function MatterWorkspaceShell({ matterId, children }: { matterId: string;
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative flex h-11 items-center px-3 text-[13px] font-medium text-foreground-secondary hover:text-foreground',
-                  active && 'text-primary after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-primary',
+                  active && 'text-primary-content after:absolute after:inset-x-3 after:bottom-0 after:h-0.5 after:bg-primary',
                 )}
               >
                 {tab.key === 'qa' ? navigationT('askMesa') : t(tab.key)}

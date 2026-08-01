@@ -34,7 +34,7 @@ export default function MatterEvidencePage({ params }: { params: Promise<{ id: s
       accessorKey: 'document_id',
       header: t('source'),
       cell: ({ row }) => row.original.document_id ? (
-        <Link href={localizedHref(locale, `/documents/${row.original.document_id}`)} className="technical-id text-primary hover:underline">{row.original.document_id.slice(0, 12)}</Link>
+        <Link href={localizedHref(locale, `/documents/${row.original.document_id}`)} className="technical-id text-primary-content hover:underline">{row.original.document_id.slice(0, 12)}</Link>
       ) : <span className="text-foreground-muted">{common('notAvailable')}</span>,
     },
     {

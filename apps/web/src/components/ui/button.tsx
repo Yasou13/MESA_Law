@@ -13,12 +13,12 @@ const buttonVariants = cva(
           "border-border-strong bg-surface text-foreground shadow-xs hover:bg-surface-subtle aria-expanded:bg-surface-subtle",
         secondary:
           "border-border bg-secondary text-secondary-foreground hover:border-border-strong hover:bg-surface-subtle aria-expanded:bg-surface-subtle",
-        tertiary: "text-primary hover:bg-[var(--primary-soft)]",
+        tertiary: "text-primary-content hover:bg-[var(--primary-soft)]",
         ghost:
           "text-foreground-secondary hover:bg-surface-subtle hover:text-foreground aria-expanded:bg-surface-subtle",
         destructive:
           "border-danger/25 bg-danger-soft text-danger hover:border-danger/40 hover:bg-danger/15 focus-visible:ring-danger/40",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-primary-content underline-offset-4 hover:underline",
       },
       size: {
         default:

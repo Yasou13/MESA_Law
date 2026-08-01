@@ -479,6 +479,7 @@
     "pdfLoadError": "PDF önizlemesi yüklenemedi",
     "pdfLoadErrorDescription": "Güvenli indirme bağlantısı süresi dolmuş veya belge PDF.js tarafından açılamamış olabilir.",
     "pdfPreparing": "PDF hazırlanıyor",
+    "pdfViewport": "PDF sayfa görüntüleme alanı",
     "pdfOpenError": "PDF açılamadı",
     "verifiedHighlight": "Doğrulanmış kaynak vurgusu"
   },

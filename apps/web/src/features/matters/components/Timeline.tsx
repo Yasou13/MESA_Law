@@ -28,7 +28,7 @@ export function Timeline({ matterId }: { matterId: string }) {
             <span className="absolute -left-[5px] top-2 size-2.5 rounded-full border-2 border-surface bg-primary" aria-hidden="true" />
             <article className="rounded-lg border border-border bg-surface p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0"><time dateTime={event.date} className="text-xs font-medium text-primary">{new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(event.date))}</time><h2 className="mt-1 break-words font-semibold">{event.title}</h2></div>
+                <div className="min-w-0"><time dateTime={event.date} className="text-xs font-medium text-primary-content">{new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(event.date))}</time><h2 className="mt-1 break-words font-semibold">{event.title}</h2></div>
                 <StatusBadge status={event.confidence.toLowerCase() === 'high' ? 'verified' : 'warning'} label={`${t('confidence')}: ${event.confidence}`} />
               </div>
               {event.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground-secondary">{event.description}</p>}

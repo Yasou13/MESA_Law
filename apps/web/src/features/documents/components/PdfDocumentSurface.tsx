@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { AlertTriangle, Loader2 } from 'lucide-react'
 import { Document as PDFDocument, Page, pdfjs } from 'react-pdf'
 import { useTranslations } from 'next-intl'
@@ -38,7 +38,7 @@ export default function PdfDocumentSurface({
   const [viewport, setViewport] = useState<{ width: number; height: number } | null>(null)
   const [loadError, setLoadError] = useState(false)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current
     if (!container) return
     const resize = () => setRenderWidth(Math.max(280, Math.min(container.clientWidth - 32, 920)))
@@ -67,9 +67,10 @@ export default function PdfDocumentSurface({
           height: `${((highlight.y1 - highlight.y0) / viewport.height) * 100}%`,
         }
       : null
+  const renderHeight = renderWidth * (viewport ? viewport.height / viewport.width : 792 / 612)
 
   return (
-    <div ref={containerRef} className="h-full overflow-auto bg-surface-subtle p-4">
+    <div ref={containerRef} tabIndex={0} aria-label={t('pdfViewport')} className="h-full overflow-auto bg-surface-subtle p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus">
       <PDFDocument
         file={file}
         loading={
@@ -88,7 +89,10 @@ export default function PdfDocumentSurface({
         }}
         onLoadError={() => setLoadError(true)}
       >
-        <div className="relative mx-auto w-fit overflow-hidden border border-border bg-white shadow-raised">
+        <div
+          className="relative mx-auto overflow-hidden border border-border bg-white shadow-raised"
+          style={{ width: renderWidth, height: renderHeight }}
+        >
           <Page
             key={`${file}:${pageNumber}`}
             pageNumber={pageNumber}
@@ -102,6 +106,7 @@ export default function PdfDocumentSurface({
           />
           {highlightStyle && (
             <div
+              role="img"
               aria-label={t('verifiedHighlight')}
               className="pointer-events-none absolute border-2 border-warning bg-warning/25 shadow-sm"
               style={highlightStyle}

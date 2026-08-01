@@ -105,5 +105,5 @@ export default function DashboardPage() {
 }
 
 function ViewAll({ locale, href, label }: { locale: AppLocale; href: string; label: string }) {
-  return <Link href={localizedHref(locale, href)} className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">{label}<ArrowRight className="size-3.5" /></Link>
+  return <Link href={localizedHref(locale, href)} className="inline-flex items-center gap-1 text-xs font-medium text-primary-content hover:underline">{label}<ArrowRight className="size-3.5" /></Link>
 }

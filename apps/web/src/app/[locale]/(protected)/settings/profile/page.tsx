@@ -57,7 +57,7 @@ export default function ProfilePage() {
 
       <Panel>
         <PanelHeader className="justify-start gap-4">
-          <div className="flex size-12 items-center justify-center rounded-full border border-primary/25 bg-primary-soft text-lg font-semibold text-primary" aria-hidden="true">
+          <div className="flex size-12 items-center justify-center rounded-full border border-primary/25 bg-primary-soft text-lg font-semibold text-primary-content" aria-hidden="true">
             {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="min-w-0"><h2 className="truncate font-semibold">{profile?.full_name || 'User'}</h2><p className="truncate text-xs text-foreground-secondary">{profile?.roles?.join(', ') || t('noRoles')}</p></div>

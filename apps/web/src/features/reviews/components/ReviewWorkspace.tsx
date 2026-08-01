@@ -277,7 +277,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
                   aria-current={selectedId === review.id ? 'true' : undefined}
                   className="flex w-full items-start gap-3 border-b border-border-subtle px-3 py-4 text-left hover:bg-surface-subtle aria-[current=true]:bg-primary-soft"
                 >
-                  <FileSearch className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <FileSearch className="mt-0.5 size-4 shrink-0 text-primary-content" aria-hidden="true" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{review.entity_type}</span>
                     <span className="technical-id mt-1 block truncate text-xs text-foreground-muted">{review.matter_id.slice(0, 8)} · v{review.version_id}</span>

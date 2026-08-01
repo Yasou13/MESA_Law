@@ -129,7 +129,7 @@ export function QAShell({ matterId }: { matterId: string }) {
       <Panel>
         <PanelHeader className="items-start">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold"><BookOpen className="size-4 text-primary" />{t('queryTitle')}</h2>
+            <h2 className="flex items-center gap-2 text-base font-semibold"><BookOpen className="size-4 text-primary-content" />{t('queryTitle')}</h2>
             <p className="mt-1 text-sm text-foreground-secondary">{t('queryDescription')}</p>
           </div>
           <StatusBadge status="verified" label={t('failClosed')} />
@@ -196,10 +196,10 @@ export function QAShell({ matterId }: { matterId: string }) {
                     <section aria-labelledby={`basis-${result.id}`}>
                       <h3 id={`basis-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('basis')}</h3>
                       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="rounded-md border border-border p-3"><FileSearch className="mb-2 size-4 text-primary" /><p className="text-xs text-foreground-muted">{t('scope')}</p><p className="mt-1 text-sm font-medium">{response.retrieval?.scope ?? 'MATTER'}</p></div>
+                        <div className="rounded-md border border-border p-3"><FileSearch className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('scope')}</p><p className="mt-1 text-sm font-medium">{response.retrieval?.scope ?? 'MATTER'}</p></div>
                         <div className="rounded-md border border-border p-3"><ShieldCheck className="mb-2 size-4 text-verified" /><p className="text-xs text-foreground-muted">Engine</p><p className="mt-1 text-sm font-medium">{response.retrieval?.engine ?? 'NONE'}</p></div>
-                        <div className="rounded-md border border-border p-3"><BookOpen className="mb-2 size-4 text-primary" /><p className="text-xs text-foreground-muted">{t('verifiedSource')}</p><p className="tabular-nums mt-1 text-sm font-medium">{t('sourceCount', { documents: response.retrieval?.verified_document_count ?? 0, citations: response.retrieval?.verified_citation_count ?? citations.length })}</p></div>
-                        <div className="rounded-md border border-border p-3"><Clock3 className="mb-2 size-4 text-primary" /><p className="text-xs text-foreground-muted">{t('duration')}</p><p className="tabular-nums mt-1 text-sm font-medium">{response.retrieval?.duration_ms ?? 0} ms</p></div>
+                        <div className="rounded-md border border-border p-3"><BookOpen className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('verifiedSource')}</p><p className="tabular-nums mt-1 text-sm font-medium">{t('sourceCount', { documents: response.retrieval?.verified_document_count ?? 0, citations: response.retrieval?.verified_citation_count ?? citations.length })}</p></div>
+                        <div className="rounded-md border border-border p-3"><Clock3 className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('duration')}</p><p className="tabular-nums mt-1 text-sm font-medium">{response.retrieval?.duration_ms ?? 0} ms</p></div>
                       </div>
                       {response.retrieval?.dataset_id && <p className="technical-id mt-2 text-xs text-foreground-muted">Dataset {response.retrieval.dataset_id}</p>}
                       {result.traceId && <p className="technical-id mt-1 text-xs text-foreground-muted">Trace {result.traceId}</p>}

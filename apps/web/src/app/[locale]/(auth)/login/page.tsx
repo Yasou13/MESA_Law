@@ -72,5 +72,5 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
-  return <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="size-8 animate-spin text-primary" /></div>}><LoginContent /></Suspense>
+  return <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="size-8 animate-spin text-primary-content" /></div>}><LoginContent /></Suspense>
 }

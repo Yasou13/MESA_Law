@@ -78,7 +78,7 @@ export default function MatterDocumentsPage({ params }: { params: Promise<{ id: 
     {
       accessorKey: 'title',
       header: ({ column }) => <SortableHeader label={documentsT('name')} column={column} />,
-      cell: ({ row }) => <div><Link href={localizedHref(locale, `/documents/${row.original.id}`)} className="block max-w-[28rem] truncate font-medium text-primary hover:underline">{row.original.title}</Link><span className="technical-id text-foreground-muted">{row.original.id.slice(0, 12)}</span></div>,
+      cell: ({ row }) => <div><Link href={localizedHref(locale, `/documents/${row.original.id}`)} className="block max-w-[28rem] truncate font-medium text-primary-content hover:underline">{row.original.title}</Link><span className="technical-id text-foreground-muted">{row.original.id.slice(0, 12)}</span></div>,
     },
     {
       accessorKey: 'status',

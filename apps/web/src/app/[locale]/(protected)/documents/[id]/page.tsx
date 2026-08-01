@@ -210,13 +210,13 @@ export default function DocumentViewerPage() {
   if (!context) return null
 
   return (
-    <div className="-m-4 flex min-h-[calc(100dvh-4rem)] flex-col border border-border bg-background md:-m-6 lg:-m-8">
+    <div className="-m-4 flex min-h-[calc(100dvh-4rem)] flex-col border border-border bg-background md:-m-6 lg:-m-8 xl:h-[calc(100dvh-4rem)] xl:overflow-hidden">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Button render={<Link href={localizedHref(locale, '/documents')} />} variant="ghost" size="icon-sm" aria-label={t('back')}>
             <ArrowLeft />
           </Button>
-          <FileText className="size-5 shrink-0 text-primary" aria-hidden="true" />
+          <FileText className="size-5 shrink-0 text-primary-content" aria-hidden="true" />
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold">{context.document.title}</h1>
             <p className="technical-id truncate text-xs text-foreground-muted">{documentId}</p>
@@ -232,7 +232,7 @@ export default function DocumentViewerPage() {
         </div>
       </header>
 
-      {focusRequested && !focusVerified && (
+      {focusRequested && !parsedPagesQuery.isLoading && !parsedPagesQuery.isFetching && !focusVerified && (
         <InlineAlert
           tone="warning"
           title={t('focusMismatch')}
@@ -242,8 +242,8 @@ export default function DocumentViewerPage() {
         </InlineAlert>
       )}
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[11rem_minmax(0,1fr)_21rem]">
-        <aside className="border-b border-border bg-surface xl:border-b-0 xl:border-r" aria-label={t('pages')}>
+      <div data-testid="document-viewer-layout" className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[11rem_minmax(0,1fr)_21rem]">
+        <aside data-testid="viewer-pages" className="border-b border-border bg-surface xl:border-b-0 xl:border-r" aria-label={t('pages')}>
           <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{t('pages')}</span>
             <span className="tabular-nums text-xs text-foreground-muted">{pageCount}</span>
@@ -255,7 +255,7 @@ export default function DocumentViewerPage() {
                 type="button"
                 onClick={() => selectPage(page)}
                 aria-current={selectedPage === page ? 'page' : undefined}
-                className="flex min-w-20 items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-subtle aria-[current=page]:border-primary aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary xl:w-full"
+                className="flex min-w-20 items-center justify-between rounded-md border border-border px-3 py-2 text-sm hover:bg-surface-subtle aria-[current=page]:border-primary aria-[current=page]:bg-primary-soft aria-[current=page]:text-primary-content xl:w-full"
               >
                 <span>{t('page')}</span><span className="tabular-nums font-semibold">{page}</span>
               </button>
@@ -263,7 +263,7 @@ export default function DocumentViewerPage() {
           </div>
         </aside>
 
-        <main className="min-h-[32rem] min-w-0 overflow-hidden bg-surface-subtle">
+        <section data-testid="viewer-document" className="min-h-[32rem] min-w-0 overflow-hidden bg-surface-subtle">
           <div className="flex items-center justify-center gap-2 border-b border-border bg-surface px-3 py-2">
             <Button variant="ghost" size="icon-sm" onClick={() => selectPage(Math.max(1, selectedPage - 1))} disabled={selectedPage <= 1} aria-label={t('previousPage')}><ChevronLeft /></Button>
             <span className="tabular-nums text-sm">{selectedPage} / {pageCount}</span>
@@ -297,9 +297,9 @@ export default function DocumentViewerPage() {
               </div>
             )}
           </div>
-        </main>
+        </section>
 
-        <aside className="space-y-3 border-t border-border bg-background p-3 xl:border-l xl:border-t-0" aria-label={t('sourceInfo')}>
+        <aside data-testid="viewer-source" className="space-y-3 border-t border-border bg-background p-3 xl:border-l xl:border-t-0" aria-label={t('sourceInfo')}>
           <Panel>
             <PanelHeader><h2 className="text-sm font-semibold">{t('canonicalRevision')}</h2></PanelHeader>
             <PanelBody className="space-y-3 text-sm">

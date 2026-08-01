@@ -31,7 +31,7 @@ export default function AdminSettingsPage() {
       <PageHeader title={t('title')} description={t('description')} />
 
       <Panel>
-        <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Database className="size-4 text-primary" />{t('features')}</h2></PanelHeader>
+        <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Database className="size-4 text-primary-content" />{t('features')}</h2></PanelHeader>
         <PanelBody className="divide-y divide-border-subtle py-0">
           {features.map(([name, enabled]) => (
             <div key={name} className="flex items-start justify-between gap-4 py-4">
@@ -44,7 +44,7 @@ export default function AdminSettingsPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <Panel>
-          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Shield className="size-4 text-primary" />{t('authPolicy')}</h2></PanelHeader>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Shield className="size-4 text-primary-content" />{t('authPolicy')}</h2></PanelHeader>
           <PanelBody>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('mfa')}</dt><dd className="font-medium">{settings.security.require_mfa ? t('yes') : t('no')}</dd></div>
@@ -55,7 +55,7 @@ export default function AdminSettingsPage() {
         </Panel>
 
         <Panel>
-          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Clock3 className="size-4 text-primary" />{t('retention')}</h2></PanelHeader>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Clock3 className="size-4 text-primary-content" />{t('retention')}</h2></PanelHeader>
           <PanelBody>
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('auditLog')}</dt><dd className="font-medium">{t('days', { value: settings.retention.audit_log_days })}</dd></div>

@@ -111,7 +111,7 @@ export function DataTable<TData>({
         </div>
       )}
 
-      <div className="max-w-full overflow-auto rounded-lg border border-border bg-surface">
+      <div data-testid="data-table-scroll" className="max-w-full overflow-auto rounded-lg border border-border bg-surface">
         <table className="w-full min-w-[680px] border-collapse text-[13px] tabular-nums">
           <thead className="sticky top-0 z-10 bg-surface-subtle text-xs text-foreground-secondary">
             {table.getHeaderGroups().map((headerGroup) => (

@@ -479,6 +479,7 @@
     "pdfLoadError": "PDF preview could not be loaded",
     "pdfLoadErrorDescription": "The secure download link may have expired or PDF.js may not be able to open the document.",
     "pdfPreparing": "Preparing PDF",
+    "pdfViewport": "PDF page viewing area",
     "pdfOpenError": "PDF could not be opened",
     "verifiedHighlight": "Verified source highlight"
   },

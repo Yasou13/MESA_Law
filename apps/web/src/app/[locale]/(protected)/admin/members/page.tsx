@@ -24,7 +24,7 @@ export default function MembersPage() {
       header: ({ column }) => <SortableHeader label={t('user')} column={column} />,
       cell: ({ row }) => (
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-subtle font-semibold text-primary" aria-hidden="true">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface-subtle font-semibold text-primary-content" aria-hidden="true">
             {row.original.full_name?.charAt(0)?.toUpperCase() || <UserRound className="size-4" />}
           </div>
           <div className="min-w-0"><p className="truncate font-medium">{row.original.full_name || t('unnamed')}</p><p className="truncate text-xs text-foreground-muted">{row.original.email}</p></div>

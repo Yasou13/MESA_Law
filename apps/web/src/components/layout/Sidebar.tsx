@@ -41,15 +41,43 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const sidebarT = useTranslations('Sidebar')
   const routePath = pathnameWithoutLocale(pathname)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileDialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (!mobileOpen) return
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     closeButtonRef.current?.focus()
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onMobileClose()
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onMobileClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(
+        mobileDialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
-    document.addEventListener('keydown', closeOnEscape)
-    return () => document.removeEventListener('keydown', closeOnEscape)
+    document.addEventListener('keydown', handleDialogKey)
+    return () => {
+      document.removeEventListener('keydown', handleDialogKey)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus()
+    }
   }, [mobileOpen, onMobileClose])
 
   const content = (
@@ -118,7 +146,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   return (
     <>
-      <aside className="hidden h-screen w-[72px] shrink-0 flex-col bg-sidebar lg:flex xl:w-64">
+      <aside data-testid="desktop-sidebar" className="hidden h-screen w-[72px] shrink-0 flex-col bg-sidebar lg:flex xl:w-64">
         {content}
       </aside>
       {mobileOpen && (
@@ -130,6 +158,8 @@ export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             onClick={onMobileClose}
           />
           <aside
+            ref={mobileDialogRef}
+            data-testid="mobile-navigation"
             role="dialog"
             aria-modal="true"
             aria-label={sidebarT('mainNavigation')}

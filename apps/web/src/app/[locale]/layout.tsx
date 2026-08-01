@@ -32,9 +32,9 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <Providers>
           <div className="flex h-screen w-full overflow-hidden">
-            <main className="flex-1 w-full overflow-y-auto relative z-10 bg-background text-foreground">
+            <div className="flex-1 w-full overflow-y-auto relative z-10 bg-background text-foreground">
               {children}
-            </main>
+            </div>
           </div>
           <Toaster
             position="bottom-right"

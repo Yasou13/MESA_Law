@@ -4,6 +4,7 @@ export MESA_LAW_ENVIRONMENT=test
 export MESA_LAW_E2E_STUB=1
 export MESA_LAW_OBSERVABILITY_ENABLED=false
 export OTEL_SDK_DISABLED=true
+: "${MESA_LAW_DATABASE_URL:?Set MESA_LAW_DATABASE_URL to a migrated, isolated PostgreSQL test database}"
 
 echo "======================================"
 echo " MESA Law Production Hardening Checks"
@@ -17,7 +18,9 @@ uv run --frozen ruff format --check apps tests scripts evaluation
 
 echo "3. Running Security Static Analysis (Bandit)..."
 # Exclude tests from bandit
-uv run --frozen bandit -r apps/ -c pyproject.toml
+uv run --frozen bandit -q -r apps \
+  -x 'apps/api/test_*.py,apps/worker/test_*.py' \
+  -c pyproject.toml
 
 echo "4. Running type checks (Mypy)..."
 uv run --frozen mypy apps scripts
@@ -27,7 +30,7 @@ uv run --frozen python -m compileall -q apps tests evaluation
 
 echo "6. Running Pytest Test Suite..."
 # Run all tests via uv pytest with OpenTelemetry disabled to prevent DNS errors
-uv run --frozen pytest apps tests --ignore=tests/e2e -v
+timeout 180s uv run --frozen pytest apps tests --ignore=tests/e2e -v
 
 echo "7. Checking Alembic and OpenAPI contracts..."
 uv run --frozen python scripts/check_alembic.py

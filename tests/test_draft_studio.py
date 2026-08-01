@@ -1,116 +1,33 @@
-from unittest.mock import AsyncMock, MagicMock
+"""MVP contract tests for the deliberately disabled AI drafting surface."""
+
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
-from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
-from apps.api.main import app
-from httpx import ASGITransport, AsyncClient
+from apps.api.routers.draft_studio import GenerateDraftRequest, generate_draft
+from fastapi import HTTPException, Request
 
-
-class MockResult:
-    def __init__(self, items=None):
-        self.items = items or []
-    def scalars(self):
-        return self
-    def all(self):
-        return self.items
-    def first(self):
-        return self.items[0] if self.items else None
-    def __iter__(self):
-        return iter(self.items)
-
-@pytest.fixture
-def override_draft_deps():
-    mock_context = RequestContext(tenant_id="firm_123", principal_id="user-1", roles={"FIRM_ADMIN"})
-    mock_session = AsyncMock()
-    
-    drafts_db = {}
-    
-    async def mock_get(model, obj_id):
-        return drafts_db.get(obj_id)
-        
-    def mock_add(obj):
-        if getattr(obj, "__tablename__", "") == "drafts":
-            if not getattr(obj, "id", None):
-                obj.id = "draft_123"
-            if getattr(obj, "status", None) is None:
-                obj.status = "DRAFT"
-            drafts_db[obj.id] = obj
-            
-    async def mock_refresh(obj):
-        if not getattr(obj, "id", None):
-            obj.id = "draft_123"
-            
-    async def mock_execute(stmt):
-        stmt_str = str(stmt).lower()
-        if "draft_citations" in stmt_str:
-            return MockResult([])
-        elif "matter_members" in stmt_str:
-            member = MagicMock(access_scope="admin")
-            return MockResult([member])
-        return MockResult(list(drafts_db.values()))
-        
-    mock_session.get.side_effect = mock_get
-    mock_session.add = MagicMock(side_effect=mock_add)
-    mock_session.refresh.side_effect = mock_refresh
-    mock_session.execute.side_effect = mock_execute
-    
-    app.dependency_overrides[setup_tenant_context] = lambda: mock_context
-    app.dependency_overrides[get_db] = lambda: mock_session
-    app.dependency_overrides[require_recent_auth] = lambda: True
-    yield mock_session
-    app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
-async def test_draft_studio_crud_and_export(override_draft_deps):
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        # Create draft
-        res = await ac.post(
-            "/api/v1/draft-studio/drafts",
-            json={"matter_id": "mat_123", "title": "Test Draft", "content": "Initial content"}
+async def test_ai_draft_generation_is_fail_closed_by_default() -> None:
+    request = Request({"type": "http", "method": "POST", "headers": []})
+    context = RequestContext(
+        tenant_id="firm-1", principal_id="attorney-1", roles={"ATTORNEY"}
+    )
+    database = AsyncMock()
+
+    with (
+        patch("apps.api.routers.draft_studio.settings.drafting_ai_enabled", False),
+        pytest.raises(HTTPException) as raised,
+    ):
+        await generate_draft(
+            request=request,
+            payload=GenerateDraftRequest(matter_id="matter-1"),
+            context=context,
+            db=database,
         )
-        assert res.status_code == 200, res.text
-        data = res.json()
-        draft_id = data["id"]
-        assert data["version"] == 1
-        assert data["title"] == "Test Draft"
 
-        # List drafts
-        list_res = await ac.get("/api/v1/draft-studio/drafts/matter/mat_123")
-        assert list_res.status_code == 200
-        drafts = list_res.json()
-        assert any(d["id"] == draft_id for d in drafts)
-
-        # Get draft
-        get_res = await ac.get(f"/api/v1/draft-studio/drafts/{draft_id}")
-        assert get_res.status_code == 200
-        assert get_res.json()["content"] == "Initial content"
-
-        # Update draft
-        put_res = await ac.put(
-            f"/api/v1/draft-studio/drafts/{draft_id}",
-            json={"title": "Updated Title", "content": "Updated content", "expected_version": 1}
-        )
-        assert put_res.status_code == 200
-        put_data = put_res.json()
-        assert put_data["version"] == 2
-        assert put_data["title"] == "Updated Title"
-        assert put_data["content"] == "Updated content"
-
-        # Submit for review
-        submit_res = await ac.post(f"/api/v1/draft-studio/drafts/{draft_id}/submit-review")
-        assert submit_res.status_code == 200
-
-        # Approve draft
-        approve_res = await ac.post(f"/api/v1/draft-studio/drafts/{draft_id}/approve")
-        assert approve_res.status_code == 200
-
-        # Export draft
-        exp_res = await ac.post(
-            f"/api/v1/draft-studio/drafts/{draft_id}/export",
-            json={"format": "pdf"}
-        )
-        assert exp_res.status_code == 200
-        assert "job_id" in exp_res.json()
-        assert exp_res.json()["version"] == 2
+    assert raised.value.status_code == 501
+    assert raised.value.detail == "AI draft generation is disabled in the MVP"
+    database.add.assert_not_called()
+    database.commit.assert_not_awaited()

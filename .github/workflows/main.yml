@@ -2,9 +2,9 @@ name: MESA Law CI/CD Quality Gates
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master", "codex/mesa-v4-mvp" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   backend-quality:
@@ -54,12 +54,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -111,19 +111,19 @@ jobs:
 
       - name: Test Upgrade to Head
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
       - name: Test Downgrade
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic downgrade -1
 
       - name: Test Upgrade to Head (Re-apply)
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
@@ -166,12 +166,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 11.17.0
 
       - name: Install Frontend Dependencies
         working-directory: apps/web

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ApiError } from "@/services/api-client";
-import { toast } from "sonner"; // Assuming sonner is used for toasts, common in modern next apps
+import toast from "react-hot-toast";
 
 interface UseApiMutationOptions<TData, TVariables> {
   mutationFn: (variables: TVariables) => Promise<TData>;

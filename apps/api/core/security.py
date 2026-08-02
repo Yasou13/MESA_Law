@@ -11,13 +11,17 @@ class CsrfSettings(BaseModel):
     cookie_samesite: str = "lax"
     cookie_secure: bool = settings.env != "development"
 
+
 @CsrfProtect.load_config
 def get_csrf_config():
     return CsrfSettings()
+
 
 async def verify_csrf(request: Request, csrf_protect: CsrfProtect = Depends()):
     if request.method not in ["GET", "HEAD", "OPTIONS", "TRACE"]:
         try:
             await csrf_protect.validate_csrf(request)
         except CsrfProtectError:
-            raise ProblemException(status=403, title="Forbidden", detail="CSRF validation failed")
+            raise ProblemException(
+                status=403, title="Forbidden", detail="CSRF validation failed"
+            )

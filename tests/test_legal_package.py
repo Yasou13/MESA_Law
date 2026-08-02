@@ -16,9 +16,9 @@ def test_valid_golden_package():
         publisher="MESA Law",
         release_date=datetime.now(UTC).date(),
         license="PRIVATE",
-        package_hash="some-valid-hash-1234"
+        package_hash="some-valid-hash-1234",
     )
-    
+
     leg = LegislationItem(
         id="leg-1",
         title="Türk Borçlar Kanunu",
@@ -26,9 +26,9 @@ def test_valid_golden_package():
         law_number="6098",
         enactment_date=date(2011, 1, 11),
         valid_from=date(2012, 7, 1),
-        content="Madde 1..."
+        content="Madde 1...",
     )
-    
+
     decision = CourtDecisionItem(
         id="dec-1",
         court="YARGITAY",
@@ -37,18 +37,17 @@ def test_valid_golden_package():
         karar_no="2021/456",
         decision_date=date(2021, 5, 10),
         anonymization_status="ANONYMIZED",
-        content="Karar özeti..."
+        content="Karar özeti...",
     )
-    
+
     pkg = GoldenLegalPackage(
-        manifest=manifest,
-        legislation=[leg],
-        court_decisions=[decision]
+        manifest=manifest, legislation=[leg], court_decisions=[decision]
     )
-    
+
     assert pkg.manifest.package_id == "PKG-2026-01"
     assert len(pkg.legislation) == 1
     assert len(pkg.court_decisions) == 1
+
 
 def test_invalid_anonymization_status():
     with pytest.raises(ValidationError) as exc:
@@ -59,9 +58,10 @@ def test_invalid_anonymization_status():
             karar_no="2",
             decision_date=date(2021, 5, 10),
             anonymization_status="INVALID_STATUS",
-            content="test"
+            content="test",
         )
     assert "must be ANONYMIZED, RAW, or PENDING" in str(exc.value)
+
 
 def test_public_license_requires_anonymization():
     manifest = SourceManifest(
@@ -69,9 +69,9 @@ def test_public_license_requires_anonymization():
         publisher="MESA Law",
         release_date=datetime.now(UTC).date(),
         license="PUBLIC",
-        package_hash="valid-hash"
+        package_hash="valid-hash",
     )
-    
+
     decision = CourtDecisionItem(
         id="dec-3",
         court="YARGITAY",
@@ -79,15 +79,13 @@ def test_public_license_requires_anonymization():
         karar_no="2",
         decision_date=date(2021, 5, 10),
         anonymization_status="RAW",
-        content="test with personal data"
+        content="test with personal data",
     )
-    
+
     with pytest.raises(ValidationError) as exc:
-        GoldenLegalPackage(
-            manifest=manifest,
-            court_decisions=[decision]
-        )
+        GoldenLegalPackage(manifest=manifest, court_decisions=[decision])
     assert "must be ANONYMIZED for PUBLIC license" in str(exc.value)
+
 
 def test_invalid_package_hash():
     manifest = SourceManifest(
@@ -95,12 +93,9 @@ def test_invalid_package_hash():
         publisher="MESA Law",
         release_date=datetime.now(UTC).date(),
         license="PRIVATE",
-        package_hash="FORCE_INVALID_HASH"
+        package_hash="FORCE_INVALID_HASH",
     )
-    
+
     with pytest.raises(ValidationError) as exc:
-        GoldenLegalPackage(
-            manifest=manifest,
-            court_decisions=[]
-        )
+        GoldenLegalPackage(manifest=manifest, court_decisions=[])
     assert "Package hash validation failed" in str(exc.value)

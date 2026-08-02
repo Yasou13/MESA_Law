@@ -37,6 +37,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "bandit>=1.8.6",
     "httpx>=0.28.1",
     "pytest>=9.1.1",
     "pytest-asyncio>=1.4.0",
@@ -47,9 +48,6 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-env = [
-    "MESA_LAW_ENVIRONMENT=test"
-]
 
 [tool.ruff]
 target-version = "py313"
@@ -74,3 +72,6 @@ ignore_missing_imports = true
 plugins = [
   "pydantic.mypy"
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "node_modules"]

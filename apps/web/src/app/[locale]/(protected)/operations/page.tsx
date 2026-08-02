@@ -1,167 +1,170 @@
 'use client'
 
-import { useState } from 'react'
-import { Activity, Clock, PlayCircle, CheckCircle2, AlertCircle, RotateCw, Filter, Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { StatusBadge } from '@/components/ui/status-badge'
-import { formatDistanceToNow } from 'date-fns'
+import type { ColumnDef } from '@tanstack/react-table'
+import { AlertCircle, CheckCircle2, Clock3, FileStack, Layers3, RefreshCw, RotateCw, ServerCog } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
+import { useMemo, useState } from 'react'
 
 import { useListJobs } from '@/api/endpoints/operations/operations'
+import type { JobResponse } from '@/api/models'
+import { LoadingState } from '@/components/ui/async-state'
+import { Button } from '@/components/ui/button'
+import { DataTable, SortableHeader } from '@/components/ui/data-table'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { PageHeader } from '@/components/ui/page-header'
+import { Panel, PanelBody } from '@/components/ui/panel'
+import { StatusBadge } from '@/components/ui/status-badge'
+import type { AppLocale } from '@/lib/navigation'
+
+type OperationGroup = 'all' | 'document' | 'scope' | 'mesa' | 'failed'
+
+function operationGroup(job: JobResponse): Exclude<OperationGroup, 'all' | 'failed'> {
+  const type = job.type.toLowerCase()
+  if (type.includes('mesa') || type.includes('publish') || type.includes('mutation')) return 'mesa'
+  if (type.includes('scope') || type.includes('binding') || type.includes('session')) return 'scope'
+  return 'document'
+}
+
+function jobTone(status: string) {
+  if (status === 'SUCCEEDED') return 'success'
+  if (status === 'FAILED' || status === 'DEAD') return 'error'
+  if (status === 'RUNNING') return 'processing'
+  return 'neutral'
+}
 
 export default function OperationsPage() {
-  const [search, setSearch] = useState('')
-  const { data: res, isLoading, refetch } = useListJobs()
-  const jobs = (res as unknown as any[]) || []
-  
-  const filteredJobs = jobs.filter((j: any) => 
-    j.type.toLowerCase().includes(search.toLowerCase()) || 
-    (j.matter_id && j.matter_id.toLowerCase().includes(search.toLowerCase())) ||
-    j.id.toLowerCase().includes(search.toLowerCase())
-  )
+  const t = useTranslations('Operations')
+  const common = useTranslations('Common')
+  const tableCopy = useTranslations('DataTable')
+  const locale = useLocale() as AppLocale
+  const [group, setGroup] = useState<OperationGroup>('all')
+  const [selectedJob, setSelectedJob] = useState<JobResponse | null>(null)
+  const { data: jobs = [], isLoading, refetch } = useListJobs()
 
-  const getStatusIcon = (status: string) => {
-    switch(status) {
-      case 'processing': return <RotateCw className="w-4 h-4 text-amber-500 animate-spin" />
-      case 'completed': return <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-      case 'failed': return <AlertCircle className="w-4 h-4 text-red-500" />
-      case 'queued': return <Clock className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-      default: return <Activity className="w-4 h-4" />
-    }
+  const groupedJobs = useMemo(() => jobs.filter((job) => {
+    if (group === 'all') return true
+    if (group === 'failed') return ['FAILED', 'DEAD'].includes(job.status) || job.retries > 0
+    return operationGroup(job) === group
+  }), [group, jobs])
+
+  const columns = useMemo<ColumnDef<JobResponse, unknown>[]>(() => [
+    {
+      accessorKey: 'type',
+      header: ({ column }) => <SortableHeader label={t('job')} column={column} />,
+      cell: ({ row }) => (
+        <div className="min-w-0">
+          <p className="max-w-72 truncate font-medium">{row.original.type.replaceAll('_', ' ')}</p>
+          <p className="technical-id max-w-72 truncate text-foreground-muted">{row.original.id}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'matter_id',
+      header: t('matter'),
+      cell: ({ row }) => <span className="technical-id text-foreground-secondary">{row.original.matter_id?.slice(0, 12) ?? common('notAvailable')}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: ({ column }) => <SortableHeader label={common('status')} column={column} />,
+      cell: ({ row }) => <StatusBadge status={jobTone(row.original.status)} label={row.original.status} />,
+    },
+    {
+      accessorKey: 'retries',
+      header: t('attempt'),
+      cell: ({ row }) => <span>{row.original.retries + 1} / {row.original.max_retries}</span>,
+    },
+    {
+      accessorKey: 'updated_at',
+      header: ({ column }) => <SortableHeader label={common('updatedAt')} column={column} />,
+      cell: ({ row }) => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(row.original.updated_at)),
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">{common('actions')}</span>,
+      cell: ({ row }) => (
+        <Button variant="ghost" size="sm" onClick={() => setSelectedJob(row.original)}>
+          {t('details')}
+        </Button>
+      ),
+    },
+  ], [common, locale, t])
+
+  const metrics = [
+    { label: t('returned'), value: jobs.length, icon: ServerCog, tone: 'text-info' },
+    { label: t('processing'), value: jobs.filter((job) => job.status === 'RUNNING').length, icon: RotateCw, tone: 'text-info' },
+    { label: t('completed'), value: jobs.filter((job) => job.status === 'SUCCEEDED').length, icon: CheckCircle2, tone: 'text-success' },
+    { label: t('failed'), value: jobs.filter((job) => ['FAILED', 'DEAD'].includes(job.status)).length, icon: AlertCircle, tone: 'text-danger' },
+  ]
+
+  const getGroupIcon = (item: OperationGroup) => {
+    if (item === 'document') return FileStack
+    if (item === 'scope') return Clock3
+    if (item === 'mesa') return ServerCog
+    if (item === 'failed') return AlertCircle
+    return Layers3
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">System Operations</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Monitor background tasks, data extractions, and research jobs.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => refetch()} disabled={isLoading}>
-            <RotateCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} /> Refresh
-          </Button>
-          <Button className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-            <PlayCircle className="w-4 h-4" /> Start Manual Job
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('title')}
+        description={t('description')}
+        actions={<Button variant="outline" onClick={() => refetch()} disabled={isLoading}><RefreshCw className={isLoading ? 'animate-spin' : ''} />{common('refresh')}</Button>}
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <Panel key={metric.label}>
+            <PanelBody className="flex items-center justify-between">
+              <div><p className="text-xs font-medium text-foreground-secondary">{metric.label}</p><p className="mt-1 text-2xl font-semibold tabular-nums">{metric.value}</p></div>
+              <metric.icon className={`size-5 ${metric.tone}`} aria-hidden="true" />
+            </PanelBody>
+          </Panel>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="glass-card p-4 rounded-xl border border-[var(--border-surface)] shadow-sm">
-          <div className="text-sm font-medium text-[var(--color-anthracite-400)]">Total Jobs (24h)</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--foreground)]">128</div>
-        </div>
-        <div className="glass-card p-4 rounded-xl border border-[var(--color-lila-500)]/30 bg-[var(--color-lila-500)]/5 shadow-sm">
-          <div className="text-sm font-medium text-[var(--color-lila-500)]">Processing</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--color-lila-400)]">1</div>
-        </div>
-        <div className="glass-card p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 shadow-sm">
-          <div className="text-sm font-medium text-emerald-500">Completed</div>
-          <div className="text-2xl font-bold mt-1 text-emerald-400">124</div>
-        </div>
-        <div className="glass-card p-4 rounded-xl border border-[var(--color-semantic-error)]/30 bg-[var(--color-semantic-error)]/5 shadow-sm">
-          <div className="text-sm font-medium text-[var(--color-semantic-error)]">Failed</div>
-          <div className="text-2xl font-bold mt-1 text-[var(--color-semantic-error)]">3</div>
-        </div>
+      <div className="flex max-w-full gap-2 overflow-x-auto pb-1" aria-label={common('status')}>
+        {(['all', 'document', 'scope', 'mesa', 'failed'] as const).map((item) => {
+          const Icon = getGroupIcon(item)
+          return <Button key={item} variant={group === item ? 'default' : 'outline'} size="sm" onClick={() => setGroup(item)}><Icon className="size-4" />{t(`groups.${item}`)}</Button>
+        })}
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-anthracite-400)]" />
-          <Input 
-            type="text" 
-            placeholder="Search by Job ID, type, or matter..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 w-full"
-          />
-        </div>
-        <Button variant="outline" className="gap-2 shrink-0">
-          <Filter className="w-4 h-4" /> Filter
-        </Button>
-      </div>
+      {isLoading ? <LoadingState label={common('loading')} /> : (
+        <DataTable
+          columns={columns}
+          data={groupedJobs}
+          getRowId={(row) => row.id}
+          copy={{
+            search: t('search'),
+            emptyTitle: t('emptyTitle'),
+            emptyDescription: t('emptyDescription'),
+            previous: tableCopy('previous'),
+            next: tableCopy('next'),
+            page: (current, total) => tableCopy('page', { current, total }),
+            rows: (visible, total) => tableCopy('rows', { visible, total }),
+          }}
+        />
+      )}
 
-      <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-        {filteredJobs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 border-dashed border-2 border-[var(--border-surface)] m-4 rounded-2xl">
-            <div className="w-16 h-16 rounded-full bg-[var(--bg-surface-hover)] flex items-center justify-center mb-4">
-              <Activity className="w-8 h-8 text-[var(--color-anthracite-400)]" />
-            </div>
-            <h3 className="text-xl font-bold text-[var(--foreground)] mb-2">No Jobs Found</h3>
-            <p className="text-[var(--color-anthracite-500)]">There are no background operations matching your criteria.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader className="bg-[var(--bg-surface-hover)]">
-              <TableRow>
-                <TableHead>Job ID & Type</TableHead>
-                <TableHead>Matter context</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredJobs.map(job => (
-                <TableRow key={job.id} className="hover:bg-[var(--bg-surface-hover)] transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="mt-0.5">{getStatusIcon(job.status)}</div>
-                      <div>
-                        <div className="font-medium text-[var(--foreground)]">{job.type}</div>
-                        <div className="text-xs text-[var(--color-anthracite-500)] font-mono">{job.id}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-[var(--color-anthracite-400)] font-mono">
-                    {job.matter_id || '-'}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge 
-                      status={job.status === 'completed' ? 'success' : job.status === 'failed' || job.status === 'dead' ? 'error' : job.status === 'processing' ? 'processing' : 'default'} 
-                      label={job.status.toUpperCase()} 
-                    />
-                    {job.error_message && (
-                      <div className="text-xs text-[var(--color-semantic-error)] mt-1 max-w-[200px] truncate" title={job.error_message}>
-                        {job.error_message}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="w-full max-w-[150px]">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-[var(--color-anthracite-400)]">
-                          {job.status === 'completed' ? '100%' : job.status === 'failed' || job.status === 'dead' ? 'Error' : 'Running...'}
-                        </span>
-                      </div>
-                      <div className="h-1.5 w-full bg-[var(--bg-surface-hover)] rounded-full overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            job.status === 'completed' ? 'bg-emerald-500 w-full' :
-                            job.status === 'failed' || job.status === 'dead' ? 'bg-[var(--color-semantic-error)] w-full' :
-                            'bg-[var(--color-lila-500)] w-2/3 animate-pulse'
-                          }`}
-                        ></div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-[var(--color-anthracite-500)]">
-                    {job.created_at ? formatDistanceToNow(new Date(job.created_at), { addSuffix: true }) : ''}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="text-[var(--color-lila-500)] hover:text-[var(--color-lila-600)]">
-                      View Logs
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+      <Dialog open={Boolean(selectedJob)} onOpenChange={(open) => !open && setSelectedJob(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t('technicalDetail')}</DialogTitle>
+            <DialogDescription className="technical-id break-all">{selectedJob?.id}</DialogDescription>
+          </DialogHeader>
+          {selectedJob && (
+            <dl className="grid gap-3 text-sm sm:grid-cols-[9rem_1fr]">
+              <dt className="text-foreground-secondary">{t('job')}</dt><dd className="break-all">{selectedJob.type}</dd>
+              <dt className="text-foreground-secondary">{common('status')}</dt><dd><StatusBadge status={jobTone(selectedJob.status)} label={selectedJob.status} /></dd>
+              <dt className="text-foreground-secondary">{t('matter')}</dt><dd className="technical-id break-all">{selectedJob.matter_id ?? common('notAvailable')}</dd>
+              <dt className="text-foreground-secondary">{t('attempt')}</dt><dd>{selectedJob.retries + 1} / {selectedJob.max_retries}</dd>
+              <dt className="text-foreground-secondary">{t('payload')}</dt><dd><pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-subtle p-3 text-xs">{JSON.stringify(selectedJob.payload, null, 2)}</pre></dd>
+              {selectedJob.error_message && <><dt className="text-danger">{t('error')}</dt><dd className="break-words rounded-md bg-danger-soft p-3 text-danger">{selectedJob.error_message}</dd></>}
+            </dl>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

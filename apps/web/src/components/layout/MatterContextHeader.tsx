@@ -1,65 +1,65 @@
-import React from 'react'
-import { StatusBadge } from '../ui/status-badge'
-import { Shield, Lock, AlertCircle, FileText, User } from 'lucide-react'
+import { CalendarClock, FileText, Landmark, Scale, Upload, UserRound } from 'lucide-react'
+import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 
-export interface MatterContextHeaderProps {
-  matter: {
-    name: string
-    internal_reference?: string
-    client_name?: string
-    responsible_attorney_name?: string
-    status: string
-    confidentiality_level: string
-    legal_hold: boolean
-    ai_processing_policy: string
-  }
-}
+import { type MatterResponse } from '@/api/models'
+import { Button } from '@/components/ui/button'
+import { StatusBadge } from '@/components/ui/status-badge'
 
-export function MatterContextHeader({ matter }: MatterContextHeaderProps) {
+export function MatterContextHeader({
+  matter,
+  uploadHref,
+  nextDeadline,
+  locale,
+}: {
+  matter: MatterResponse
+  uploadHref: string
+  nextDeadline?: string | null
+  locale: 'tr' | 'en'
+}) {
+  const t = useTranslations('Shell')
+  const isActive = ['open', 'active'].includes(matter.status.toLowerCase())
+
   return (
-    <div className="bg-[var(--bg-surface)] border-b border-[var(--border-surface)] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-xl font-bold text-[var(--foreground)]">{matter.name}</h1>
-          <StatusBadge status={matter.status === 'open' ? 'success' : 'neutral'} label={matter.status.toUpperCase()} />
-          {matter.legal_hold && (
-            <StatusBadge status="legal-hold" label="LEGAL HOLD" icon={AlertCircle} />
-          )}
+    <header className="space-y-4 border-b border-border bg-surface px-4 py-5 md:px-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="truncate text-xl leading-7 font-semibold tracking-[-0.01em] text-foreground md:text-[28px] md:leading-9">
+              {matter.title}
+            </h1>
+            <StatusBadge status={isActive ? 'success' : 'neutral'} label={matter.status} />
+          </div>
+          <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-foreground-secondary sm:text-sm">
+            {matter.internal_reference && (
+              <div className="flex items-center gap-1.5"><FileText className="size-4" /><dt className="sr-only">{t('reference')}</dt><dd className="tabular-nums">{matter.internal_reference}</dd></div>
+            )}
+            {matter.client_name && (
+              <div className="flex items-center gap-1.5"><UserRound className="size-4" /><dt className="sr-only">{t('client')}</dt><dd>{matter.client_name}</dd></div>
+            )}
+            {matter.jurisdiction && (
+              <div className="flex items-center gap-1.5"><Landmark className="size-4" /><dt className="sr-only">{t('jurisdiction')}</dt><dd>{matter.jurisdiction}</dd></div>
+            )}
+            {matter.case_type && (
+              <div className="flex items-center gap-1.5"><Scale className="size-4" /><dt className="sr-only">{t('caseType')}</dt><dd>{matter.case_type}</dd></div>
+            )}
+            {nextDeadline && (
+              <div className="flex items-center gap-1.5 text-warning"><CalendarClock className="size-4" /><dt className="sr-only">{t('nextDeadline')}</dt><dd>{nextDeadline}</dd></div>
+            )}
+          </dl>
         </div>
-        <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--color-anthracite-500)]">
-          {matter.internal_reference && (
-            <span className="flex items-center gap-1.5">
-              <FileText className="w-4 h-4" /> {matter.internal_reference}
-            </span>
-          )}
-          {matter.client_name && (
-            <span className="flex items-center gap-1.5">
-              <User className="w-4 h-4" /> {matter.client_name}
-            </span>
-          )}
-          {matter.responsible_attorney_name && (
-            <span className="flex items-center gap-1.5">
-              <Shield className="w-4 h-4" /> {matter.responsible_attorney_name}
-            </span>
-          )}
-        </div>
+        {matter.access_scope !== 'read' && (
+          <Button render={<Link href={uploadHref} />}>
+            <Upload className="size-4" />{t('upload')}
+          </Button>
+        )}
       </div>
-      
-      <div className="flex flex-col items-end gap-2 text-xs font-medium">
-        <div className="flex items-center gap-2">
-          <span className="text-[var(--color-anthracite-400)] uppercase tracking-wider">Confidentiality:</span>
-          <span className="flex items-center gap-1 px-2 py-1 bg-[var(--bg-surface-hover)] rounded-md border border-[var(--border-surface)]">
-            <Lock className="w-3.5 h-3.5 text-zinc-500" />
-            {matter.confidentiality_level}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[var(--color-anthracite-400)] uppercase tracking-wider">AI Policy:</span>
-          <span className="px-2 py-1 bg-[var(--color-lila-50)] text-[var(--color-lila-600)] dark:bg-[var(--color-lila-500)]/10 dark:text-[var(--color-lila-500)] rounded-md border border-[var(--color-lila-500)]/20">
-            {matter.ai_processing_policy}
-          </span>
-        </div>
-      </div>
-    </div>
+
+      <dl className="grid gap-2 text-xs text-foreground-secondary sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
+        <div><dt className="font-medium text-foreground-muted">{t('confidentiality')}</dt><dd className="mt-0.5 text-foreground">{matter.confidentiality_level}</dd></div>
+        <div><dt className="font-medium text-foreground-muted">{t('aiPolicy')}</dt><dd className="mt-0.5 text-foreground">{matter.ai_processing_policy}</dd></div>
+        {matter.opened_at && <div><dt className="font-medium text-foreground-muted">{t('opened')}</dt><dd className="mt-0.5 text-foreground tabular-nums">{new Intl.DateTimeFormat(locale).format(new Date(matter.opened_at))}</dd></div>}
+      </dl>
+    </header>
   )
 }

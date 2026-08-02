@@ -1,106 +1,136 @@
-import Axios, { AxiosRequestConfig, AxiosError } from 'axios';
-import { getSession, signOut } from 'next-auth/react';
-import { toast } from 'react-hot-toast';
-import type { Session } from 'next-auth';
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from 'axios'
+import { getSession, signOut } from 'next-auth/react'
 
-// Base URL empty string so it resolves to current origin, preventing double /api/v1
-const baseURL = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL || '';
-export const AXIOS_INSTANCE = Axios.create({ baseURL });
+export interface ApiProblem {
+  detail?: string | Array<{ msg?: string }>
+  title?: string
+  message?: string
+}
 
-// Request Interceptor
-AXIOS_INSTANCE.interceptors.request.use(async (config) => {
-  if (typeof window !== 'undefined') {
-    const session = await getSession() as Session | null;
-    if (session) {
-      if (session.accessToken) {
-        config.headers['Authorization'] = `Bearer ${session.accessToken}`;
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number | undefined,
+    public readonly problem: ApiProblem | undefined,
+    public readonly referenceId: string | undefined,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
+export interface ApiResponseMetadata {
+  traceId?: string
+  requestId?: string
+  correlationId?: string
+}
+
+const responseMetadata = new WeakMap<object, ApiResponseMetadata>()
+
+function responseHeader(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+export function getApiResponseMetadata(value: unknown): ApiResponseMetadata | undefined {
+  if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+    return undefined
+  }
+  return responseMetadata.get(value)
+}
+
+function apiOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_MESA_LAW_API_BASE_URL?.trim()
+  if (!configured) return ''
+  return configured.replace(/\/$/, '').replace(/\/api\/v1$/, '')
+}
+
+function problemMessage(error: AxiosError<ApiProblem>): string {
+  const problem = error.response?.data
+  if (typeof problem?.detail === 'string') return problem.detail
+  if (Array.isArray(problem?.detail)) {
+    return problem.detail.map((issue) => issue.msg ?? 'Validation error').join(', ')
+  }
+  return problem?.message ?? problem?.title ?? error.message
+}
+
+export const AXIOS_INSTANCE = axios.create({
+  baseURL: apiOrigin(),
+  timeout: 30_000,
+  withCredentials: true,
+})
+
+AXIOS_INSTANCE.interceptors.request.use(
+  async (config: InternalAxiosRequestConfig) => {
+    const headers = AxiosHeaders.from(config.headers)
+    if (typeof window !== 'undefined') {
+      const session = await getSession()
+      if (session?.accessToken) {
+        headers.set('Authorization', `Bearer ${session.accessToken}`)
+      }
+      const method = config.method?.toUpperCase()
+      if (
+        method &&
+        ['POST', 'PUT', 'PATCH'].includes(method) &&
+        !headers.has('Idempotency-Key')
+      ) {
+        headers.set('Idempotency-Key', crypto.randomUUID())
       }
     }
-  }
-  return config;
-});
+    config.headers = headers
+    return config
+  },
+)
 
-// Response Interceptor
 AXIOS_INSTANCE.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
-    if (typeof window !== 'undefined') {
-      const status = error.response?.status;
-      const data = error.response?.data as any;
-      const headers = error.response?.headers || {};
-      
-      const referenceId = headers['x-reference-id'] || headers['x-correlation-id'];
-      const refSuffix = referenceId ? ` (Ref: ${referenceId})` : '';
-      
-      let message = 'An unexpected error occurred';
-      
-      // Handle application/problem+json and standard FastAPI ValidationErrors
-      if (data && data.detail) {
-        if (typeof data.detail === 'string') {
-          message = data.detail;
-        } else if (Array.isArray(data.detail)) {
-          message = data.detail.map((err: any) => err.msg || JSON.stringify(err)).join(', ');
-        }
-      } else if (error.message) {
-        message = error.message;
-      }
-      
-      message += refSuffix;
-      
-      if (status === 401) {
-        toast.error('Session expired. Please log in again.');
-        await signOut({ redirect: true, callbackUrl: '/login' });
-      } else if (status === 403) {
-        toast.error(`Permission denied: ${message}`);
-      } else if (status === 404) {
-        toast.error(`Resource not found: ${message}`);
-      } else if (status === 409) {
-        toast.error(`Conflict: ${message}`);
-      } else if (status === 422) {
-        toast.error(`Validation error: ${message}`);
-      } else if (status === 429) {
-        toast.error(`Rate limited: Please wait before trying again.${refSuffix}`);
-      } else if (status === 503) {
-        toast.error(`Service unavailable: ${message}`);
-      } else if (status && status >= 500) {
-        toast.error(`Server error: ${message}`);
-      } else {
-        toast.error(message);
-      }
+  async (unknownError: unknown) => {
+    if (!axios.isAxiosError<ApiProblem>(unknownError)) {
+      return Promise.reject(unknownError)
     }
-    return Promise.reject(error);
-  }
-);
+    const referenceId =
+      unknownError.response?.headers['x-reference-id'] ??
+      unknownError.response?.headers['x-correlation-id'] ??
+      unknownError.response?.headers['x-trace-id']
+    const error = new ApiError(
+      problemMessage(unknownError),
+      unknownError.response?.status,
+      unknownError.response?.data,
+      typeof referenceId === 'string' ? referenceId : undefined,
+    )
+    if (error.status === 401 && typeof window !== 'undefined') {
+      await signOut({ redirect: true, callbackUrl: '/login' })
+    }
+    return Promise.reject(error)
+  },
+)
 
 export const customInstance = <T>(
-  url: string,
-  options?: any,
+  config: AxiosRequestConfig,
+  options?: AxiosRequestConfig,
 ): Promise<T> => {
-  const source = Axios.CancelToken.source();
-  
-  const mappedConfig: AxiosRequestConfig = { 
-    url,
-    method: options?.method || 'GET',
-    headers: options?.headers,
-    cancelToken: source.token 
-  };
-
-  if (options?.body) {
-    try {
-      mappedConfig.data = JSON.parse(options.body);
-    } catch {
-      mappedConfig.data = options.body;
-    }
+  const headers = {
+    ...config.headers,
+    ...options?.headers,
   }
+  return AXIOS_INSTANCE.request<T>({ ...config, ...options, headers }).then(
+    (response) => {
+      const data = response.data
+      if ((typeof data === 'object' && data !== null) || typeof data === 'function') {
+        responseMetadata.set(data, {
+          traceId: responseHeader(response.headers['x-trace-id']),
+          requestId: responseHeader(response.headers['x-request-id']),
+          correlationId: responseHeader(response.headers['x-correlation-id']),
+        })
+      }
+      return data
+    },
+  )
+}
 
-  const promise = AXIOS_INSTANCE(mappedConfig).then((response) => {
-    return response.data as unknown as T;
-  });
-
-  // @ts-expect-error adding cancel to promise
-  promise.cancel = () => {
-    source.cancel('Query was cancelled');
-  };
-
-  return promise;
-};
+export type ErrorType<Error> = AxiosError<Error>
+export type BodyType<BodyData> = BodyData

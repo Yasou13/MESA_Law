@@ -1,44 +1,32 @@
-'use client';
+'use client'
 
-import { useLocale } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
-import { Globe } from 'lucide-react';
-import { locales } from '@/i18n';
+import { Globe } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
+import { usePathname, useRouter } from 'next/navigation'
+
+import { locales } from '@/i18n'
 
 export function LanguageSwitcher() {
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
+  const locale = useLocale()
+  const t = useTranslations('Shell')
+  const router = useRouter()
+  const pathname = usePathname()
 
   const handleLocaleChange = (newLocale: string) => {
-    if (newLocale === locale) return;
-
-    // Strip current locale prefix from pathname if present
-    const segments = pathname.split('/');
-    if (locales.includes(segments[1] as typeof locales[number])) {
-      segments.splice(1, 1);
-    }
-
-    // For non-default locale, add the prefix
-    const newPath = newLocale === 'en'
-      ? segments.join('/') || '/'
-      : `/${newLocale}${segments.join('/') || '/'}`;
-
-    router.replace(newPath);
-    router.refresh();
-  };
+    if (newLocale === locale) return
+    const segments = pathname.split('/')
+    if (locales.includes(segments[1] as (typeof locales)[number])) segments.splice(1, 1)
+    const path = segments.join('/') || '/'
+    router.replace(newLocale === 'tr' ? path : `/${newLocale}${path}`)
+    router.refresh()
+  }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-lg text-sm text-[var(--foreground)]">
-      <Globe className="w-4 h-4 text-[var(--color-anthracite-400)]" />
-      <select 
-        value={locale} 
-        onChange={(e) => handleLocaleChange(e.target.value)}
-        className="bg-transparent border-0 focus:ring-0 text-[var(--foreground)] outline-none cursor-pointer"
-      >
-        <option value="en">English</option>
-        <option value="tr">Türkçe</option>
+    <label className="flex h-9 items-center gap-1 rounded-md px-2 text-foreground-secondary hover:bg-surface-subtle">
+      <Globe className="size-4" aria-hidden="true" /><span className="sr-only">{t('language')}</span>
+      <select value={locale} onChange={(event) => handleLocaleChange(event.target.value)} className="cursor-pointer border-0 bg-transparent text-xs font-medium text-foreground outline-none">
+        <option value="tr">TR</option><option value="en">EN</option>
       </select>
-    </div>
-  );
+    </label>
+  )
 }

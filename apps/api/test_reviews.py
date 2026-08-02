@@ -11,4 +11,3 @@ async def test_review_item_model_exists():
         item = result.scalars().first()
         # Ensure we can query the table without errors
         assert item is None or isinstance(item, ReviewItem)
-

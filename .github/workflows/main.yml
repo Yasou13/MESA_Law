@@ -2,14 +2,28 @@ name: MESA Law CI/CD Quality Gates
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master", "codex/mesa-v4-mvp" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   backend-quality:
     name: Backend Checks
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: mesa_law
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: mesa_law_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       
@@ -21,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: ".python-version"
+          python-version: "3.13"
           
       - name: Install dependencies
         run: uv sync --frozen
@@ -30,6 +44,12 @@ jobs:
         run: |
           uv run ruff check .
           uv run ruff format --check .
+
+      - name: Security static analysis
+        run: >-
+          uv run bandit -q -r apps
+          -x 'apps/api/test_*.py,apps/worker/test_*.py'
+          -c pyproject.toml
           
       - name: Typecheck (Mypy)
         run: uv run mypy apps
@@ -37,9 +57,21 @@ jobs:
       - name: Compile check
         run: python -m compileall apps tests
 
+      - name: OpenAPI drift
+        env:
+          MESA_LAW_ENVIRONMENT: test
+        run: uv run python scripts/export_openapi.py --check
+
+      - name: Upgrade isolated test database
+        env:
+          MESA_LAW_ENVIRONMENT: test
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+        run: uv run alembic upgrade head
+
       - name: Run Pytest
         env:
           MESA_LAW_ENVIRONMENT: test
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
         run: uv run pytest apps tests --ignore=tests/e2e -v
 
   frontend-quality:
@@ -54,12 +86,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 11.17.0
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -69,6 +101,11 @@ jobs:
 
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Generated API client drift
+        run: |
+          pnpm api:generate
+          git diff --exit-code -- src/api
 
       - name: Unit Tests
         run: pnpm test:unit
@@ -104,26 +141,26 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: ".python-version"
+          python-version: "3.13"
 
       - name: Install dependencies
         run: uv sync --frozen
 
       - name: Test Upgrade to Head
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
       - name: Test Downgrade
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic downgrade -1
 
       - name: Test Upgrade to Head (Re-apply)
         env:
-          DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
+          MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law:password@localhost:5432/mesa_law_db"
           MESA_LAW_ENVIRONMENT: test
         run: uv run alembic upgrade head
 
@@ -132,15 +169,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Generate ephemeral Compose credentials
+        env:
+          CI: "true"
+        run: python scripts/write_ci_env.py
       
       - name: Build Docker Compose Stack
         run: docker compose --profile core build
         
       - name: Start Docker Compose Stack
-        run: docker compose --profile core up -d
-        
-      - name: Wait for services
-        run: sleep 15
+        run: docker compose --profile core up -d --wait --wait-timeout 180
         
       - name: Check container statuses
         run: docker compose --profile core ps
@@ -153,7 +192,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version-file: ".python-version"
+          python-version: "3.13"
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -166,12 +205,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 11.17.0
 
       - name: Install Frontend Dependencies
         working-directory: apps/web
@@ -180,6 +219,9 @@ jobs:
       - name: Install Playwright Browsers
         working-directory: apps/web
         run: pnpm exec playwright install --with-deps
+
+      - name: Release Compose web port for Law-side stub
+        run: docker compose --profile core stop web
 
       - name: Run Playwright E2E Tests
         working-directory: apps/web

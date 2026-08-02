@@ -1,54 +1,26 @@
 'use client'
 
-import { useEffect } from 'react'
-import { AlertOctagon, RotateCcw, Home } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { AlertOctagon, Home, RotateCcw } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
+import { useEffect } from 'react'
 
-export default function ErrorBoundary({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string }
-  reset: () => void
-}) {
-  useEffect(() => {
-    // Log the error to an error reporting service
-    console.error(error)
-  }, [error])
+import { Button, buttonVariants } from '@/components/ui/button'
+import { Panel, PanelBody } from '@/components/ui/panel'
+import { localizedHref, type AppLocale } from '@/lib/navigation'
 
+export default function ErrorBoundary({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const t = useTranslations('ErrorBoundary')
+  const locale = useLocale() as AppLocale
+  useEffect(() => { console.error(error) }, [error])
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center p-6 bg-[var(--background)]">
-      <div className="max-w-md w-full glass-card p-8 rounded-2xl border border-[var(--color-semantic-error)]/20 shadow-xl text-center flex flex-col items-center">
-        <div className="w-16 h-16 rounded-full bg-[var(--color-semantic-error)]/10 flex items-center justify-center mb-6 text-[var(--color-semantic-error)]">
-          <AlertOctagon className="w-8 h-8" />
-        </div>
-        
-        <h2 className="text-2xl font-bold tracking-tight text-[var(--foreground)] mb-2">Something went wrong!</h2>
-        
-        <p className="text-[var(--color-anthracite-400)] mb-6 leading-relaxed">
-          An unexpected error occurred while rendering this page. Our team has been notified.
-        </p>
-
-        <div className="w-full bg-[var(--bg-surface)] border border-[var(--border-surface)] p-3 rounded-lg mb-8 text-left text-xs font-mono text-[var(--color-semantic-error)] overflow-auto max-h-32">
-          {error.message || 'Unknown application error'}
-          {error.digest && <div className="mt-2 opacity-70">Digest: {error.digest}</div>}
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
-          <Button
-            onClick={() => reset()}
-            className="w-full sm:w-auto gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]"
-          >
-            <RotateCcw className="w-4 h-4" /> Try again
-          </Button>
-          <Link href="/dashboard">
-            <Button variant="outline" className="w-full sm:w-auto gap-2">
-              <Home className="w-4 h-4" /> Go to Dashboard
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="flex min-h-[60vh] items-center justify-center py-8">
+      <Panel className="w-full max-w-lg border-danger/30"><PanelBody className="flex flex-col items-center p-7 text-center">
+        <span className="flex size-12 items-center justify-center rounded-full bg-danger-soft text-danger"><AlertOctagon className="size-6" /></span>
+        <h1 className="mt-5 text-xl font-semibold">{t('title')}</h1><p className="mt-2 text-sm leading-6 text-foreground-secondary">{t('description')}</p>
+        <pre className="mt-5 max-h-32 w-full overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-subtle p-3 text-left text-xs text-danger">{error.message || t('unknown')}{error.digest && `\nDigest: ${error.digest}`}</pre>
+        <div className="mt-6 flex flex-wrap justify-center gap-2"><Button onClick={reset}><RotateCcw className="size-4" />{t('tryAgain')}</Button><Link href={localizedHref(locale, '/dashboard')} className={buttonVariants({ variant: 'outline' })}><Home className="size-4" />{t('dashboard')}</Link></div>
+      </PanelBody></Panel>
     </div>
   )
 }

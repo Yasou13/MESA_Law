@@ -1,184 +1,109 @@
 'use client'
-import { Activity, Clock, FileText, Bell, AlertTriangle, ArrowRight, FolderOpen } from 'lucide-react'
+
+import { AlertTriangle, ArrowRight, Bell, BriefcaseBusiness, CalendarClock, FileCheck2, Files, ShieldAlert } from 'lucide-react'
+import { useLocale, useTranslations } from 'next-intl'
 import Link from 'next/link'
-import { useGetDashboardMetricsApiV1DashboardMetricsGet } from '@/api/endpoints/dashboard/dashboard'
-import { useListMatters } from '@/api/endpoints/default/default'
+
+import { useGetDashboardMetrics } from '@/api/endpoints/dashboard/dashboard'
+import { useListAllDocuments, useListMatters } from '@/api/endpoints/default/default'
 import { useListDeadlines } from '@/api/endpoints/deadlines/deadlines'
-import { useListDraftReviewsApiV1ReviewsGet } from '@/api/endpoints/reviews/reviews'
+import { useListReviews } from '@/api/endpoints/reviews/reviews'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
 import { StatusBadge } from '@/components/ui/status-badge'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import { localizedHref, type AppLocale } from '@/lib/navigation'
 
 export default function DashboardPage() {
-  const { data: response, isLoading: isLoadingMetrics, isError, refetch } = useGetDashboardMetricsApiV1DashboardMetricsGet()
-  const { data: mattersRes, isLoading: isLoadingMatters } = useListMatters()
-  const { data: deadlinesRes, isLoading: isLoadingDeadlines } = useListDeadlines()
-  const { data: reviewsRes, isLoading: isLoadingReviews } = useListDraftReviewsApiV1ReviewsGet()
+  const t = useTranslations('Dashboard')
+  const common = useTranslations('Common')
+  const locale = useLocale() as AppLocale
+  const metricsQuery = useGetDashboardMetrics()
+  const mattersQuery = useListMatters()
+  const deadlinesQuery = useListDeadlines()
+  const reviewsQuery = useListReviews({ status: 'PROPOSED' })
+  const documentsQuery = useListAllDocuments()
 
-  if (isLoadingMetrics) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-lila-500)]"></div>
-      </div>
-    )
-  }
+  if (metricsQuery.isLoading) return <LoadingState label={common('loading')} />
+  if (metricsQuery.isError) return <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => metricsQuery.refetch()} />
 
-  if (isError) {
-    return (
-      <div className="p-6 text-center">
-        <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Failed to load dashboard</h2>
-        <Button onClick={() => refetch()} variant="outline">Retry</Button>
-      </div>
-    )
-  }
+  const metrics = metricsQuery.data
+  const matters = (mattersQuery.data ?? []).slice(0, 5)
+  const deadlines = (deadlinesQuery.data ?? []).filter((deadline) => !deadline.is_completed).slice(0, 5)
+  const reviews = (reviewsQuery.data ?? []).slice(0, 5)
+  const processedDocuments = (documentsQuery.data ?? []).filter((document) => ['clean', 'ready', 'processed'].includes(document.status.toLowerCase())).length
 
-  const metrics: any = response?.data || {}
-  const recentMatters: any[] = ((mattersRes as any)?.items || (mattersRes as any) || []).slice(0, 5)
-  const upcomingDeadlines: any[] = ((deadlinesRes as any)?.items || (deadlinesRes as any) || []).slice(0, 5)
-  const pendingReviews: any[] = ((reviewsRes as any) || []).slice(0, 5)
+  const priorities = [
+    { label: t('activeMatters'), value: metrics?.active_matters ?? 0, icon: BriefcaseBusiness, href: '/matters', tone: 'text-info' },
+    { label: t('pendingReviews'), value: metrics?.pending_reviews ?? 0, icon: Files, href: '/reviews', tone: 'text-review' },
+    { label: t('processedDocuments'), value: processedDocuments, icon: FileCheck2, href: '/documents', tone: 'text-verified' },
+    { label: t('failedOperations'), value: metrics?.failed_operations ?? 0, icon: ShieldAlert, href: '/operations', tone: 'text-danger' },
+    { label: t('upcomingDeadlines'), value: metrics?.upcoming_deadlines ?? 0, icon: CalendarClock, href: '/deadlines', tone: 'text-warning' },
+    { label: t('unreadNotifications'), value: metrics?.unread_notifications ?? 0, icon: Bell, href: '/notifications', tone: 'text-foreground-secondary' },
+  ]
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-zinc-500 dark:text-zinc-400">Welcome to MESA Law Intelligence Platform.</p>
-      </div>
-      
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { title: 'Active Matters', value: metrics.active_matters, icon: <Activity className="w-5 h-5 text-blue-400" />, href: '/matters' },
-          { title: 'Pending Reviews', value: metrics.pending_reviews, icon: <FileText className="w-5 h-5 text-purple-400" />, href: '/reviews' },
-          { title: 'Upcoming Deadlines', value: metrics.upcoming_deadlines, icon: <Clock className="w-5 h-5 text-orange-400" />, href: '/deadlines' },
-          { title: 'Unread Notifications', value: metrics.unread_notifications, icon: <Bell className="w-5 h-5 text-zinc-400" />, href: '/notifications' },
-        ].map((stat, i) => (
-          <Link key={i} href={stat.href} className="block">
-            <div className="glass-card rounded-xl p-6 transition-all hover:scale-[1.02] h-full flex flex-col justify-between group">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 group-hover:text-[var(--foreground)] transition-colors">{stat.title}</h3>
-                {stat.icon}
-              </div>
-              <p className="text-3xl font-bold">{stat.value}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-      
-      {metrics.system_status === 'degraded' && (
-        <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl flex items-start gap-4">
-          <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
-          <div>
-            <h4 className="text-sm font-medium text-orange-600 dark:text-orange-400">System Capability Degraded</h4>
-            <p className="text-sm text-orange-600/80 dark:text-orange-400/80 mt-1">
-              Some intelligence features might be limited. Degraded components: {metrics.degraded_capabilities?.join(', ')}
-            </p>
-          </div>
+    <div className="space-y-6">
+      <PageHeader title={t('title')} description={t('description')} />
+
+      {metrics?.system_status === 'degraded' && (
+        <div className="flex gap-3 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm" role="status">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden="true" />
+          <div><p className="font-semibold text-warning">{t('degradedTitle')}</p><p className="mt-1 text-foreground-secondary">{t('degradedDescription', { capabilities: metrics.degraded_capabilities.join(', ') })}</p></div>
         </div>
       )}
 
-      {/* Widgets Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Active Matters Widget */}
-        <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-          <div className="p-4 border-b border-[var(--border-surface)] flex items-center justify-between bg-[var(--bg-surface)]">
-            <h3 className="font-semibold flex items-center gap-2"><FolderOpen className="w-4 h-4 text-[var(--color-anthracite-500)]" /> Active Matters</h3>
-            <Link href="/matters" className="text-xs text-[var(--color-lila-600)] hover:underline flex items-center gap-1">View all <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Matter Name</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingMatters ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-4">Loading...</TableCell></TableRow>
-                ) : recentMatters.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-4 text-zinc-400">No active matters</TableCell></TableRow>
-                ) : (
-                  recentMatters.map(m => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">
-                        <Link href={`/matters/${m.id}`} className="hover:underline">{m.name}</Link>
-                      </TableCell>
-                      <TableCell><StatusBadge status={m.status === 'open' ? 'success' : 'neutral'} label={m.status.toUpperCase()} /></TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {priorities.map((priority) => (
+          <Link key={priority.label} href={localizedHref(locale, priority.href)} className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            <Panel className="h-full transition-colors hover:border-border-strong">
+              <PanelBody className="flex items-center justify-between">
+                <div><p className="text-xs font-medium text-foreground-secondary">{priority.label}</p><p className="mt-1 text-3xl font-semibold tabular-nums">{priority.value}</p></div>
+                <priority.icon className={`size-5 ${priority.tone}`} aria-hidden="true" />
+              </PanelBody>
+            </Panel>
+          </Link>
+        ))}
+      </div>
 
-        {/* Upcoming Deadlines Widget */}
-        <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden">
-          <div className="p-4 border-b border-[var(--border-surface)] flex items-center justify-between bg-[var(--bg-surface)]">
-            <h3 className="font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-orange-500" /> Upcoming Deadlines</h3>
-            <Link href="/deadlines" className="text-xs text-[var(--color-lila-600)] hover:underline flex items-center gap-1">View all <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Due Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingDeadlines ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-4">Loading...</TableCell></TableRow>
-                ) : upcomingDeadlines.length === 0 ? (
-                  <TableRow><TableCell colSpan={2} className="text-center py-4 text-zinc-400">No upcoming deadlines</TableCell></TableRow>
-                ) : (
-                  upcomingDeadlines.map(d => (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.description}</TableCell>
-                      <TableCell className="text-orange-500">{new Date(d.due_date).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-        
-        {/* Pending Reviews Widget */}
-        <div className="glass-card rounded-xl border border-[var(--border-surface)] overflow-hidden lg:col-span-2">
-          <div className="p-4 border-b border-[var(--border-surface)] flex items-center justify-between bg-[var(--bg-surface)]">
-            <h3 className="font-semibold flex items-center gap-2"><FileText className="w-4 h-4 text-purple-500" /> Pending Reviews</h3>
-            <Link href="/reviews" className="text-xs text-[var(--color-lila-600)] hover:underline flex items-center gap-1">View all <ArrowRight className="w-3 h-3" /></Link>
-          </div>
-          <div className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Review Type</TableHead>
-                  <TableHead>Target ID</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoadingReviews ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-4">Loading...</TableCell></TableRow>
-                ) : pendingReviews.length === 0 ? (
-                  <TableRow><TableCell colSpan={3} className="text-center py-4 text-zinc-400">No pending reviews</TableCell></TableRow>
-                ) : (
-                  pendingReviews.map((r: any) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium capitalize">{r.review_type}</TableCell>
-                      <TableCell className="text-zinc-500 text-sm font-mono">{r.target_id}</TableCell>
-                      <TableCell><StatusBadge status="review-required" label={r.status} /></TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel>
+          <PanelHeader><h2 className="font-semibold">{t('activeMatters')}</h2><ViewAll locale={locale} href="/matters" label={t('viewAll')} /></PanelHeader>
+          <PanelBody className="divide-y divide-border-subtle p-0">
+            {mattersQuery.isLoading ? <div className="p-4"><LoadingState label={common('loading')} /></div> : matters.length === 0 ? <p className="p-6 text-sm text-foreground-secondary">{t('noMatters')}</p> : matters.map((matter) => (
+              <Link key={matter.id} href={localizedHref(locale, `/matters/${matter.id}`)} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-surface-subtle">
+                <span className="min-w-0 truncate font-medium">{matter.title}</span><StatusBadge status={matter.status === 'open' ? 'success' : 'neutral'} label={matter.status.toUpperCase()} />
+              </Link>
+            ))}
+          </PanelBody>
+        </Panel>
+
+        <Panel>
+          <PanelHeader><h2 className="font-semibold">{t('upcomingDeadlines')}</h2><ViewAll locale={locale} href="/deadlines" label={t('viewAll')} /></PanelHeader>
+          <PanelBody className="divide-y divide-border-subtle p-0">
+            {deadlinesQuery.isLoading ? <div className="p-4"><LoadingState label={common('loading')} /></div> : deadlines.length === 0 ? <p className="p-6 text-sm text-foreground-secondary">{t('noDeadlines')}</p> : deadlines.map((deadline) => (
+              <div key={deadline.id} className="flex items-center justify-between gap-4 px-4 py-3">
+                <span className="min-w-0 truncate font-medium">{deadline.description}</span><time className="shrink-0 text-sm text-warning">{new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(deadline.due_date))}</time>
+              </div>
+            ))}
+          </PanelBody>
+        </Panel>
+
+        <Panel className="xl:col-span-2">
+          <PanelHeader><h2 className="font-semibold">{t('pendingReviews')}</h2><ViewAll locale={locale} href="/reviews" label={t('viewAll')} /></PanelHeader>
+          <PanelBody className="divide-y divide-border-subtle p-0">
+            {reviewsQuery.isLoading ? <div className="p-4"><LoadingState label={common('loading')} /></div> : reviews.length === 0 ? <p className="p-6 text-sm text-foreground-secondary">{t('noReviews')}</p> : reviews.map((review) => (
+              <Link key={review.id} href={localizedHref(locale, `/reviews?review=${review.id}`)} className="grid gap-1 px-4 py-3 hover:bg-surface-subtle sm:grid-cols-[1fr_1fr_auto] sm:items-center">
+                <span className="truncate font-medium">{review.entity_type}</span><span className="technical-id truncate text-foreground-muted">{review.entity_id}</span><StatusBadge status="review-required" label={review.status} />
+              </Link>
+            ))}
+          </PanelBody>
+        </Panel>
       </div>
     </div>
   )
+}
+
+function ViewAll({ locale, href, label }: { locale: AppLocale; href: string; label: string }) {
+  return <Link href={localizedHref(locale, href)} className="inline-flex items-center gap-1 text-xs font-medium text-primary-content hover:underline">{label}<ArrowRight className="size-3.5" /></Link>
 }

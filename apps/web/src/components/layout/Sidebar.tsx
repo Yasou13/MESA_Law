@@ -1,256 +1,174 @@
 'use client'
 
-import { usePathname, useRouter } from 'next/navigation'
+import {
+  BookOpenCheck,
+  BriefcaseBusiness,
+  FileStack,
+  Gauge,
+  MessageSquareText,
+  Settings,
+  ShieldCheck,
+  X,
+} from 'lucide-react'
 import Link from 'next/link'
-import { FolderOpen, Search, LogOut, CheckSquare, LayoutDashboard, Settings, Users, Bell, FileText, Clock, FileEdit, ChevronDown, Check, Menu, X, FileCheck } from 'lucide-react'
-import { clsx } from 'clsx'
-import { signOut } from 'next-auth/react'
-import { CommandMenu } from './CommandMenu'
-import { useGetNotificationsApiV1NotificationsGet } from '@/api/endpoints/notifications/notifications'
-import { useListUserFirms } from '@/api/endpoints/default/default'
-import { useSetActiveFirmApiV1SessionActiveFirmPost, useGetSessionContextApiV1SessionContextGet } from '@/api/endpoints/session/session'
-import { useState, useEffect } from 'react'
-import { toast } from 'react-hot-toast'
-import { useTranslations } from 'next-intl'
-import { LanguageSwitcher } from './LanguageSwitcher'
-import { useQueryClient } from '@tanstack/react-query'
+import { useLocale, useTranslations } from 'next-intl'
+import { usePathname } from 'next/navigation'
+import { useEffect, useRef } from 'react'
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+import { localizedHref, pathnameWithoutLocale } from '@/lib/navigation'
 
 const navigation = [
-  { nameKey: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { nameKey: 'matters', href: '/matters', icon: FolderOpen },
-  { nameKey: 'documents', href: '/documents', icon: FileText },
-  { nameKey: 'review_center', href: '/reviews', icon: FileCheck },
-  { nameKey: 'drafts', href: '/drafts', icon: FileEdit },
-  { nameKey: 'notifications', href: '/notifications', icon: Bell },
-  { nameKey: 'operations', href: '/operations', icon: CheckSquare },
+  { key: 'dashboard', href: '/dashboard', icon: Gauge },
+  { key: 'matters', href: '/matters', icon: BriefcaseBusiness },
+  { key: 'documents', href: '/documents', icon: FileStack },
+  { key: 'review_center', href: '/reviews', icon: BookOpenCheck },
+  { key: 'askMesa', href: '/ask-mesa', icon: MessageSquareText },
+  { key: 'operations', href: '/operations', icon: ShieldCheck },
+  { key: 'settings', href: '/settings/profile', icon: Settings },
 ] as const
 
-const adminNavigation = [
-  { nameKey: 'members', href: '/admin/members', icon: Users },
-  { nameKey: 'audit', href: '/admin/audit', icon: FileText },
-  { nameKey: 'settings', href: '/admin/settings', icon: Settings },
-] as const
+interface SidebarProps {
+  mobileOpen: boolean
+  onMobileClose: () => void
+}
 
-export function Sidebar() {
-  const tNav = useTranslations('Navigation')
-  const tAdmin = useTranslations('Administration')
-  const tSidebar = useTranslations('Sidebar')
-  
+export function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const { data: notifRes } = useGetNotificationsApiV1NotificationsGet()
-  const unreadCount = Array.isArray(notifRes)
-    ? notifRes.filter((n: { status?: string }) => n.status !== 'READ').length
-    : 0
-
-  const { data: firmsRes } = useListUserFirms()
-  const firms = (firmsRes as unknown as any[]) || []
-  const { mutate: setActiveFirm, isPending: isSwitching } = useSetActiveFirmApiV1SessionActiveFirmPost()
-
-  const { data: contextRes, refetch: refetchContext } = useGetSessionContextApiV1SessionContextGet()
-  const activeFirmId = (contextRes as any)?.tenant_id || null
-
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const locale = useLocale() as 'tr' | 'en'
+  const navigationT = useTranslations('Navigation')
+  const sidebarT = useTranslations('Sidebar')
+  const routePath = pathnameWithoutLocale(pathname)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const mobileDialogRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
-    if (!activeFirmId && firms.length > 0) {
-      // API currently has no active firm, but user has firms, set the first one automatically
-      // Note: We don't automatically trigger a mutation here if we don't want to infinite-loop,
-      // but usually the backend defaults to the user's firm if they only have one.
-    }
-  }, [activeFirmId, firms])
-
-  const handleSwitchFirm = (firmId: string) => {
-    setIsDropdownOpen(false)
-    if (firmId === activeFirmId) return
-
-    setActiveFirm({ params: { firm_id: firmId } }, {
-      onSuccess: async () => {
-        await refetchContext()
-        queryClient.clear() // Phase 2: Clear TanStack Query cache
-        toast.success('Switched active firm')
-        router.push('/dashboard') // Phase 2: Navigate to dashboard without reload
-        router.refresh()
-      },
-      onError: () => {
-        toast.error('Failed to switch firm')
+    if (!mobileOpen) return
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
+    const handleDialogKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onMobileClose()
+        return
       }
-    })
-  }
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(
+        mobileDialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.offsetParent !== null)
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', handleDialogKey)
+    return () => {
+      document.removeEventListener('keydown', handleDialogKey)
+      document.body.style.overflow = previousOverflow
+      previousFocus?.focus()
+    }
+  }, [mobileOpen, onMobileClose])
 
-  const activeFirmName = firms.find((f: { id: string; name: string }) => f.id === activeFirmId)?.name || 'MESA Law'
-
-  return (
+  const content = (
     <>
-      {/* Mobile Menu Button */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-[var(--bg-surface)] border-b border-[var(--border-surface)] flex items-center px-4 z-40 justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/icon-192.png" alt="MESA Logo" className="w-8 h-8 rounded-lg shadow-sm" />
-          <span className="text-xl font-bold text-[var(--foreground)]">MESA</span>
-        </Link>
-        <button 
-          onClick={() => setIsMobileOpen(true)}
-          className="p-2 -mr-2 text-[var(--foreground)]"
-          aria-label="Open menu"
+      <div className="flex h-16 shrink-0 items-center justify-between border-b border-sidebar-border px-4 lg:justify-center xl:justify-start">
+        <Link
+          href={localizedHref(locale, '/dashboard')}
+          onClick={onMobileClose}
+          className="flex min-w-0 items-center gap-3 rounded-md focus-visible:outline-offset-4"
         >
-          <Menu className="w-6 h-6" />
+          {/* The existing product mark is intentionally preserved. */}
+          <img src="/icon-192.png" alt="MESA" className="size-8 rounded-md" />
+          <span className="truncate text-base font-semibold tracking-[-0.01em] text-white lg:hidden xl:inline">
+            MESA Law
+          </span>
+        </Link>
+        <button
+          ref={closeButtonRef}
+          type="button"
+          onClick={onMobileClose}
+          className="flex size-10 items-center justify-center rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-white lg:hidden"
+          aria-label={sidebarT('close')}
+        >
+          <X className="size-5" />
         </button>
       </div>
 
-      {/* Mobile Backdrop */}
-      {isMobileOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-[var(--background)]/80 backdrop-blur-sm z-40"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      )}
-
-      {/* Sidebar Content */}
-      <div className={clsx(
-        "flex flex-col w-64 border-r border-[var(--border-surface)] bg-[var(--bg-surface)] backdrop-blur-xl h-screen fixed md:sticky top-0 z-50 transition-transform duration-300 ease-in-out overflow-y-auto",
-        isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-      )}>
-        {/* Header & Firm Switcher */}
-        <div className="p-6 pb-2">
-          <div className="flex items-center justify-between mb-6">
-            <Link href="/" className="flex items-center gap-2" onClick={() => setIsMobileOpen(false)}>
-              <img src="/icon-192.png" alt="MESA Logo" className="w-8 h-8 rounded-lg shadow-sm" />
-              <span className="text-xl font-bold text-[var(--foreground)]">MESA</span>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5" aria-label={sidebarT('mainNavigation')}>
+        {navigation.map((item) => {
+          const active = item.href === '/dashboard'
+            ? routePath === item.href
+            : routePath.startsWith(item.href)
+          const link = (
+            <Link
+              key={item.href}
+              href={localizedHref(locale, item.href)}
+              onClick={onMobileClose}
+              aria-current={active ? 'page' : undefined}
+              className={cn(
+                'group relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150',
+                active
+                  ? 'bg-sidebar-accent text-white before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary-100'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-white',
+                'lg:justify-center lg:px-0 xl:justify-start xl:px-3',
+              )}
+            >
+              <item.icon className="size-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span className="truncate lg:hidden xl:inline">{navigationT(item.key)}</span>
             </Link>
-            <button 
-              className="md:hidden p-1 text-[var(--color-anthracite-400)] hover:text-[var(--foreground)]"
-              onClick={() => setIsMobileOpen(false)}
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          {/* Firm Switcher */}
-          <div className="relative">
-            <button 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              disabled={isSwitching}
-              className="w-full flex items-center justify-between px-3 py-2 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-lg text-sm text-[var(--foreground)] hover:border-[var(--color-lila-500)]/50 transition-colors disabled:opacity-50"
-            >
-              <span className="font-medium truncate mr-2">{isSwitching ? tSidebar('switching') : activeFirmName}</span>
-              <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isDropdownOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--bg-surface)] border border-[var(--border-surface)] rounded-lg shadow-xl z-50 overflow-hidden">
-                {firms.map((firm: { id: string; name: string }) => (
-                  <button
-                    key={firm.id}
-                    onClick={() => handleSwitchFirm(firm.id)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)] transition-colors text-left"
-                  >
-                    <span className="truncate">{firm.name}</span>
-                    {firm.id === activeFirmId && <Check className="w-4 h-4 text-[var(--color-lila-500)]" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          )
+          return (
+            <Tooltip key={item.href}>
+              <TooltipTrigger render={link} />
+              <TooltipContent side="right" className="hidden lg:block xl:hidden">{navigationT(item.key)}</TooltipContent>
+            </Tooltip>
+          )
+        })}
+      </nav>
 
-        {/* Search */}
-        <div className="px-4 mt-6">
-          <CommandMenu />
-        </div>
-
-        {/* Main Navigation */}
-        <nav className="px-4 space-y-1 mt-4">
-          {navigation.map((item) => {
-            const isActive = pathname.startsWith(item.href)
-            return (
-              <Link
-                key={item.nameKey}
-                href={item.href}
-                onClick={() => setIsMobileOpen(false)}
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                  isActive 
-                    ? "bg-[var(--color-lila-500)] text-white shadow-md shadow-[var(--color-lila-500)]/20" 
-                    : "text-[var(--color-anthracite-500)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)]"
-                )}
-              >
-                <item.icon className={clsx("w-5 h-5", isActive ? "text-white" : "text-[var(--color-anthracite-400)]")} />
-                {tNav(item.nameKey)}
-              </Link>
-            )
-          })}
-        </nav>
-
-        {/* Administration Navigation */}
-        <div className="mt-8 px-4">
-          <h3 className="px-3 text-xs font-semibold text-[var(--color-anthracite-400)] uppercase tracking-wider mb-2">{tAdmin('title')}</h3>
-          <nav className="space-y-1">
-            {adminNavigation.map((item) => {
-              const isActive = pathname.startsWith(item.href)
-              return (
-                <Link
-                  key={item.nameKey}
-                  href={item.href}
-                  onClick={() => setIsMobileOpen(false)}
-                  className={clsx(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                    isActive 
-                      ? "bg-[var(--color-lila-500)] text-white shadow-md shadow-[var(--color-lila-500)]/20" 
-                      : "text-[var(--color-anthracite-500)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)]"
-                  )}
-                >
-                  <item.icon className={clsx("w-5 h-5", isActive ? "text-white" : "text-[var(--color-anthracite-400)]")} />
-                  {tAdmin(item.nameKey)}
-                </Link>
-              )
-            })}
-          </nav>
-        </div>
-
-        {/* Bottom Section */}
-        <div className="mt-auto px-4 pb-4">
-          <Link href="/notifications" className="block bg-[var(--bg-surface-hover)] rounded-xl border border-[var(--border-surface)] p-3 mb-4 flex items-center justify-between hover:border-[var(--color-lila-500)]/50 transition-colors">
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Bell className="w-5 h-5 text-[var(--color-anthracite-400)]" />
-                {unreadCount > 0 && (
-                  <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[var(--color-lila-500)] rounded-full border-2 border-[var(--bg-surface-hover)]"></div>
-                )}
-              </div>
-              <div className="text-xs font-medium text-[var(--foreground)]">{tNav('notifications')} {unreadCount > 0 && `(${unreadCount})`}</div>
-            </div>
-          </Link>
-
-          <div className="flex items-center justify-between text-xs text-[var(--color-anthracite-400)] px-2 mb-4">
-            <span className="flex items-center gap-1.5"><kbd className="bg-[var(--bg-surface)] border border-[var(--border-surface)] px-1.5 rounded font-mono">⌘</kbd> + <kbd className="bg-[var(--bg-surface)] border border-[var(--border-surface)] px-1.5 rounded font-mono">K</kbd> for Ops</span>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-[var(--border-surface)]">
-          <div className="mb-4">
-            <LanguageSwitcher />
-          </div>
-          <Link 
-            href="/settings/profile"
-            className="w-full flex items-center gap-3 px-3 py-2 mb-2 rounded-lg text-sm font-medium text-[var(--color-anthracite-400)] hover:text-[var(--foreground)] hover:bg-[var(--bg-surface-hover)] transition-colors"
-            onClick={() => setIsMobileOpen(false)}
-          >
-            <Users className="w-5 h-5" />
-            Profile Settings
-          </Link>
-          <button 
-            onClick={() => signOut({ callbackUrl: '/login' })}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-[var(--color-semantic-error)] hover:bg-[var(--color-semantic-error)]/10 cursor-pointer transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            {tSidebar('sign_out')}
-          </button>
-        </div>
+      <div className="border-t border-sidebar-border px-4 py-4 text-xs leading-5 text-sidebar-foreground lg:hidden xl:block">
+        <p className="font-medium text-white">MESA Law</p>
+        <p>{sidebarT('tagline')}</p>
       </div>
+    </>
+  )
+
+  return (
+    <>
+      <aside data-testid="desktop-sidebar" className="hidden h-screen w-[72px] shrink-0 flex-col bg-sidebar lg:flex xl:w-64">
+        {content}
+      </aside>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label={sidebarT('close')}
+            className="absolute inset-0 bg-neutral-950/50"
+            onClick={onMobileClose}
+          />
+          <aside
+            ref={mobileDialogRef}
+            data-testid="mobile-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label={sidebarT('mainNavigation')}
+            className="relative flex h-full w-[min(20rem,88vw)] flex-col bg-sidebar shadow-md"
+          >
+            {content}
+          </aside>
+        </div>
+      )}
     </>
   )
 }

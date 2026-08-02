@@ -6,7 +6,7 @@
       "clientId": "mesa-client",
       "enabled": true,
       "publicClient": false,
-      "secret": "mesa-client-secret",
+      "secret": "${KEYCLOAK_CLIENT_SECRET}",
       "directAccessGrantsEnabled": true,
       "redirectUris": ["http://localhost:3000/*"],
       "webOrigins": ["http://localhost:3000"]
@@ -21,18 +21,5 @@
       { "name": "AUDITOR" },
       { "name": "SUPPORT_TEMPORARY" }
     ]
-  },
-  "users": [
-    {
-      "username": "admin@mesa.local",
-      "enabled": true,
-      "email": "admin@mesa.local",
-      "firstName": "Admin",
-      "lastName": "User",
-      "credentials": [
-        { "type": "password", "value": "admin", "temporary": false }
-      ],
-      "realmRoles": ["FIRM_ADMIN"]
-    }
-  ]
+  }
 }

@@ -6,16 +6,19 @@
  */
 
 export interface MatterResponse {
-  id: string;
-  title: string;
-  internal_reference?: string | null;
-  status: string;
-  client_name?: string | null;
-  jurisdiction?: string | null;
-  case_type?: string | null;
-  confidentiality_level: string;
-  ai_processing_policy: string;
-  opened_at?: string | null;
-  closed_at?: string | null;
   access_scope?: string | null;
+  ai_processing_policy: string;
+  case_type?: string | null;
+  client_name?: string | null;
+  closed_at?: string | null;
+  confidentiality_level: string;
+  created_at: string;
+  id: string;
+  internal_reference?: string | null;
+  jurisdiction?: string | null;
+  opened_at?: string | null;
+  responsible_attorney?: string | null;
+  status: string;
+  title: string;
+  updated_at: string;
 }

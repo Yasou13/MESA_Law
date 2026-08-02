@@ -4,7 +4,7 @@ import createNextIntlPlugin from 'next-intl/plugin';
 const withNextIntl = createNextIntlPlugin('./src/i18n.ts');
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: process.env.MESA_LAW_STANDALONE === '1' ? 'standalone' : undefined,
   async rewrites() {
     return [
       {

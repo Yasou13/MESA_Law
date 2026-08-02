@@ -24,26 +24,38 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  ClaimEvidenceResponse,
+  ClaimResponse,
   ConflictCheckRequest,
   ConflictCheckResponse,
   DocumentResponse,
+  DocumentViewerContextResponse,
+  DownloadResponse,
   ElevateRoleParams,
+  EvidenceResponse,
   FirmCreateRequest,
+  FirmMemberResponse,
   FirmResponse,
   HTTPValidationError,
   MatterCreate,
-  MatterQABody,
+  MatterPartyResponse,
   MatterResponse,
   OverrideConflictParams,
   OverrideConflictRequest,
+  OverrideConflictResponse,
   ParsedDocumentResponse,
   ParsedPageResponse,
+  QAResponse,
+  QuestionRequest,
   RoleElevationRequest,
+  TimelineEventResponse,
+  UploadCompleteResponse,
   UploadIntentRequest,
   UploadIntentResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -65,107 +77,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type listUserFirmsResponse200 = {
-  data: FirmResponse[]
-  status: 200
-}
-
-export type listUserFirmsResponseSuccess = (listUserFirmsResponse200) & {
-  headers: Headers;
-};
-;
-
-export type listUserFirmsResponse = (listUserFirmsResponseSuccess)
-
-export const getListUserFirmsUrl = () => {
-
-
-
-
-  return `/api/v1/firms`
-}
-
 /**
- * @summary List User Firms
+ * @summary Root
  */
-export const listUserFirms = async ( options?: RequestInit): Promise<listUserFirmsResponse> => {
+export const rootGet = (
 
-  return customInstance<listUserFirmsResponse>(getListUserFirmsUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<unknown>(
+      {url: `/`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getListUserFirmsQueryKey = () => {
+export const getRootGetQueryKey = () => {
     return [
-    `/api/v1/firms`
+    `/`
     ] as const;
     }
 
 
-export const getListUserFirmsQueryOptions = <TData = Awaited<ReturnType<typeof listUserFirms>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getRootGetQueryOptions = <TData = Awaited<ReturnType<typeof rootGet>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListUserFirmsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getRootGetQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserFirms>>> = ({ signal }) => listUserFirms({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof rootGet>>> = ({ signal }) => rootGet(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type ListUserFirmsQueryResult = NonNullable<Awaited<ReturnType<typeof listUserFirms>>>
-export type ListUserFirmsQueryError = unknown
+export type RootGetQueryResult = NonNullable<Awaited<ReturnType<typeof rootGet>>>
+export type RootGetQueryError = ErrorType<unknown>
 
 
-export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>> & Pick<
+export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listUserFirms>>,
+          Awaited<ReturnType<typeof rootGet>>,
           TError,
-          Awaited<ReturnType<typeof listUserFirms>>
+          Awaited<ReturnType<typeof rootGet>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>> & Pick<
+export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listUserFirms>>,
+          Awaited<ReturnType<typeof rootGet>>,
           TError,
-          Awaited<ReturnType<typeof listUserFirms>>
+          Awaited<ReturnType<typeof rootGet>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
- * @summary List User Firms
+ * @summary Root
  */
 
-export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useRootGet<TData = Awaited<ReturnType<typeof rootGet>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof rootGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getListUserFirmsQueryOptions(options)
+  const queryOptions = getRootGetQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -176,1476 +168,21 @@ export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms
 
 
 
-
-export type createFirmResponse200 = {
-  data: FirmResponse
-  status: 200
-}
-
-export type createFirmResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createFirmResponseSuccess = (createFirmResponse200) & {
-  headers: Headers;
-};
-export type createFirmResponseError = (createFirmResponse422) & {
-  headers: Headers;
-};
-
-export type createFirmResponse = (createFirmResponseSuccess | createFirmResponseError)
-
-export const getCreateFirmUrl = () => {
-
-
-
-
-  return `/api/v1/firms`
-}
-
-/**
- * @summary Create Firm
- */
-export const createFirm = async (firmCreateRequest: FirmCreateRequest, options?: RequestInit): Promise<createFirmResponse> => {
-
-  return customInstance<createFirmResponse>(getCreateFirmUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(firmCreateRequest)
-  }
-);}
-
-
-
-
-
-export const getCreateFirmMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: FirmCreateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: FirmCreateRequest}, TContext> => {
-
-const mutationKey = ['createFirm'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFirm>>, {data: FirmCreateRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createFirm(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateFirmMutationResult = NonNullable<Awaited<ReturnType<typeof createFirm>>>
-    export type CreateFirmMutationBody = FirmCreateRequest
-    export type CreateFirmMutationError = HTTPValidationError
-
-    /**
- * @summary Create Firm
- */
-export const useCreateFirm = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: FirmCreateRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createFirm>>,
-        TError,
-        {data: FirmCreateRequest},
-        TContext
-      > => {
-      return useMutation(getCreateFirmMutationOptions(options), queryClient);
-    }
-    export type listFirmMembersResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listFirmMembersResponseSuccess = (listFirmMembersResponse200) & {
-  headers: Headers;
-};
-;
-
-export type listFirmMembersResponse = (listFirmMembersResponseSuccess)
-
-export const getListFirmMembersUrl = () => {
-
-
-
-
-  return `/api/v1/firms/members`
-}
-
-/**
- * @summary List Firm Members
- */
-export const listFirmMembers = async ( options?: RequestInit): Promise<listFirmMembersResponse> => {
-
-  return customInstance<listFirmMembersResponse>(getListFirmMembersUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListFirmMembersQueryKey = () => {
-    return [
-    `/api/v1/firms/members`
-    ] as const;
-    }
-
-
-export const getListFirmMembersQueryOptions = <TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListFirmMembersQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFirmMembers>>> = ({ signal }) => listFirmMembers({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListFirmMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listFirmMembers>>>
-export type ListFirmMembersQueryError = unknown
-
-
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listFirmMembers>>,
-          TError,
-          Awaited<ReturnType<typeof listFirmMembers>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listFirmMembers>>,
-          TError,
-          Awaited<ReturnType<typeof listFirmMembers>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Firm Members
- */
-
-export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListFirmMembersQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type getFirmDetailsResponse200 = {
-  data: FirmResponse
-  status: 200
-}
-
-export type getFirmDetailsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getFirmDetailsResponseSuccess = (getFirmDetailsResponse200) & {
-  headers: Headers;
-};
-export type getFirmDetailsResponseError = (getFirmDetailsResponse422) & {
-  headers: Headers;
-};
-
-export type getFirmDetailsResponse = (getFirmDetailsResponseSuccess | getFirmDetailsResponseError)
-
-export const getGetFirmDetailsUrl = (firmId: string,) => {
-
-
-
-
-  return `/api/v1/firms/${firmId}`
-}
-
-/**
- * @summary Get Firm Details
- */
-export const getFirmDetails = async (firmId: string, options?: RequestInit): Promise<getFirmDetailsResponse> => {
-
-  return customInstance<getFirmDetailsResponse>(getGetFirmDetailsUrl(firmId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetFirmDetailsQueryKey = (firmId: string,) => {
-    return [
-    `/api/v1/firms/${firmId}`
-    ] as const;
-    }
-
-
-export const getGetFirmDetailsQueryOptions = <TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = HTTPValidationError>(firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetFirmDetailsQueryKey(firmId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFirmDetails>>> = ({ signal }) => getFirmDetails(firmId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: firmId !== null && firmId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetFirmDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof getFirmDetails>>>
-export type GetFirmDetailsQueryError = HTTPValidationError
-
-
-export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = HTTPValidationError>(
- firmId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getFirmDetails>>,
-          TError,
-          Awaited<ReturnType<typeof getFirmDetails>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = HTTPValidationError>(
- firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getFirmDetails>>,
-          TError,
-          Awaited<ReturnType<typeof getFirmDetails>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = HTTPValidationError>(
- firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Get Firm Details
- */
-
-export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = HTTPValidationError>(
- firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetFirmDetailsQueryOptions(firmId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type elevateRoleResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type elevateRoleResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type elevateRoleResponseSuccess = (elevateRoleResponse200) & {
-  headers: Headers;
-};
-export type elevateRoleResponseError = (elevateRoleResponse422) & {
-  headers: Headers;
-};
-
-export type elevateRoleResponse = (elevateRoleResponseSuccess | elevateRoleResponseError)
-
-export const getElevateRoleUrl = (firmId: string,
-    userId: string,
-    params?: ElevateRoleParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/firms/${firmId}/members/${userId}/role?${stringifiedParams}` : `/api/v1/firms/${firmId}/members/${userId}/role`
-}
-
-/**
- * @summary Elevate Role
- */
-export const elevateRole = async (firmId: string,
-    userId: string,
-    roleElevationRequest: RoleElevationRequest,
-    params?: ElevateRoleParams, options?: RequestInit): Promise<elevateRoleResponse> => {
-
-  return customInstance<elevateRoleResponse>(getElevateRoleUrl(firmId,userId,params),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(roleElevationRequest)
-  }
-);}
-
-
-
-
-
-export const getElevateRoleMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext> => {
-
-const mutationKey = ['elevateRole'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof elevateRole>>, {firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}> = (props) => {
-          const {firmId,userId,data,params} = props ?? {};
-
-          return  elevateRole(firmId,userId,data,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ElevateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof elevateRole>>>
-    export type ElevateRoleMutationBody = RoleElevationRequest
-    export type ElevateRoleMutationError = HTTPValidationError
-
-    /**
- * @summary Elevate Role
- */
-export const useElevateRole = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof elevateRole>>,
-        TError,
-        {firmId: string;userId: string;data: RoleElevationRequest;params?: ElevateRoleParams},
-        TContext
-      > => {
-      return useMutation(getElevateRoleMutationOptions(options), queryClient);
-    }
-    export type listMattersResponse200 = {
-  data: MatterResponse[]
-  status: 200
-}
-
-export type listMattersResponseSuccess = (listMattersResponse200) & {
-  headers: Headers;
-};
-;
-
-export type listMattersResponse = (listMattersResponseSuccess)
-
-export const getListMattersUrl = () => {
-
-
-
-
-  return `/api/v1/matters`
-}
-
-/**
- * @summary List Matters
- */
-export const listMatters = async ( options?: RequestInit): Promise<listMattersResponse> => {
-
-  return customInstance<listMattersResponse>(getListMattersUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListMattersQueryKey = () => {
-    return [
-    `/api/v1/matters`
-    ] as const;
-    }
-
-
-export const getListMattersQueryOptions = <TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMattersQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatters>>> = ({ signal }) => listMatters({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMattersQueryResult = NonNullable<Awaited<ReturnType<typeof listMatters>>>
-export type ListMattersQueryError = unknown
-
-
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatters>>,
-          TError,
-          Awaited<ReturnType<typeof listMatters>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatters>>,
-          TError,
-          Awaited<ReturnType<typeof listMatters>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Matters
- */
-
-export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListMattersQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type createMatterResponse201 = {
-  data: MatterResponse
-  status: 201
-}
-
-export type createMatterResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createMatterResponseSuccess = (createMatterResponse201) & {
-  headers: Headers;
-};
-export type createMatterResponseError = (createMatterResponse422) & {
-  headers: Headers;
-};
-
-export type createMatterResponse = (createMatterResponseSuccess | createMatterResponseError)
-
-export const getCreateMatterUrl = () => {
-
-
-
-
-  return `/api/v1/matters`
-}
-
-/**
- * @summary Create Matter
- */
-export const createMatter = async (matterCreate: MatterCreate, options?: RequestInit): Promise<createMatterResponse> => {
-
-  return customInstance<createMatterResponse>(getCreateMatterUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(matterCreate)
-  }
-);}
-
-
-
-
-
-export const getCreateMatterMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: MatterCreate}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: MatterCreate}, TContext> => {
-
-const mutationKey = ['createMatter'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMatter>>, {data: MatterCreate}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createMatter(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateMatterMutationResult = NonNullable<Awaited<ReturnType<typeof createMatter>>>
-    export type CreateMatterMutationBody = MatterCreate
-    export type CreateMatterMutationError = HTTPValidationError
-
-    /**
- * @summary Create Matter
- */
-export const useCreateMatter = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: MatterCreate}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createMatter>>,
-        TError,
-        {data: MatterCreate},
-        TContext
-      > => {
-      return useMutation(getCreateMatterMutationOptions(options), queryClient);
-    }
-    export type getMatterResponse200 = {
-  data: MatterResponse
-  status: 200
-}
-
-export type getMatterResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type getMatterResponseSuccess = (getMatterResponse200) & {
-  headers: Headers;
-};
-export type getMatterResponseError = (getMatterResponse422) & {
-  headers: Headers;
-};
-
-export type getMatterResponse = (getMatterResponseSuccess | getMatterResponseError)
-
-export const getGetMatterUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}`
-}
-
-/**
- * @summary Get Matter
- */
-export const getMatter = async (matterId: string, options?: RequestInit): Promise<getMatterResponse> => {
-
-  return customInstance<getMatterResponse>(getGetMatterUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetMatterQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/matters/${matterId}`
-    ] as const;
-    }
-
-
-export const getGetMatterQueryOptions = <TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetMatterQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatter>>> = ({ signal }) => getMatter(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type GetMatterQueryResult = NonNullable<Awaited<ReturnType<typeof getMatter>>>
-export type GetMatterQueryError = HTTPValidationError
-
-
-export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMatter>>,
-          TError,
-          Awaited<ReturnType<typeof getMatter>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getMatter>>,
-          TError,
-          Awaited<ReturnType<typeof getMatter>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary Get Matter
- */
-
-export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getGetMatterQueryOptions(matterId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type rebuildMatterMesaResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type rebuildMatterMesaResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type rebuildMatterMesaResponseSuccess = (rebuildMatterMesaResponse200) & {
-  headers: Headers;
-};
-export type rebuildMatterMesaResponseError = (rebuildMatterMesaResponse422) & {
-  headers: Headers;
-};
-
-export type rebuildMatterMesaResponse = (rebuildMatterMesaResponseSuccess | rebuildMatterMesaResponseError)
-
-export const getRebuildMatterMesaUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/rebuild-mesa`
-}
-
-/**
- * @summary Rebuild Matter Mesa
- */
-export const rebuildMatterMesa = async (matterId: string, options?: RequestInit): Promise<rebuildMatterMesaResponse> => {
-
-  return customInstance<rebuildMatterMesaResponse>(getRebuildMatterMesaUrl(matterId),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getRebuildMatterMesaMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext> => {
-
-const mutationKey = ['rebuildMatterMesa'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rebuildMatterMesa>>, {matterId: string}> = (props) => {
-          const {matterId} = props ?? {};
-
-          return  rebuildMatterMesa(matterId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RebuildMatterMesaMutationResult = NonNullable<Awaited<ReturnType<typeof rebuildMatterMesa>>>
-
-    export type RebuildMatterMesaMutationError = HTTPValidationError
-
-    /**
- * @summary Rebuild Matter Mesa
- */
-export const useRebuildMatterMesa = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof rebuildMatterMesa>>,
-        TError,
-        {matterId: string},
-        TContext
-      > => {
-      return useMutation(getRebuildMatterMesaMutationOptions(options), queryClient);
-    }
-    export type matterQAResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type matterQAResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type matterQAResponseSuccess = (matterQAResponse200) & {
-  headers: Headers;
-};
-export type matterQAResponseError = (matterQAResponse422) & {
-  headers: Headers;
-};
-
-export type matterQAResponse = (matterQAResponseSuccess | matterQAResponseError)
-
-export const getMatterQAUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/qa`
-}
-
-/**
- * @summary Matter Qa Endpoint
- */
-export const matterQA = async (matterId: string,
-    matterQABody: MatterQABody, options?: RequestInit): Promise<matterQAResponse> => {
-
-  return customInstance<matterQAResponse>(getMatterQAUrl(matterId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(matterQABody)
-  }
-);}
-
-
-
-
-
-export const getMatterQAMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: MatterQABody}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: MatterQABody}, TContext> => {
-
-const mutationKey = ['matterQA'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof matterQA>>, {matterId: string;data: MatterQABody}> = (props) => {
-          const {matterId,data} = props ?? {};
-
-          return  matterQA(matterId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MatterQAMutationResult = NonNullable<Awaited<ReturnType<typeof matterQA>>>
-    export type MatterQAMutationBody = MatterQABody
-    export type MatterQAMutationError = HTTPValidationError
-
-    /**
- * @summary Matter Qa Endpoint
- */
-export const useMatterQA = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: MatterQABody}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof matterQA>>,
-        TError,
-        {matterId: string;data: MatterQABody},
-        TContext
-      > => {
-      return useMutation(getMatterQAMutationOptions(options), queryClient);
-    }
-    export type listMatterPartiesResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listMatterPartiesResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listMatterPartiesResponseSuccess = (listMatterPartiesResponse200) & {
-  headers: Headers;
-};
-export type listMatterPartiesResponseError = (listMatterPartiesResponse422) & {
-  headers: Headers;
-};
-
-export type listMatterPartiesResponse = (listMatterPartiesResponseSuccess | listMatterPartiesResponseError)
-
-export const getListMatterPartiesUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/parties`
-}
-
-/**
- * @summary List Matter Parties
- */
-export const listMatterParties = async (matterId: string, options?: RequestInit): Promise<listMatterPartiesResponse> => {
-
-  return customInstance<listMatterPartiesResponse>(getListMatterPartiesUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListMatterPartiesQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/matters/${matterId}/parties`
-    ] as const;
-    }
-
-
-export const getListMatterPartiesQueryOptions = <TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMatterPartiesQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterParties>>> = ({ signal }) => listMatterParties(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMatterPartiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterParties>>>
-export type ListMatterPartiesQueryError = HTTPValidationError
-
-
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterParties>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterParties>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterParties>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterParties>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Matter Parties
- */
-
-export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListMatterPartiesQueryOptions(matterId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type conflictCheckResponse200 = {
-  data: ConflictCheckResponse
-  status: 200
-}
-
-export type conflictCheckResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type conflictCheckResponseSuccess = (conflictCheckResponse200) & {
-  headers: Headers;
-};
-export type conflictCheckResponseError = (conflictCheckResponse422) & {
-  headers: Headers;
-};
-
-export type conflictCheckResponse = (conflictCheckResponseSuccess | conflictCheckResponseError)
-
-export const getConflictCheckUrl = () => {
-
-
-
-
-  return `/api/v1/matters/conflict-check`
-}
-
-/**
- * @summary Check Conflicts
- */
-export const conflictCheck = async (conflictCheckRequest: ConflictCheckRequest, options?: RequestInit): Promise<conflictCheckResponse> => {
-
-  return customInstance<conflictCheckResponse>(getConflictCheckUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(conflictCheckRequest)
-  }
-);}
-
-
-
-
-
-export const getConflictCheckMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext> => {
-
-const mutationKey = ['conflictCheck'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof conflictCheck>>, {data: ConflictCheckRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  conflictCheck(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ConflictCheckMutationResult = NonNullable<Awaited<ReturnType<typeof conflictCheck>>>
-    export type ConflictCheckMutationBody = ConflictCheckRequest
-    export type ConflictCheckMutationError = HTTPValidationError
-
-    /**
- * @summary Check Conflicts
- */
-export const useConflictCheck = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: ConflictCheckRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof conflictCheck>>,
-        TError,
-        {data: ConflictCheckRequest},
-        TContext
-      > => {
-      return useMutation(getConflictCheckMutationOptions(options), queryClient);
-    }
-    export type overrideConflictResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type overrideConflictResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type overrideConflictResponseSuccess = (overrideConflictResponse200) & {
-  headers: Headers;
-};
-export type overrideConflictResponseError = (overrideConflictResponse422) & {
-  headers: Headers;
-};
-
-export type overrideConflictResponse = (overrideConflictResponseSuccess | overrideConflictResponseError)
-
-export const getOverrideConflictUrl = (matterId: string,
-    params?: OverrideConflictParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/matters/${matterId}/override-conflict?${stringifiedParams}` : `/api/v1/matters/${matterId}/override-conflict`
-}
-
-/**
- * @summary Override Conflict
- */
-export const overrideConflict = async (matterId: string,
-    overrideConflictRequest: OverrideConflictRequest,
-    params?: OverrideConflictParams, options?: RequestInit): Promise<overrideConflictResponse> => {
-
-  return customInstance<overrideConflictResponse>(getOverrideConflictUrl(matterId,params),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(overrideConflictRequest)
-  }
-);}
-
-
-
-
-
-export const getOverrideConflictMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext> => {
-
-const mutationKey = ['overrideConflict'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof overrideConflict>>, {matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}> = (props) => {
-          const {matterId,data,params} = props ?? {};
-
-          return  overrideConflict(matterId,data,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type OverrideConflictMutationResult = NonNullable<Awaited<ReturnType<typeof overrideConflict>>>
-    export type OverrideConflictMutationBody = OverrideConflictRequest
-    export type OverrideConflictMutationError = HTTPValidationError
-
-    /**
- * @summary Override Conflict
- */
-export const useOverrideConflict = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof overrideConflict>>,
-        TError,
-        {matterId: string;data: OverrideConflictRequest;params?: OverrideConflictParams},
-        TContext
-      > => {
-      return useMutation(getOverrideConflictMutationOptions(options), queryClient);
-    }
-    export type createUploadIntentResponse200 = {
-  data: UploadIntentResponse
-  status: 200
-}
-
-export type createUploadIntentResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type createUploadIntentResponseSuccess = (createUploadIntentResponse200) & {
-  headers: Headers;
-};
-export type createUploadIntentResponseError = (createUploadIntentResponse422) & {
-  headers: Headers;
-};
-
-export type createUploadIntentResponse = (createUploadIntentResponseSuccess | createUploadIntentResponseError)
-
-export const getCreateUploadIntentUrl = () => {
-
-
-
-
-  return `/api/v1/documents/upload-intent`
-}
-
-/**
- * @summary Create Upload Intent
- */
-export const createUploadIntent = async (uploadIntentRequest: UploadIntentRequest, options?: RequestInit): Promise<createUploadIntentResponse> => {
-
-  return customInstance<createUploadIntentResponse>(getCreateUploadIntentUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(uploadIntentRequest)
-  }
-);}
-
-
-
-
-
-export const getCreateUploadIntentMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: UploadIntentRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: UploadIntentRequest}, TContext> => {
-
-const mutationKey = ['createUploadIntent'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createUploadIntent>>, {data: UploadIntentRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createUploadIntent(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateUploadIntentMutationResult = NonNullable<Awaited<ReturnType<typeof createUploadIntent>>>
-    export type CreateUploadIntentMutationBody = UploadIntentRequest
-    export type CreateUploadIntentMutationError = HTTPValidationError
-
-    /**
- * @summary Create Upload Intent
- */
-export const useCreateUploadIntent = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: UploadIntentRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof createUploadIntent>>,
-        TError,
-        {data: UploadIntentRequest},
-        TContext
-      > => {
-      return useMutation(getCreateUploadIntentMutationOptions(options), queryClient);
-    }
-    export type listMatterDocumentsResponse200 = {
-  data: DocumentResponse[]
-  status: 200
-}
-
-export type listMatterDocumentsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listMatterDocumentsResponseSuccess = (listMatterDocumentsResponse200) & {
-  headers: Headers;
-};
-export type listMatterDocumentsResponseError = (listMatterDocumentsResponse422) & {
-  headers: Headers;
-};
-
-export type listMatterDocumentsResponse = (listMatterDocumentsResponseSuccess | listMatterDocumentsResponseError)
-
-export const getListMatterDocumentsUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/documents/matters/${matterId}`
-}
-
-/**
- * @summary List Matter Documents
- */
-export const listMatterDocuments = async (matterId: string, options?: RequestInit): Promise<listMatterDocumentsResponse> => {
-
-  return customInstance<listMatterDocumentsResponse>(getListMatterDocumentsUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListMatterDocumentsQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/documents/matters/${matterId}`
-    ] as const;
-    }
-
-
-export const getListMatterDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListMatterDocumentsQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterDocuments>>> = ({ signal }) => listMatterDocuments(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListMatterDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterDocuments>>>
-export type ListMatterDocumentsQueryError = HTTPValidationError
-
-
-export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterDocuments>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterDocuments>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listMatterDocuments>>,
-          TError,
-          Awaited<ReturnType<typeof listMatterDocuments>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Matter Documents
- */
-
-export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListMatterDocumentsQueryOptions(matterId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type listAllDocumentsResponse200 = {
-  data: DocumentResponse[]
-  status: 200
-}
-
-export type listAllDocumentsResponseSuccess = (listAllDocumentsResponse200) & {
-  headers: Headers;
-};
-;
-
-export type listAllDocumentsResponse = (listAllDocumentsResponseSuccess)
-
-export const getListAllDocumentsUrl = () => {
-
-
-
-
-  return `/api/v1/documents`
-}
 
 /**
  * @summary List All Documents
  */
-export const listAllDocuments = async ( options?: RequestInit): Promise<listAllDocumentsResponse> => {
+export const listAllDocuments = (
 
-  return customInstance<listAllDocumentsResponse>(getListAllDocumentsUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<DocumentResponse[]>(
+      {url: `/api/v1/documents`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -1657,7 +194,7 @@ export const getListAllDocumentsQueryKey = () => {
     }
 
 
-export const getListAllDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListAllDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1666,7 +203,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllDocuments>>> = ({ signal }) => listAllDocuments({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllDocuments>>> = ({ signal }) => listAllDocuments(requestOptions, signal);
 
 
 
@@ -1676,10 +213,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAllDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAllDocuments>>>
-export type ListAllDocumentsQueryError = unknown
+export type ListAllDocumentsQueryError = ErrorType<unknown>
 
 
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = ErrorType<unknown>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAllDocuments>>,
@@ -1689,7 +226,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAllDocuments>>,
@@ -1699,7 +236,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1707,7 +244,7 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
  * @summary List All Documents
  */
 
-export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = unknown>(
+export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDocuments>>, TError = ErrorType<unknown>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAllDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1724,47 +261,176 @@ export function useListAllDocuments<TData = Awaited<ReturnType<typeof listAllDoc
 
 
 
-export type getDocumentResponse200 = {
-  data: DocumentResponse
-  status: 200
+/**
+ * @summary List Matter Documents
+ */
+export const listMatterDocuments = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<DocumentResponse[]>(
+      {url: `/api/v1/documents/matters/${matterId}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListMatterDocumentsQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/documents/matters/${matterId}`
+    ] as const;
+    }
+
+
+export const getListMatterDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMatterDocumentsQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterDocuments>>> = ({ signal }) => listMatterDocuments(matterId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type getDocumentResponse422 = {
-  data: HTTPValidationError
-  status: 422
+export type ListMatterDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterDocuments>>>
+export type ListMatterDocumentsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterDocuments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterDocuments>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Matter Documents
+ */
+
+export function useListMatterDocuments<TData = Awaited<ReturnType<typeof listMatterDocuments>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMatterDocumentsQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type getDocumentResponseSuccess = (getDocumentResponse200) & {
-  headers: Headers;
-};
-export type getDocumentResponseError = (getDocumentResponse422) & {
-  headers: Headers;
-};
-
-export type getDocumentResponse = (getDocumentResponseSuccess | getDocumentResponseError)
-
-export const getGetDocumentUrl = (documentId: string,) => {
 
 
 
 
-  return `/api/v1/documents/${documentId}`
-}
 
 /**
+ * @summary Create Upload Intent
+ */
+export const createUploadIntent = (
+    uploadIntentRequest: BodyType<UploadIntentRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<UploadIntentResponse>(
+      {url: `/api/v1/documents/upload-intent`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: uploadIntentRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getCreateUploadIntentMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: BodyType<UploadIntentRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: BodyType<UploadIntentRequest>}, TContext> => {
+
+const mutationKey = ['createUploadIntent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createUploadIntent>>, {data: BodyType<UploadIntentRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createUploadIntent(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateUploadIntentMutationResult = NonNullable<Awaited<ReturnType<typeof createUploadIntent>>>
+    export type CreateUploadIntentMutationBody = BodyType<UploadIntentRequest>
+    export type CreateUploadIntentMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Upload Intent
+ */
+export const useCreateUploadIntent = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUploadIntent>>, TError,{data: BodyType<UploadIntentRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createUploadIntent>>,
+        TError,
+        {data: BodyType<UploadIntentRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateUploadIntentMutationOptions(options), queryClient);
+    }
+    /**
  * @summary Get Document
  */
-export const getDocument = async (documentId: string, options?: RequestInit): Promise<getDocumentResponse> => {
-
-  return customInstance<getDocumentResponse>(getGetDocumentUrl(documentId),
-  {
-    ...options,
-    method: 'GET'
+export const getDocument = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<DocumentResponse>(
+      {url: `/api/v1/documents/${documentId}`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -1776,7 +442,7 @@ export const getGetDocumentQueryKey = (documentId: string,) => {
     }
 
 
-export const getGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<HTTPValidationError>>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1785,7 +451,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({ signal }) => getDocument(documentId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocument>>> = ({ signal }) => getDocument(documentId, requestOptions, signal);
 
 
 
@@ -1795,10 +461,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type GetDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getDocument>>>
-export type GetDocumentQueryError = HTTPValidationError
+export type GetDocumentQueryError = ErrorType<HTTPValidationError>
 
 
-export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof getDocument>>,
@@ -1808,7 +474,7 @@ export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof getDocument>>,
@@ -1818,7 +484,7 @@ export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, 
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -1826,7 +492,7 @@ export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, 
  * @summary Get Document
  */
 
-export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = HTTPValidationError>(
+export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1843,52 +509,25 @@ export function useGetDocument<TData = Awaited<ReturnType<typeof getDocument>>, 
 
 
 
-export type completeUploadResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type completeUploadResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type completeUploadResponseSuccess = (completeUploadResponse200) & {
-  headers: Headers;
-};
-export type completeUploadResponseError = (completeUploadResponse422) & {
-  headers: Headers;
-};
-
-export type completeUploadResponse = (completeUploadResponseSuccess | completeUploadResponseError)
-
-export const getCompleteUploadUrl = (documentId: string,) => {
-
-
-
-
-  return `/api/v1/documents/${documentId}/complete`
-}
-
 /**
  * @summary Complete Upload
  */
-export const completeUpload = async (documentId: string, options?: RequestInit): Promise<completeUploadResponse> => {
-
-  return customInstance<completeUploadResponse>(getCompleteUploadUrl(documentId),
-  {
-    ...options,
-    method: 'POST'
+export const completeUpload = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<UploadCompleteResponse>(
+      {url: `/api/v1/documents/${documentId}/complete`, method: 'POST', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getCompleteUploadMutationOptions = <TError = HTTPValidationError,
+export const getCompleteUploadMutationOptions = <TError = ErrorType<HTTPValidationError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeUpload>>, TError,{documentId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof completeUpload>>, TError,{documentId: string}, TContext> => {
 
@@ -1917,12 +556,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CompleteUploadMutationResult = NonNullable<Awaited<ReturnType<typeof completeUpload>>>
 
-    export type CompleteUploadMutationError = HTTPValidationError
+    export type CompleteUploadMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Complete Upload
  */
-export const useCompleteUpload = <TError = HTTPValidationError,
+export const useCompleteUpload = <TError = ErrorType<HTTPValidationError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeUpload>>, TError,{documentId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof completeUpload>>,
@@ -1932,47 +571,20 @@ export const useCompleteUpload = <TError = HTTPValidationError,
       > => {
       return useMutation(getCompleteUploadMutationOptions(options), queryClient);
     }
-    export type downloadDocumentResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type downloadDocumentResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type downloadDocumentResponseSuccess = (downloadDocumentResponse200) & {
-  headers: Headers;
-};
-export type downloadDocumentResponseError = (downloadDocumentResponse422) & {
-  headers: Headers;
-};
-
-export type downloadDocumentResponse = (downloadDocumentResponseSuccess | downloadDocumentResponseError)
-
-export const getDownloadDocumentUrl = (documentId: string,) => {
-
-
-
-
-  return `/api/v1/documents/${documentId}/download`
-}
-
-/**
+    /**
  * @summary Download Document
  */
-export const downloadDocument = async (documentId: string, options?: RequestInit): Promise<downloadDocumentResponse> => {
-
-  return customInstance<downloadDocumentResponse>(getDownloadDocumentUrl(documentId),
-  {
-    ...options,
-    method: 'GET'
+export const downloadDocument = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<DownloadResponse>(
+      {url: `/api/v1/documents/${documentId}/download`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -1984,7 +596,7 @@ export const getDownloadDocumentQueryKey = (documentId: string,) => {
     }
 
 
-export const getDownloadDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadDocument>>, TError = HTTPValidationError>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getDownloadDocumentQueryOptions = <TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<HTTPValidationError>>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -1993,7 +605,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocument>>> = ({ signal }) => downloadDocument(documentId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadDocument>>> = ({ signal }) => downloadDocument(documentId, requestOptions, signal);
 
 
 
@@ -2003,10 +615,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type DownloadDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof downloadDocument>>>
-export type DownloadDocumentQueryError = HTTPValidationError
+export type DownloadDocumentQueryError = ErrorType<HTTPValidationError>
 
 
-export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = HTTPValidationError>(
+export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof downloadDocument>>,
@@ -2016,7 +628,7 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = HTTPValidationError>(
+export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof downloadDocument>>,
@@ -2026,7 +638,7 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = HTTPValidationError>(
+export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2034,7 +646,7 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
  * @summary Download Document
  */
 
-export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = HTTPValidationError>(
+export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDocument>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadDocument>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2051,47 +663,832 @@ export function useDownloadDocument<TData = Awaited<ReturnType<typeof downloadDo
 
 
 
-export type listClaimsResponse200 = {
-  data: unknown
-  status: 200
+/**
+ * @summary Get Document Viewer Context
+ */
+export const getDocumentViewerContext = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<DocumentViewerContextResponse>(
+      {url: `/api/v1/documents/${documentId}/viewer-context`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetDocumentViewerContextQueryKey = (documentId: string,) => {
+    return [
+    `/api/v1/documents/${documentId}/viewer-context`
+    ] as const;
+    }
+
+
+export const getGetDocumentViewerContextQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentViewerContextQueryKey(documentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentViewerContext>>> = ({ signal }) => getDocumentViewerContext(documentId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: documentId !== null && documentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type listClaimsResponse422 = {
-  data: HTTPValidationError
-  status: 422
+export type GetDocumentViewerContextQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentViewerContext>>>
+export type GetDocumentViewerContextQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentViewerContext>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentViewerContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentViewerContext>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentViewerContext>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Document Viewer Context
+ */
+
+export function useGetDocumentViewerContext<TData = Awaited<ReturnType<typeof getDocumentViewerContext>>, TError = ErrorType<HTTPValidationError>>(
+ documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocumentViewerContext>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetDocumentViewerContextQueryOptions(documentId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type listClaimsResponseSuccess = (listClaimsResponse200) & {
-  headers: Headers;
-};
-export type listClaimsResponseError = (listClaimsResponse422) & {
-  headers: Headers;
-};
-
-export type listClaimsResponse = (listClaimsResponseSuccess | listClaimsResponseError)
-
-export const getListClaimsUrl = (matterId: string,) => {
 
 
 
 
-  return `/api/v1/matters/${matterId}/claims`
+
+/**
+ * @summary List User Firms
+ */
+export const listUserFirms = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<FirmResponse[]>(
+      {url: `/api/v1/firms`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListUserFirmsQueryKey = () => {
+    return [
+    `/api/v1/firms`
+    ] as const;
+    }
+
+
+export const getListUserFirmsQueryOptions = <TData = Awaited<ReturnType<typeof listUserFirms>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUserFirmsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUserFirms>>> = ({ signal }) => listUserFirms(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
+
+export type ListUserFirmsQueryResult = NonNullable<Awaited<ReturnType<typeof listUserFirms>>>
+export type ListUserFirmsQueryError = ErrorType<unknown>
+
+
+export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUserFirms>>,
+          TError,
+          Awaited<ReturnType<typeof listUserFirms>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listUserFirms>>,
+          TError,
+          Awaited<ReturnType<typeof listUserFirms>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List User Firms
+ */
+
+export function useListUserFirms<TData = Awaited<ReturnType<typeof listUserFirms>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listUserFirms>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListUserFirmsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create Firm
+ */
+export const createFirm = (
+    firmCreateRequest: BodyType<FirmCreateRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<FirmResponse>(
+      {url: `/api/v1/firms`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: firmCreateRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getCreateFirmMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: BodyType<FirmCreateRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: BodyType<FirmCreateRequest>}, TContext> => {
+
+const mutationKey = ['createFirm'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createFirm>>, {data: BodyType<FirmCreateRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createFirm(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateFirmMutationResult = NonNullable<Awaited<ReturnType<typeof createFirm>>>
+    export type CreateFirmMutationBody = BodyType<FirmCreateRequest>
+    export type CreateFirmMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Firm
+ */
+export const useCreateFirm = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createFirm>>, TError,{data: BodyType<FirmCreateRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createFirm>>,
+        TError,
+        {data: BodyType<FirmCreateRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateFirmMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List Firm Members
+ */
+export const listFirmMembers = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<FirmMemberResponse[]>(
+      {url: `/api/v1/firms/members`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListFirmMembersQueryKey = () => {
+    return [
+    `/api/v1/firms/members`
+    ] as const;
+    }
+
+
+export const getListFirmMembersQueryOptions = <TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFirmMembersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFirmMembers>>> = ({ signal }) => listFirmMembers(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFirmMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listFirmMembers>>>
+export type ListFirmMembersQueryError = ErrorType<unknown>
+
+
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFirmMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listFirmMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFirmMembers>>,
+          TError,
+          Awaited<ReturnType<typeof listFirmMembers>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Firm Members
+ */
+
+export function useListFirmMembers<TData = Awaited<ReturnType<typeof listFirmMembers>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFirmMembers>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFirmMembersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Get Firm Details
+ */
+export const getFirmDetails = (
+    firmId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<FirmResponse>(
+      {url: `/api/v1/firms/${firmId}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetFirmDetailsQueryKey = (firmId: string,) => {
+    return [
+    `/api/v1/firms/${firmId}`
+    ] as const;
+    }
+
+
+export const getGetFirmDetailsQueryOptions = <TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = ErrorType<HTTPValidationError>>(firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFirmDetailsQueryKey(firmId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFirmDetails>>> = ({ signal }) => getFirmDetails(firmId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: firmId !== null && firmId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetFirmDetailsQueryResult = NonNullable<Awaited<ReturnType<typeof getFirmDetails>>>
+export type GetFirmDetailsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = ErrorType<HTTPValidationError>>(
+ firmId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFirmDetails>>,
+          TError,
+          Awaited<ReturnType<typeof getFirmDetails>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = ErrorType<HTTPValidationError>>(
+ firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFirmDetails>>,
+          TError,
+          Awaited<ReturnType<typeof getFirmDetails>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = ErrorType<HTTPValidationError>>(
+ firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Firm Details
+ */
+
+export function useGetFirmDetails<TData = Awaited<ReturnType<typeof getFirmDetails>>, TError = ErrorType<HTTPValidationError>>(
+ firmId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getFirmDetails>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetFirmDetailsQueryOptions(firmId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Elevate Role
+ */
+export const elevateRole = (
+    firmId: string,
+    userId: string,
+    roleElevationRequest: BodyType<RoleElevationRequest>,
+    params?: ElevateRoleParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<unknown>(
+      {url: `/api/v1/firms/${firmId}/members/${userId}/role`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: roleElevationRequest,
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getElevateRoleMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: BodyType<RoleElevationRequest>;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: BodyType<RoleElevationRequest>;params?: ElevateRoleParams}, TContext> => {
+
+const mutationKey = ['elevateRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof elevateRole>>, {firmId: string;userId: string;data: BodyType<RoleElevationRequest>;params?: ElevateRoleParams}> = (props) => {
+          const {firmId,userId,data,params} = props ?? {};
+
+          return  elevateRole(firmId,userId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ElevateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof elevateRole>>>
+    export type ElevateRoleMutationBody = BodyType<RoleElevationRequest>
+    export type ElevateRoleMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Elevate Role
+ */
+export const useElevateRole = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof elevateRole>>, TError,{firmId: string;userId: string;data: BodyType<RoleElevationRequest>;params?: ElevateRoleParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof elevateRole>>,
+        TError,
+        {firmId: string;userId: string;data: BodyType<RoleElevationRequest>;params?: ElevateRoleParams},
+        TContext
+      > => {
+      return useMutation(getElevateRoleMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List Matters
+ */
+export const listMatters = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<MatterResponse[]>(
+      {url: `/api/v1/matters`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListMattersQueryKey = () => {
+    return [
+    `/api/v1/matters`
+    ] as const;
+    }
+
+
+export const getListMattersQueryOptions = <TData = Awaited<ReturnType<typeof listMatters>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMattersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatters>>> = ({ signal }) => listMatters(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListMattersQueryResult = NonNullable<Awaited<ReturnType<typeof listMatters>>>
+export type ListMattersQueryError = ErrorType<unknown>
+
+
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatters>>,
+          TError,
+          Awaited<ReturnType<typeof listMatters>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatters>>,
+          TError,
+          Awaited<ReturnType<typeof listMatters>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Matters
+ */
+
+export function useListMatters<TData = Awaited<ReturnType<typeof listMatters>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatters>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMattersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Create Matter
+ */
+export const createMatter = (
+    matterCreate: BodyType<MatterCreate>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<MatterResponse>(
+      {url: `/api/v1/matters`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: matterCreate, signal
+    },
+      options);
+    }
+
+
+
+
+export const getCreateMatterMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: BodyType<MatterCreate>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: BodyType<MatterCreate>}, TContext> => {
+
+const mutationKey = ['createMatter'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMatter>>, {data: BodyType<MatterCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMatter(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMatterMutationResult = NonNullable<Awaited<ReturnType<typeof createMatter>>>
+    export type CreateMatterMutationBody = BodyType<MatterCreate>
+    export type CreateMatterMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Matter
+ */
+export const useCreateMatter = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMatter>>, TError,{data: BodyType<MatterCreate>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createMatter>>,
+        TError,
+        {data: BodyType<MatterCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateMatterMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Check Conflicts
+ */
+export const conflictCheck = (
+    conflictCheckRequest: BodyType<ConflictCheckRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ConflictCheckResponse>(
+      {url: `/api/v1/matters/conflict-check`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: conflictCheckRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getConflictCheckMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: BodyType<ConflictCheckRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: BodyType<ConflictCheckRequest>}, TContext> => {
+
+const mutationKey = ['conflictCheck'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof conflictCheck>>, {data: BodyType<ConflictCheckRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  conflictCheck(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConflictCheckMutationResult = NonNullable<Awaited<ReturnType<typeof conflictCheck>>>
+    export type ConflictCheckMutationBody = BodyType<ConflictCheckRequest>
+    export type ConflictCheckMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Check Conflicts
+ */
+export const useConflictCheck = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof conflictCheck>>, TError,{data: BodyType<ConflictCheckRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof conflictCheck>>,
+        TError,
+        {data: BodyType<ConflictCheckRequest>},
+        TContext
+      > => {
+      return useMutation(getConflictCheckMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Get Matter
+ */
+export const getMatter = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<MatterResponse>(
+      {url: `/api/v1/matters/${matterId}`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetMatterQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}`
+    ] as const;
+    }
+
+
+export const getGetMatterQueryOptions = <TData = Awaited<ReturnType<typeof getMatter>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMatterQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMatter>>> = ({ signal }) => getMatter(matterId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetMatterQueryResult = NonNullable<Awaited<ReturnType<typeof getMatter>>>
+export type GetMatterQueryError = ErrorType<HTTPValidationError>
+
+
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMatter>>,
+          TError,
+          Awaited<ReturnType<typeof getMatter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMatter>>,
+          TError,
+          Awaited<ReturnType<typeof getMatter>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Matter
+ */
+
+export function useGetMatter<TData = Awaited<ReturnType<typeof getMatter>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getMatter>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetMatterQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 /**
  * @summary List Claims
  */
-export const listClaims = async (matterId: string, options?: RequestInit): Promise<listClaimsResponse> => {
-
-  return customInstance<listClaimsResponse>(getListClaimsUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
+export const listClaims = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<ClaimResponse[]>(
+      {url: `/api/v1/matters/${matterId}/claims`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -2103,7 +1500,7 @@ export const getListClaimsQueryKey = (matterId: string,) => {
     }
 
 
-export const getListClaimsQueryOptions = <TData = Awaited<ReturnType<typeof listClaims>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListClaimsQueryOptions = <TData = Awaited<ReturnType<typeof listClaims>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2112,7 +1509,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClaims>>> = ({ signal }) => listClaims(matterId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClaims>>> = ({ signal }) => listClaims(matterId, requestOptions, signal);
 
 
 
@@ -2122,10 +1519,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListClaimsQueryResult = NonNullable<Awaited<ReturnType<typeof listClaims>>>
-export type ListClaimsQueryError = HTTPValidationError
+export type ListClaimsQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = HTTPValidationError>(
+export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listClaims>>,
@@ -2135,7 +1532,7 @@ export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TE
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = HTTPValidationError>(
+export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listClaims>>,
@@ -2145,7 +1542,7 @@ export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TE
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = HTTPValidationError>(
+export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2153,7 +1550,7 @@ export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TE
  * @summary List Claims
  */
 
-export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = HTTPValidationError>(
+export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaims>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2170,285 +1567,20 @@ export function useListClaims<TData = Awaited<ReturnType<typeof listClaims>>, TE
 
 
 
-export type listEvidenceResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listEvidenceResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listEvidenceResponseSuccess = (listEvidenceResponse200) & {
-  headers: Headers;
-};
-export type listEvidenceResponseError = (listEvidenceResponse422) & {
-  headers: Headers;
-};
-
-export type listEvidenceResponse = (listEvidenceResponseSuccess | listEvidenceResponseError)
-
-export const getListEvidenceUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/evidence`
-}
-
-/**
- * @summary List Evidence
- */
-export const listEvidence = async (matterId: string, options?: RequestInit): Promise<listEvidenceResponse> => {
-
-  return customInstance<listEvidenceResponse>(getListEvidenceUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListEvidenceQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/matters/${matterId}/evidence`
-    ] as const;
-    }
-
-
-export const getListEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listEvidence>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListEvidenceQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEvidence>>> = ({ signal }) => listEvidence(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListEvidenceQueryResult = NonNullable<Awaited<ReturnType<typeof listEvidence>>>
-export type ListEvidenceQueryError = HTTPValidationError
-
-
-export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listEvidence>>,
-          TError,
-          Awaited<ReturnType<typeof listEvidence>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listEvidence>>,
-          TError,
-          Awaited<ReturnType<typeof listEvidence>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Evidence
- */
-
-export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListEvidenceQueryOptions(matterId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type listTimelineEventsResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listTimelineEventsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listTimelineEventsResponseSuccess = (listTimelineEventsResponse200) & {
-  headers: Headers;
-};
-export type listTimelineEventsResponseError = (listTimelineEventsResponse422) & {
-  headers: Headers;
-};
-
-export type listTimelineEventsResponse = (listTimelineEventsResponseSuccess | listTimelineEventsResponseError)
-
-export const getListTimelineEventsUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/timeline`
-}
-
-/**
- * @summary List Timeline Events
- */
-export const listTimelineEvents = async (matterId: string, options?: RequestInit): Promise<listTimelineEventsResponse> => {
-
-  return customInstance<listTimelineEventsResponse>(getListTimelineEventsUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListTimelineEventsQueryKey = (matterId: string,) => {
-    return [
-    `/api/v1/matters/${matterId}/timeline`
-    ] as const;
-    }
-
-
-export const getListTimelineEventsQueryOptions = <TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListTimelineEventsQueryKey(matterId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTimelineEvents>>> = ({ signal }) => listTimelineEvents(matterId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ListTimelineEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listTimelineEvents>>>
-export type ListTimelineEventsQueryError = HTTPValidationError
-
-
-export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = HTTPValidationError>(
- matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listTimelineEvents>>,
-          TError,
-          Awaited<ReturnType<typeof listTimelineEvents>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof listTimelineEvents>>,
-          TError,
-          Awaited<ReturnType<typeof listTimelineEvents>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/**
- * @summary List Timeline Events
- */
-
-export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = HTTPValidationError>(
- matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getListTimelineEventsQueryOptions(matterId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-export type listClaimsWithEvidenceResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type listClaimsWithEvidenceResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listClaimsWithEvidenceResponseSuccess = (listClaimsWithEvidenceResponse200) & {
-  headers: Headers;
-};
-export type listClaimsWithEvidenceResponseError = (listClaimsWithEvidenceResponse422) & {
-  headers: Headers;
-};
-
-export type listClaimsWithEvidenceResponse = (listClaimsWithEvidenceResponseSuccess | listClaimsWithEvidenceResponseError)
-
-export const getListClaimsWithEvidenceUrl = (matterId: string,) => {
-
-
-
-
-  return `/api/v1/matters/${matterId}/claims-evidence`
-}
-
 /**
  * @summary List Claims With Evidence
  */
-export const listClaimsWithEvidence = async (matterId: string, options?: RequestInit): Promise<listClaimsWithEvidenceResponse> => {
-
-  return customInstance<listClaimsWithEvidenceResponse>(getListClaimsWithEvidenceUrl(matterId),
-  {
-    ...options,
-    method: 'GET'
+export const listClaimsWithEvidence = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<ClaimEvidenceResponse[]>(
+      {url: `/api/v1/matters/${matterId}/claims-evidence`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -2460,7 +1592,7 @@ export const getListClaimsWithEvidenceQueryKey = (matterId: string,) => {
     }
 
 
-export const getListClaimsWithEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = HTTPValidationError>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListClaimsWithEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2469,7 +1601,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClaimsWithEvidence>>> = ({ signal }) => listClaimsWithEvidence(matterId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listClaimsWithEvidence>>> = ({ signal }) => listClaimsWithEvidence(matterId, requestOptions, signal);
 
 
 
@@ -2479,10 +1611,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListClaimsWithEvidenceQueryResult = NonNullable<Awaited<ReturnType<typeof listClaimsWithEvidence>>>
-export type ListClaimsWithEvidenceQueryError = HTTPValidationError
+export type ListClaimsWithEvidenceQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = HTTPValidationError>(
+export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listClaimsWithEvidence>>,
@@ -2492,7 +1624,7 @@ export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof list
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = HTTPValidationError>(
+export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listClaimsWithEvidence>>,
@@ -2502,7 +1634,7 @@ export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof list
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = HTTPValidationError>(
+export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2510,7 +1642,7 @@ export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof list
  * @summary List Claims With Evidence
  */
 
-export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = HTTPValidationError>(
+export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError = ErrorType<HTTPValidationError>>(
  matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listClaimsWithEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2527,47 +1659,490 @@ export function useListClaimsWithEvidence<TData = Awaited<ReturnType<typeof list
 
 
 
-export type listParsedDocumentsResponse200 = {
-  data: ParsedDocumentResponse[]
-  status: 200
+/**
+ * @summary List Evidence
+ */
+export const listEvidence = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<EvidenceResponse[]>(
+      {url: `/api/v1/matters/${matterId}/evidence`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListEvidenceQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}/evidence`
+    ] as const;
+    }
+
+
+export const getListEvidenceQueryOptions = <TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListEvidenceQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listEvidence>>> = ({ signal }) => listEvidence(matterId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type listParsedDocumentsResponse422 = {
-  data: HTTPValidationError
-  status: 422
+export type ListEvidenceQueryResult = NonNullable<Awaited<ReturnType<typeof listEvidence>>>
+export type ListEvidenceQueryError = ErrorType<HTTPValidationError>
+
+
+export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEvidence>>,
+          TError,
+          Awaited<ReturnType<typeof listEvidence>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEvidence>>,
+          TError,
+          Awaited<ReturnType<typeof listEvidence>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Evidence
+ */
+
+export function useListEvidence<TData = Awaited<ReturnType<typeof listEvidence>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listEvidence>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListEvidenceQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
 }
 
-export type listParsedDocumentsResponseSuccess = (listParsedDocumentsResponse200) & {
-  headers: Headers;
-};
-export type listParsedDocumentsResponseError = (listParsedDocumentsResponse422) & {
-  headers: Headers;
-};
-
-export type listParsedDocumentsResponse = (listParsedDocumentsResponseSuccess | listParsedDocumentsResponseError)
-
-export const getListParsedDocumentsUrl = (documentId: string,) => {
 
 
 
 
-  return `/api/v1/parser/document/${documentId}`
+
+/**
+ * @summary Override Conflict
+ */
+export const overrideConflict = (
+    matterId: string,
+    overrideConflictRequest: BodyType<OverrideConflictRequest>,
+    params?: OverrideConflictParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<OverrideConflictResponse>(
+      {url: `/api/v1/matters/${matterId}/override-conflict`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: overrideConflictRequest,
+        params, signal
+    },
+      options);
+    }
+
+
+
+
+export const getOverrideConflictMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: BodyType<OverrideConflictRequest>;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: BodyType<OverrideConflictRequest>;params?: OverrideConflictParams}, TContext> => {
+
+const mutationKey = ['overrideConflict'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof overrideConflict>>, {matterId: string;data: BodyType<OverrideConflictRequest>;params?: OverrideConflictParams}> = (props) => {
+          const {matterId,data,params} = props ?? {};
+
+          return  overrideConflict(matterId,data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OverrideConflictMutationResult = NonNullable<Awaited<ReturnType<typeof overrideConflict>>>
+    export type OverrideConflictMutationBody = BodyType<OverrideConflictRequest>
+    export type OverrideConflictMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Override Conflict
+ */
+export const useOverrideConflict = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideConflict>>, TError,{matterId: string;data: BodyType<OverrideConflictRequest>;params?: OverrideConflictParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof overrideConflict>>,
+        TError,
+        {matterId: string;data: BodyType<OverrideConflictRequest>;params?: OverrideConflictParams},
+        TContext
+      > => {
+      return useMutation(getOverrideConflictMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List Matter Parties
+ */
+export const listMatterParties = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<MatterPartyResponse[]>(
+      {url: `/api/v1/matters/${matterId}/parties`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListMatterPartiesQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}/parties`
+    ] as const;
+    }
+
+
+export const getListMatterPartiesQueryOptions = <TData = Awaited<ReturnType<typeof listMatterParties>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMatterPartiesQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMatterParties>>> = ({ signal }) => listMatterParties(matterId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
+
+export type ListMatterPartiesQueryResult = NonNullable<Awaited<ReturnType<typeof listMatterParties>>>
+export type ListMatterPartiesQueryError = ErrorType<HTTPValidationError>
+
+
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterParties>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterParties>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMatterParties>>,
+          TError,
+          Awaited<ReturnType<typeof listMatterParties>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Matter Parties
+ */
+
+export function useListMatterParties<TData = Awaited<ReturnType<typeof listMatterParties>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listMatterParties>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListMatterPartiesQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * @summary Matter Qa Endpoint
+ */
+export const matterQA = (
+    matterId: string,
+    questionRequest: BodyType<QuestionRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<QAResponse>(
+      {url: `/api/v1/matters/${matterId}/qa`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: questionRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getMatterQAMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: BodyType<QuestionRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: BodyType<QuestionRequest>}, TContext> => {
+
+const mutationKey = ['matterQA'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof matterQA>>, {matterId: string;data: BodyType<QuestionRequest>}> = (props) => {
+          const {matterId,data} = props ?? {};
+
+          return  matterQA(matterId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MatterQAMutationResult = NonNullable<Awaited<ReturnType<typeof matterQA>>>
+    export type MatterQAMutationBody = BodyType<QuestionRequest>
+    export type MatterQAMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Matter Qa Endpoint
+ */
+export const useMatterQA = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof matterQA>>, TError,{matterId: string;data: BodyType<QuestionRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof matterQA>>,
+        TError,
+        {matterId: string;data: BodyType<QuestionRequest>},
+        TContext
+      > => {
+      return useMutation(getMatterQAMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary Rebuild Matter Mesa
+ */
+export const rebuildMatterMesa = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<unknown>(
+      {url: `/api/v1/matters/${matterId}/rebuild-mesa`, method: 'POST', signal
+    },
+      options);
+    }
+
+
+
+
+export const getRebuildMatterMesaMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext> => {
+
+const mutationKey = ['rebuildMatterMesa'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rebuildMatterMesa>>, {matterId: string}> = (props) => {
+          const {matterId} = props ?? {};
+
+          return  rebuildMatterMesa(matterId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RebuildMatterMesaMutationResult = NonNullable<Awaited<ReturnType<typeof rebuildMatterMesa>>>
+
+    export type RebuildMatterMesaMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Rebuild Matter Mesa
+ */
+export const useRebuildMatterMesa = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rebuildMatterMesa>>, TError,{matterId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof rebuildMatterMesa>>,
+        TError,
+        {matterId: string},
+        TContext
+      > => {
+      return useMutation(getRebuildMatterMesaMutationOptions(options), queryClient);
+    }
+    /**
+ * @summary List Timeline Events
+ */
+export const listTimelineEvents = (
+    matterId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<TimelineEventResponse[]>(
+      {url: `/api/v1/matters/${matterId}/timeline`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getListTimelineEventsQueryKey = (matterId: string,) => {
+    return [
+    `/api/v1/matters/${matterId}/timeline`
+    ] as const;
+    }
+
+
+export const getListTimelineEventsQueryOptions = <TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = ErrorType<HTTPValidationError>>(matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTimelineEventsQueryKey(matterId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTimelineEvents>>> = ({ signal }) => listTimelineEvents(matterId, requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: matterId !== null && matterId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListTimelineEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listTimelineEvents>>>
+export type ListTimelineEventsQueryError = ErrorType<HTTPValidationError>
+
+
+export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTimelineEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listTimelineEvents>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTimelineEvents>>,
+          TError,
+          Awaited<ReturnType<typeof listTimelineEvents>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary List Timeline Events
+ */
+
+export function useListTimelineEvents<TData = Awaited<ReturnType<typeof listTimelineEvents>>, TError = ErrorType<HTTPValidationError>>(
+ matterId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listTimelineEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListTimelineEventsQueryOptions(matterId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
 
 /**
  * @summary List Parsed Documents
  */
-export const listParsedDocuments = async (documentId: string, options?: RequestInit): Promise<listParsedDocumentsResponse> => {
-
-  return customInstance<listParsedDocumentsResponse>(getListParsedDocumentsUrl(documentId),
-  {
-    ...options,
-    method: 'GET'
+export const listParsedDocuments = (
+    documentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<ParsedDocumentResponse[]>(
+      {url: `/api/v1/parser/document/${documentId}`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -2579,7 +2154,7 @@ export const getListParsedDocumentsQueryKey = (documentId: string,) => {
     }
 
 
-export const getListParsedDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = HTTPValidationError>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListParsedDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = ErrorType<HTTPValidationError>>(documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2588,7 +2163,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listParsedDocuments>>> = ({ signal }) => listParsedDocuments(documentId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listParsedDocuments>>> = ({ signal }) => listParsedDocuments(documentId, requestOptions, signal);
 
 
 
@@ -2598,10 +2173,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListParsedDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listParsedDocuments>>>
-export type ListParsedDocumentsQueryError = HTTPValidationError
+export type ListParsedDocumentsQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = HTTPValidationError>(
+export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listParsedDocuments>>,
@@ -2611,7 +2186,7 @@ export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listPar
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = HTTPValidationError>(
+export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listParsedDocuments>>,
@@ -2621,7 +2196,7 @@ export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listPar
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = HTTPValidationError>(
+export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2629,7 +2204,7 @@ export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listPar
  * @summary List Parsed Documents
  */
 
-export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = HTTPValidationError>(
+export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listParsedDocuments>>, TError = ErrorType<HTTPValidationError>>(
  documentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedDocuments>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2646,47 +2221,20 @@ export function useListParsedDocuments<TData = Awaited<ReturnType<typeof listPar
 
 
 
-export type listParsedPagesResponse200 = {
-  data: ParsedPageResponse[]
-  status: 200
-}
-
-export type listParsedPagesResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listParsedPagesResponseSuccess = (listParsedPagesResponse200) & {
-  headers: Headers;
-};
-export type listParsedPagesResponseError = (listParsedPagesResponse422) & {
-  headers: Headers;
-};
-
-export type listParsedPagesResponse = (listParsedPagesResponseSuccess | listParsedPagesResponseError)
-
-export const getListParsedPagesUrl = (parsedDocumentId: string,) => {
-
-
-
-
-  return `/api/v1/parser/${parsedDocumentId}/pages`
-}
-
 /**
  * @summary List Parsed Pages
  */
-export const listParsedPages = async (parsedDocumentId: string, options?: RequestInit): Promise<listParsedPagesResponse> => {
-
-  return customInstance<listParsedPagesResponse>(getListParsedPagesUrl(parsedDocumentId),
-  {
-    ...options,
-    method: 'GET'
+export const listParsedPages = (
+    parsedDocumentId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<ParsedPageResponse[]>(
+      {url: `/api/v1/parser/${parsedDocumentId}/pages`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
@@ -2698,7 +2246,7 @@ export const getListParsedPagesQueryKey = (parsedDocumentId: string,) => {
     }
 
 
-export const getListParsedPagesQueryOptions = <TData = Awaited<ReturnType<typeof listParsedPages>>, TError = HTTPValidationError>(parsedDocumentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListParsedPagesQueryOptions = <TData = Awaited<ReturnType<typeof listParsedPages>>, TError = ErrorType<HTTPValidationError>>(parsedDocumentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -2707,7 +2255,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listParsedPages>>> = ({ signal }) => listParsedPages(parsedDocumentId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listParsedPages>>> = ({ signal }) => listParsedPages(parsedDocumentId, requestOptions, signal);
 
 
 
@@ -2717,10 +2265,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListParsedPagesQueryResult = NonNullable<Awaited<ReturnType<typeof listParsedPages>>>
-export type ListParsedPagesQueryError = HTTPValidationError
+export type ListParsedPagesQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = HTTPValidationError>(
+export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = ErrorType<HTTPValidationError>>(
  parsedDocumentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listParsedPages>>,
@@ -2730,7 +2278,7 @@ export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedP
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = HTTPValidationError>(
+export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = ErrorType<HTTPValidationError>>(
  parsedDocumentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listParsedPages>>,
@@ -2740,7 +2288,7 @@ export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedP
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = HTTPValidationError>(
+export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = ErrorType<HTTPValidationError>>(
  parsedDocumentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -2748,7 +2296,7 @@ export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedP
  * @summary List Parsed Pages
  */
 
-export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = HTTPValidationError>(
+export function useListParsedPages<TData = Awaited<ReturnType<typeof listParsedPages>>, TError = ErrorType<HTTPValidationError>>(
  parsedDocumentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listParsedPages>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

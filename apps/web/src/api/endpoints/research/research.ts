@@ -26,11 +26,13 @@ import type {
 import type {
   HTTPValidationError,
   LegalSourceResponse,
+  ResearchJobResponse,
   ResearchRequest,
   SearchLegalResearchParams
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -52,143 +54,21 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type startLegalResearchResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type startLegalResearchResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type startLegalResearchResponseSuccess = (startLegalResearchResponse200) & {
-  headers: Headers;
-};
-export type startLegalResearchResponseError = (startLegalResearchResponse422) & {
-  headers: Headers;
-};
-
-export type startLegalResearchResponse = (startLegalResearchResponseSuccess | startLegalResearchResponseError)
-
-export const getStartLegalResearchUrl = () => {
-
-
-
-
-  return `/api/v1/research/start`
-}
-
-/**
- * @summary Start Legal Research
- */
-export const startLegalResearch = async (researchRequest: ResearchRequest, options?: RequestInit): Promise<startLegalResearchResponse> => {
-
-  return customInstance<startLegalResearchResponse>(getStartLegalResearchUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(researchRequest)
-  }
-);}
-
-
-
-
-
-export const getStartLegalResearchMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: ResearchRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: ResearchRequest}, TContext> => {
-
-const mutationKey = ['startLegalResearch'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startLegalResearch>>, {data: ResearchRequest}> = (props) => {
-          const {data} = props ?? {};
-
-          return  startLegalResearch(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartLegalResearchMutationResult = NonNullable<Awaited<ReturnType<typeof startLegalResearch>>>
-    export type StartLegalResearchMutationBody = ResearchRequest
-    export type StartLegalResearchMutationError = HTTPValidationError
-
-    /**
- * @summary Start Legal Research
- */
-export const useStartLegalResearch = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: ResearchRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof startLegalResearch>>,
-        TError,
-        {data: ResearchRequest},
-        TContext
-      > => {
-      return useMutation(getStartLegalResearchMutationOptions(options), queryClient);
-    }
-    export type searchLegalResearchResponse200 = {
-  data: LegalSourceResponse[]
-  status: 200
-}
-
-export type searchLegalResearchResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type searchLegalResearchResponseSuccess = (searchLegalResearchResponse200) & {
-  headers: Headers;
-};
-export type searchLegalResearchResponseError = (searchLegalResearchResponse422) & {
-  headers: Headers;
-};
-
-export type searchLegalResearchResponse = (searchLegalResearchResponseSuccess | searchLegalResearchResponseError)
-
-export const getSearchLegalResearchUrl = (params: SearchLegalResearchParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/research/search?${stringifiedParams}` : `/api/v1/research/search`
-}
-
 /**
  * @summary Search Legal Research
  */
-export const searchLegalResearch = async (params: SearchLegalResearchParams, options?: RequestInit): Promise<searchLegalResearchResponse> => {
-
-  return customInstance<searchLegalResearchResponse>(getSearchLegalResearchUrl(params),
-  {
-    ...options,
-    method: 'GET'
+export const searchLegalResearch = (
+    params: SearchLegalResearchParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<LegalSourceResponse[]>(
+      {url: `/api/v1/research/search`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
 
 
 
@@ -200,7 +80,7 @@ export const getSearchLegalResearchQueryKey = (params?: SearchLegalResearchParam
     }
 
 
-export const getSearchLegalResearchQueryOptions = <TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = HTTPValidationError>(params: SearchLegalResearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getSearchLegalResearchQueryOptions = <TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = ErrorType<HTTPValidationError>>(params: SearchLegalResearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -209,7 +89,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchLegalResearch>>> = ({ signal }) => searchLegalResearch(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchLegalResearch>>> = ({ signal }) => searchLegalResearch(params, requestOptions, signal);
 
 
 
@@ -219,10 +99,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type SearchLegalResearchQueryResult = NonNullable<Awaited<ReturnType<typeof searchLegalResearch>>>
-export type SearchLegalResearchQueryError = HTTPValidationError
+export type SearchLegalResearchQueryError = ErrorType<HTTPValidationError>
 
 
-export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = HTTPValidationError>(
+export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = ErrorType<HTTPValidationError>>(
  params: SearchLegalResearchParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchLegalResearch>>,
@@ -232,7 +112,7 @@ export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchL
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = HTTPValidationError>(
+export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = ErrorType<HTTPValidationError>>(
  params: SearchLegalResearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof searchLegalResearch>>,
@@ -242,7 +122,7 @@ export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchL
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = HTTPValidationError>(
+export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = ErrorType<HTTPValidationError>>(
  params: SearchLegalResearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -250,7 +130,7 @@ export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchL
  * @summary Search Legal Research
  */
 
-export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = HTTPValidationError>(
+export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchLegalResearch>>, TError = ErrorType<HTTPValidationError>>(
  params: SearchLegalResearchParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof searchLegalResearch>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -267,3 +147,67 @@ export function useSearchLegalResearch<TData = Awaited<ReturnType<typeof searchL
 
 
 
+/**
+ * @summary Start Legal Research
+ */
+export const startLegalResearch = (
+    researchRequest: BodyType<ResearchRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<ResearchJobResponse>(
+      {url: `/api/v1/research/start`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: researchRequest, signal
+    },
+      options);
+    }
+
+
+
+
+export const getStartLegalResearchMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: BodyType<ResearchRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: BodyType<ResearchRequest>}, TContext> => {
+
+const mutationKey = ['startLegalResearch'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startLegalResearch>>, {data: BodyType<ResearchRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startLegalResearch(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartLegalResearchMutationResult = NonNullable<Awaited<ReturnType<typeof startLegalResearch>>>
+    export type StartLegalResearchMutationBody = BodyType<ResearchRequest>
+    export type StartLegalResearchMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Start Legal Research
+ */
+export const useStartLegalResearch = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startLegalResearch>>, TError,{data: BodyType<ResearchRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof startLegalResearch>>,
+        TError,
+        {data: BodyType<ResearchRequest>},
+        TContext
+      > => {
+      return useMutation(getStartLegalResearchMutationOptions(options), queryClient);
+    }

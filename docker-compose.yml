@@ -2,16 +2,24 @@ name: mesa-law
 
 x-common-env: &common-env
   POSTGRES_USER: ${POSTGRES_USER:-mesa}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
   POSTGRES_DB: ${POSTGRES_DB:-mesa_law}
   POSTGRES_HOST: postgres
   POSTGRES_PORT: 5432
   REDIS_URL: redis://redis:6379/0
-  MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_app:app_pass@postgres:5432/${POSTGRES_DB:-mesa_law}"
+  MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_app:${MESA_LAW_APP_DB_PASSWORD:?Set MESA_LAW_APP_DB_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mesa_law}"
   MESA_LAW_STORAGE_ENDPOINT: "http://minio:9000"
-  MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:-admin}"
-  MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:-password123}"
-  MESA_LAW_SECRET_KEY: "supersecret_dev_key"
+  MESA_LAW_STORAGE_ACCESS_KEY: "${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}"
+  MESA_LAW_STORAGE_SECRET_KEY: "${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}"
+  MESA_LAW_SECRET_KEY: "${MESA_LAW_SECRET_KEY:?Set MESA_LAW_SECRET_KEY in .env}"
+  MESA_LAW_ENVIRONMENT: "${MESA_LAW_ENVIRONMENT:-development}"
+  MESA_LAW_TEST_AUTH_ENABLED: "${MESA_LAW_TEST_AUTH_ENABLED:-false}"
+  MESA_LAW_CLAMAV_REQUIRED: "true"
+  MESA_LAW_INTELLIGENCE_ADAPTER: "${MESA_LAW_INTELLIGENCE_ADAPTER:-mock}"
+  MESA_LAW_MESA_BACKEND_URL: "${MESA_LAW_MESA_BACKEND_URL:-http://host.docker.internal:8000}"
+  MESA_LAW_MESA_API_KEY: "${MESA_LAW_MESA_API_KEY:-}"
+  MESA_LAW_OBSERVABILITY_ENABLED: "${MESA_LAW_OBSERVABILITY_ENABLED:-false}"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
 
 services:
   # ---------------------------------------------------------
@@ -22,8 +30,12 @@ services:
     profiles: ["core"]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mesa}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-mesa_law}
+      MESA_LAW_APP_DB_PASSWORD: ${MESA_LAW_APP_DB_PASSWORD:?Set MESA_LAW_APP_DB_PASSWORD in .env}
+      MESA_LAW_WORKER_DB_PASSWORD: ${MESA_LAW_WORKER_DB_PASSWORD:?Set MESA_LAW_WORKER_DB_PASSWORD in .env}
+      MESA_LAW_MIGRATOR_DB_PASSWORD: ${MESA_LAW_MIGRATOR_DB_PASSWORD:?Set MESA_LAW_MIGRATOR_DB_PASSWORD in .env}
+      KEYCLOAK_DB: ${KEYCLOAK_DB:-keycloak}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -34,6 +46,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   redis:
     image: redis:7-alpine
@@ -47,14 +63,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   minio:
     image: minio/minio:RELEASE.2024-03-30T09-41-56Z
     profiles: ["core"]
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-password123}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
     volumes:
       - minio-data:/data
     ports:
@@ -65,6 +85,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   minio-bootstrap:
     image: minio/mc:RELEASE.2024-03-30T11-44-32Z
@@ -72,9 +96,12 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set MINIO_ROOT_USER in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add myminio http://minio:9000 admin password123;
+      /usr/bin/mc alias set myminio http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
       /usr/bin/mc mb myminio/mesa-law-docs --ignore-existing;
       exit 0;
       "
@@ -86,11 +113,13 @@ services:
     environment:
       KC_DB: postgres
       KC_DB_URL_HOST: postgres
-      KC_DB_URL_DATABASE: ${POSTGRES_DB:-mesa_law}
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB:-keycloak}
       KC_DB_USERNAME: ${POSTGRES_USER:-mesa}
-      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-mesa}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?Set KEYCLOAK_ADMIN in .env}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}
+      JAVA_OPTS_KC_HEAP: "-XX:MaxRAMPercentage=70 -XX:InitialRAMPercentage=30"
     volumes:
       - ./docker/keycloak-realm.json:/opt/keycloak/data/import/keycloak-realm.json:ro
     depends_on:
@@ -103,6 +132,10 @@ services:
       interval: 15s
       timeout: 10s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          memory: 1280M
 
   clamav:
     image: clamav/clamav:1.3.1
@@ -114,10 +147,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
 
   caddy:
     image: caddy:2-alpine
-    profiles: ["core"]
+    profiles: ["edge"]
     ports:
       - "80:80"
       - "443:443"
@@ -130,7 +167,7 @@ services:
   # ---------------------------------------------------------
   otel-collector:
     image: otel/opentelemetry-collector:0.97.0
-    profiles: ["core"]
+    profiles: ["observability"]
     volumes:
       - ./docker/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
@@ -139,7 +176,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v2.51.0
-    profiles: ["core"]
+    profiles: ["observability"]
     volumes:
       - prometheus-data:/prometheus
     ports:
@@ -147,9 +184,9 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.1
-    profiles: ["core"]
+    profiles: ["observability"]
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?Set GRAFANA_ADMIN_PASSWORD in .env}
     volumes:
       - grafana-data:/var/lib/grafana
     ports:
@@ -157,13 +194,13 @@ services:
 
   loki:
     image: grafana/loki:2.9.5
-    profiles: ["core"]
+    profiles: ["observability"]
     ports:
       - "127.0.0.1:3100:3100"
 
   tempo:
     image: grafana/tempo:2.4.0
-    profiles: ["core"]
+    profiles: ["observability"]
     command: [ "-config.file=/etc/tempo.yaml" ]
     ports:
       - "127.0.0.1:3200:3200"
@@ -178,7 +215,7 @@ services:
     profiles: ["core"]
     environment:
       <<: *common-env
-      MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_migrator:migrator_pass@postgres:5432/${POSTGRES_DB:-mesa_law}"
+      MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_migrator:${MESA_LAW_MIGRATOR_DB_PASSWORD:?Set MESA_LAW_MIGRATOR_DB_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mesa_law}"
     command: ["uv", "run", "alembic", "upgrade", "head"]
     depends_on:
       postgres:
@@ -193,8 +230,9 @@ services:
       <<: *common-env
       MESA_LAW_KEYCLOAK_ISSUER: "http://localhost:8080/realms/mesa_law"
       MESA_LAW_KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/mesa_law/protocol/openid-connect/certs"
+      MESA_LAW_KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_CLIENT_ID: "mesa-client"
-      KEYCLOAK_CLIENT_SECRET: "mesa-client-secret"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}"
     ports:
       - "127.0.0.1:8001:8001"
     depends_on:
@@ -231,8 +269,8 @@ services:
     profiles: ["core"]
     environment:
       <<: *common-env
-      MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_worker:worker_pass@postgres:5432/${POSTGRES_DB:-mesa_law}"
-      MESA_LAW_WORKER_CONCURRENCY: "5"
+      MESA_LAW_DATABASE_URL: "postgresql+psycopg://mesa_law_worker:${MESA_LAW_WORKER_DB_PASSWORD:?Set MESA_LAW_WORKER_DB_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-mesa_law}"
+      MESA_LAW_WORKER_CONCURRENCY: "1"
     depends_on:
       postgres:
         condition: service_healthy
@@ -255,13 +293,14 @@ services:
       dockerfile: docker/web.Dockerfile
     profiles: ["core"]
     environment:
+      MESA_LAW_ENVIRONMENT: "${MESA_LAW_ENVIRONMENT:-development}"
       NEXTAUTH_URL: "http://localhost:3000"
-      NEXTAUTH_SECRET: "supersecret_nextauth_key_for_dev_only"
+      NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:?Set NEXTAUTH_SECRET in .env}"
       KEYCLOAK_PUBLIC_ISSUER: "http://localhost:8080/realms/mesa_law"
       KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_JWKS_URL: "http://keycloak:8080/realms/mesa_law/protocol/openid-connect/certs"
       KEYCLOAK_CLIENT_ID: "mesa-client"
-      KEYCLOAK_CLIENT_SECRET: "mesa-client-secret"
+      KEYCLOAK_CLIENT_SECRET: "${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}"
     ports:
       - "127.0.0.1:3000:3000"
     deploy:

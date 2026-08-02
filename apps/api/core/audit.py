@@ -9,7 +9,7 @@ async def log_audit_event(
     action: str,
     entity_type: str,
     entity_id: str,
-    changes: dict = None
+    changes: dict | None = None,
 ):
     event = AuditEvent(
         tenant_id=tenant_id,
@@ -17,23 +17,24 @@ async def log_audit_event(
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,
-        changes=changes
+        changes=changes,
     )
     session.add(event)
     await session.commit()
+
 
 async def create_notification(
     session: AsyncSession,
     tenant_id: str,
     user_id: str,
     title: str,
-    message: str
+    message: str,
 ):
     notification = Notification(
         tenant_id=tenant_id,
         user_id=user_id,
         title=title,
-        message=message
+        message=message,
     )
     session.add(notification)
     await session.commit()

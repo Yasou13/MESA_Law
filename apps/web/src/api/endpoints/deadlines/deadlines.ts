@@ -30,6 +30,7 @@ import type {
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -51,54 +52,21 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type listDeadlinesResponse200 = {
-  data: DeadlineResponse[]
-  status: 200
-}
-
-export type listDeadlinesResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listDeadlinesResponseSuccess = (listDeadlinesResponse200) & {
-  headers: Headers;
-};
-export type listDeadlinesResponseError = (listDeadlinesResponse422) & {
-  headers: Headers;
-};
-
-export type listDeadlinesResponse = (listDeadlinesResponseSuccess | listDeadlinesResponseError)
-
-export const getListDeadlinesUrl = (params?: ListDeadlinesParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/deadlines?${stringifiedParams}` : `/api/v1/deadlines`
-}
-
 /**
  * @summary List Deadlines
  */
-export const listDeadlines = async (params?: ListDeadlinesParams, options?: RequestInit): Promise<listDeadlinesResponse> => {
-
-  return customInstance<listDeadlinesResponse>(getListDeadlinesUrl(params),
-  {
-    ...options,
-    method: 'GET'
+export const listDeadlines = (
+    params?: ListDeadlinesParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<DeadlineResponse[]>(
+      {url: `/api/v1/deadlines`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
 
 
 
@@ -110,7 +78,7 @@ export const getListDeadlinesQueryKey = (params?: ListDeadlinesParams,) => {
     }
 
 
-export const getListDeadlinesQueryOptions = <TData = Awaited<ReturnType<typeof listDeadlines>>, TError = HTTPValidationError>(params?: ListDeadlinesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListDeadlinesQueryOptions = <TData = Awaited<ReturnType<typeof listDeadlines>>, TError = ErrorType<HTTPValidationError>>(params?: ListDeadlinesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -119,7 +87,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeadlines>>> = ({ signal }) => listDeadlines(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeadlines>>> = ({ signal }) => listDeadlines(params, requestOptions, signal);
 
 
 
@@ -129,10 +97,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListDeadlinesQueryResult = NonNullable<Awaited<ReturnType<typeof listDeadlines>>>
-export type ListDeadlinesQueryError = HTTPValidationError
+export type ListDeadlinesQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = HTTPValidationError>(
+export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = ErrorType<HTTPValidationError>>(
  params: undefined |  ListDeadlinesParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listDeadlines>>,
@@ -142,7 +110,7 @@ export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = HTTPValidationError>(
+export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListDeadlinesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listDeadlines>>,
@@ -152,7 +120,7 @@ export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = HTTPValidationError>(
+export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListDeadlinesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -160,7 +128,7 @@ export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines
  * @summary List Deadlines
  */
 
-export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = HTTPValidationError>(
+export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListDeadlinesParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeadlines>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -177,52 +145,25 @@ export function useListDeadlines<TData = Awaited<ReturnType<typeof listDeadlines
 
 
 
-export type completeDeadlineResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type completeDeadlineResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type completeDeadlineResponseSuccess = (completeDeadlineResponse200) & {
-  headers: Headers;
-};
-export type completeDeadlineResponseError = (completeDeadlineResponse422) & {
-  headers: Headers;
-};
-
-export type completeDeadlineResponse = (completeDeadlineResponseSuccess | completeDeadlineResponseError)
-
-export const getCompleteDeadlineUrl = (deadlineId: string,) => {
-
-
-
-
-  return `/api/v1/deadlines/${deadlineId}/complete`
-}
-
 /**
  * @summary Complete Deadline
  */
-export const completeDeadline = async (deadlineId: string, options?: RequestInit): Promise<completeDeadlineResponse> => {
-
-  return customInstance<completeDeadlineResponse>(getCompleteDeadlineUrl(deadlineId),
-  {
-    ...options,
-    method: 'POST'
+export const completeDeadline = (
+    deadlineId: string,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<unknown>(
+      {url: `/api/v1/deadlines/${deadlineId}/complete`, method: 'POST', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getCompleteDeadlineMutationOptions = <TError = HTTPValidationError,
+export const getCompleteDeadlineMutationOptions = <TError = ErrorType<HTTPValidationError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeDeadline>>, TError,{deadlineId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
 ): UseMutationOptions<Awaited<ReturnType<typeof completeDeadline>>, TError,{deadlineId: string}, TContext> => {
 
@@ -251,12 +192,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CompleteDeadlineMutationResult = NonNullable<Awaited<ReturnType<typeof completeDeadline>>>
 
-    export type CompleteDeadlineMutationError = HTTPValidationError
+    export type CompleteDeadlineMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Complete Deadline
  */
-export const useCompleteDeadline = <TError = HTTPValidationError,
+export const useCompleteDeadline = <TError = ErrorType<HTTPValidationError>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeDeadline>>, TError,{deadlineId: string}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof completeDeadline>>,

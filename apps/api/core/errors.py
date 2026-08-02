@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
+
 class ProblemException(Exception):
     def __init__(self, status: int, title: str, detail: str, type: str = "about:blank"):
         self.status = status
@@ -12,7 +13,10 @@ class ProblemException(Exception):
         self.detail = detail
         self.type = type
 
-async def problem_exception_handler(request: Request, exc: ProblemException):
+
+async def problem_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if not isinstance(exc, ProblemException):
+        raise exc
     return JSONResponse(
         status_code=exc.status,
         content={
@@ -20,12 +24,13 @@ async def problem_exception_handler(request: Request, exc: ProblemException):
             "title": exc.title,
             "status": exc.status,
             "detail": exc.detail,
-            "instance": str(request.url)
+            "instance": str(request.url),
         },
-        media_type="application/problem+json"
+        media_type="application/problem+json",
     )
 
-async def global_exception_handler(request: Request, exc: Exception):
+
+async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("Unhandled exception occurred")
     return JSONResponse(
         status_code=500,
@@ -34,7 +39,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "title": "Internal Server Error",
             "status": 500,
             "detail": "An unexpected error occurred.",
-            "instance": str(request.url)
+            "instance": str(request.url),
         },
-        media_type="application/problem+json"
+        media_type="application/problem+json",
     )

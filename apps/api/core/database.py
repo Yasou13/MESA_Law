@@ -8,34 +8,36 @@ from .config import settings
 async_engine = create_async_engine(
     settings.effective_database_url,
     pool_pre_ping=True,
-    pool_size=5 if settings.env == "development" else 20,
-    max_overflow=10 if settings.env == "development" else 20,
+    pool_size=settings.database_pool_size,
+    max_overflow=settings.database_max_overflow,
     pool_timeout=30,
-    echo=settings.env == "development",
+    echo=settings.sql_echo,
 )
 
 import os
 
 if os.getenv("MESA_LAW_ENVIRONMENT", "development") != "test":
     from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
     SQLAlchemyInstrumentor().instrument(
-        engine=async_engine.sync_engine,
-        enable_commenter=True,
-        commenter_options={}
+        engine=async_engine.sync_engine, enable_commenter=True, commenter_options={}
     )
 
-AsyncSessionLocal = async_sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
+AsyncSessionLocal = async_sessionmaker(
+    async_engine, expire_on_commit=False, class_=AsyncSession
+)
 
 # Sync engine and session for Alembic / background jobs
 engine = create_engine(
     settings.effective_database_url,
     pool_pre_ping=True,
-    pool_size=5 if settings.env == "development" else 20,
-    max_overflow=10 if settings.env == "development" else 20,
+    pool_size=settings.database_pool_size,
+    max_overflow=settings.database_max_overflow,
     pool_timeout=30,
-    echo=settings.env == "development",
+    echo=settings.sql_echo,
 )
 SessionLocal = sessionmaker(engine, expire_on_commit=False, class_=Session)
+
 
 async def get_db():
     async with AsyncSessionLocal() as session:

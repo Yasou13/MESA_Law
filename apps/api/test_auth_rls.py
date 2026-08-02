@@ -17,16 +17,20 @@ app = FastAPI()
 app.add_exception_handler(Exception, global_exception_handler)
 app.add_exception_handler(ProblemException, problem_exception_handler)
 
+
 @app.post("/test-matters")
-async def create_matter(tenant_id: str = Header(...), db: AsyncSession = Depends(get_db)):
+async def create_matter(
+    tenant_id: str = Header(...), db: AsyncSession = Depends(get_db)
+):
     if not tenant_id:
         raise ProblemException(401, "Unauthorized", "Tenant missing")
     set_tenant_id(tenant_id)
-    
+
     # Implicit RLS via loader criteria
     result = await db.execute(select(Matter))
     matters = result.scalars().all()
     return {"matters": [{"id": m.id, "title": m.title} for m in matters]}
+
 
 @app.get("/test-matters-bypass")
 async def fetch_matter_bypass(db: AsyncSession = Depends(get_db)):
@@ -39,7 +43,9 @@ async def fetch_matter_bypass(db: AsyncSession = Depends(get_db)):
         raise
     return {"error": "failed"}
 
+
 client = TestClient(app)
+
 
 @pytest.mark.asyncio
 async def test_rls_guard_active():
@@ -47,11 +53,12 @@ async def test_rls_guard_active():
     assert response.status_code == 200
     assert response.json() == {"error": "blocked"}
 
+
 @pytest.mark.asyncio
 async def test_tenant_isolation():
     tenant1_id = str(uuid6.uuid7())
     tenant2_id = str(uuid6.uuid7())
-    
+
     async with AsyncSessionLocal() as db:
         # Avoid RLS errors when inserting by explicitly setting tenant
         set_tenant_id(tenant1_id)
@@ -60,23 +67,23 @@ async def test_tenant_isolation():
         db.add(firm1)
         db.add(firm2)
         await db.flush()
-        
+
         m1 = Matter(title="Matter 1", tenant_id=tenant1_id)
         db.add(m1)
         await db.flush()
-        
+
         set_tenant_id(tenant2_id)
         m2 = Matter(title="Matter 2", tenant_id=tenant2_id)
         db.add(m2)
         await db.commit()
-    
+
     # Query as tenant 1
     r1 = client.post("/test-matters", headers={"tenant-id": tenant1_id})
     assert r1.status_code == 200
     m_t1 = r1.json()["matters"]
     assert len(m_t1) == 1
     assert m_t1[0]["title"] == "Matter 1"
-    
+
     # Query as tenant 2
     r2 = client.post("/test-matters", headers={"tenant-id": tenant2_id})
     m_t2 = r2.json()["matters"]

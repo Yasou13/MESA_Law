@@ -7,7 +7,7 @@
 
 export interface UploadIntentResponse {
   document_id: string;
-  revision_id: string;
   presigned_url: string;
+  revision_id: string;
   storage_key: string;
 }

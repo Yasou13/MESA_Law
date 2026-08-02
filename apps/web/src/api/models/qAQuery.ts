@@ -6,7 +6,11 @@
  */
 
 export interface QAQuery {
-  matter_id?: string | null;
   document_id?: string | null;
+  matter_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 4096
+     */
   question: string;
 }

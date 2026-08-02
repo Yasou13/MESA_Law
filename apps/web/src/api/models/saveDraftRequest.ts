@@ -6,7 +6,7 @@
  */
 
 export interface SaveDraftRequest {
+  content: string;
   matter_id: string;
   title: string;
-  content: string;
 }

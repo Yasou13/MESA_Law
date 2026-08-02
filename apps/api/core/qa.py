@@ -1,311 +1,400 @@
-"""
-QA Module — provides intelligent question answering over matter documents.
-
-Architecture:
-  1. MESA Core (primary) → Full RAG with MESA v4 backend
-  2. LLM-Augmented Degraded Mode → PostgreSQL FTS retrieval + LLM summarization
-  3. Pure Lexical Degraded Mode → PostgreSQL FTS only (no LLM, fallback of last resort)
-
-Each tier provides progressively less intelligent answers but maintains
-the citation integrity contract: every claim must be traceable to a source.
-"""
+import hashlib
 import logging
-import os
+from time import perf_counter
+from typing import Literal
 
-from sqlalchemy import text
+from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
+from apps.api.core.observability import increment_metric
+from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
+from apps.api.core.ports.mesa_v4 import MesaV4Error, SessionStartRequest
+from apps.api.models.document import Document, DocumentRevision
+from apps.api.models.domain import SourceLocator
+from apps.api.models.mesa import MesaScopeBinding
+from apps.api.models.parser import DocumentChunk, ParsedDocument, ParsedPage
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger("api.qa")
 
-class PostgresLexicalAdapter:
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        
-    async def search(self, tenant_id: str, matter_id: str | None, document_id: str | None, query: str, limit: int = 5) -> list[dict]:
-        """
-        Fallback RAG using PostgreSQL Full Text Search (tsvector).
-        We join DocumentChunk with ParsedPage and Document to filter by matter_id.
-        Phase 8: STRICTLY ONLY FTS, no ILIKE '%user_query%'.
-        """
-        # Note: In a real system, you'd normalize query tokens here to avoid TS query syntax errors.
-        # Simple normalization: replace spaces with & for to_tsquery, or use plainto_tsquery.
-        stmt_str = """
-            SELECT c.id as chunk_id, p.page_number, c.text_content, d.id as doc_id, pd.revision_id as document_revision_id,
-                   ts_rank_cd(c.fts_vector, plainto_tsquery('turkish', :query)) AS rank
-            FROM document_chunks c
-            JOIN parsed_pages p ON c.page_id = p.id
-            JOIN parsed_documents pd ON p.parsed_document_id = pd.id
-            JOIN documents d ON c.document_id = d.id
-            WHERE d.tenant_id = :tenant_id
-              AND c.fts_vector @@ plainto_tsquery('turkish', :query)
-        """
-        if matter_id:
-            stmt_str += " AND d.matter_id = :matter_id"
-        if document_id:
-            stmt_str += " AND d.id = :document_id"
-            
-        stmt_str += " ORDER BY rank DESC LIMIT :limit"
-        
-        stmt = text(stmt_str)
-        
-        params = {
-            "tenant_id": tenant_id,
-            "query": query, 
-            "limit": limit
-        }
-        if matter_id:
-            params["matter_id"] = matter_id
-        if document_id:
-            params["document_id"] = document_id
-            
-        result = await self.session.execute(stmt, params)
-        rows = result.all()
-        
-        return [
-            {
-                "chunk_id": row.chunk_id,
-                "page_number": row.page_number,
-                "text": row.text_content,
-                "document_id": row.doc_id,
-                "document_revision_id": row.document_revision_id,
-                "rank": row.rank
-            }
-            for row in rows
-        ]
+
+class QACitation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: str
+    revision_id: str
+    page_number: int | None
+    low_provenance: bool
+    provenance_state: str
+    chunk_id: str
+    text_start: int
+    text_end: int
+    evidence_excerpt: str
+    evidence_sha256: str
+    relevance_score: float | None = None
 
 
-def _build_citations_from_chunks(results: list[dict]) -> list[dict]:
-    """Build citation list from retrieval results."""
+class QARetrievalMetadata(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scope: Literal["MATTER", "DOCUMENT"]
+    engine: Literal["MESA", "LOCAL_FALLBACK", "NONE"]
+    dataset_id: str | None = None
+    verified_document_count: int = 0
+    verified_citation_count: int = 0
+    duration_ms: int = 0
+
+
+class QAResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    answer: str
+    status: str
+    citations: list[QACitation] = Field(default_factory=list)
+    degraded_reason: str | None = None
+    retrieval: QARetrievalMetadata = Field(
+        default_factory=lambda: QARetrievalMetadata(scope="MATTER", engine="NONE")
+    )
+
+
+class QuestionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=4096)
+
+
+def _citation_rejected(reason: str) -> None:
+    increment_metric(
+        "citation_verification_failures_total",
+        attributes={"reason": reason},
+    )
+
+
+def _citation_from_local_chunk(
+    chunk: DocumentChunk,
+    page: ParsedPage,
+    revision: DocumentRevision,
+    relevance_score: float | None = None,
+) -> QACitation | None:
+    if (
+        not revision.is_canonical
+        or chunk.revision_id != revision.id
+        or chunk.page_id != page.id
+        or chunk.character_start is None
+        or chunk.character_end is None
+        or chunk.character_end > len(page.text_content)
+    ):
+        _citation_rejected("local_linkage")
+        return None
+    evidence = page.text_content[chunk.character_start : chunk.character_end]
+    digest = hashlib.sha256(evidence.encode("utf-8")).hexdigest()
+    if evidence != chunk.text_content or digest != chunk.content_sha256:
+        _citation_rejected("local_hash")
+        return None
+    low = chunk.provenance_state == "LOW_PROVENANCE"
+    if not low and not chunk.provenance_state.startswith("VERIFIED_PDF"):
+        _citation_rejected("local_provenance_state")
+        return None
+    return QACitation(
+        document_id=chunk.document_id,
+        revision_id=revision.id,
+        page_number=None if low else page.page_number,
+        low_provenance=low,
+        provenance_state=chunk.provenance_state,
+        chunk_id=chunk.id,
+        text_start=chunk.character_start,
+        text_end=chunk.character_end,
+        evidence_excerpt=evidence[:500],
+        evidence_sha256=digest,
+        relevance_score=relevance_score,
+    )
+
+
+async def _lexical_citations(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    matter_id: str,
+    document_id: str | None,
+    question: str,
+    limit: int = 5,
+) -> list[QACitation]:
+    query_vector = func.plainto_tsquery("turkish", question)
+    rank = func.ts_rank_cd(DocumentChunk.fts_vector, query_vector)
+    statement = (
+        select(
+            DocumentChunk,
+            ParsedPage,
+            DocumentRevision,
+            rank.label("relevance_score"),
+        )
+        .join(ParsedPage, DocumentChunk.page_id == ParsedPage.id)
+        .join(ParsedDocument, ParsedPage.parsed_document_id == ParsedDocument.id)
+        .join(Document, DocumentChunk.document_id == Document.id)
+        .join(DocumentRevision, DocumentChunk.revision_id == DocumentRevision.id)
+        .where(
+            DocumentChunk.tenant_id == tenant_id,
+            Document.tenant_id == tenant_id,
+            Document.matter_id == matter_id,
+            DocumentRevision.is_canonical.is_(True),
+            DocumentChunk.fts_vector.op("@@")(query_vector),
+        )
+        .order_by(rank.desc(), DocumentChunk.id)
+        .limit(limit)
+    )
+    if document_id:
+        statement = statement.where(Document.id == document_id)
+    rows = (await session.execute(statement)).all()
     citations = []
-    for i, r in enumerate(results):
-        citations.append({
-            "document_id": r["document_id"],
-            "document_revision_id": r["document_revision_id"],
-            "source_locator_id": r["chunk_id"],
-            "page_number": r["page_number"],
-            "paragraph_index": i,
-            "text_snippet": r["text"][:150],
-            "verification_state": "verified"
-        })
+    for chunk, page, revision, relevance_score in rows:
+        citation = _citation_from_local_chunk(
+            chunk,
+            page,
+            revision,
+            float(relevance_score) if relevance_score is not None else None,
+        )
+        if citation is not None:
+            citations.append(citation)
     return citations
 
 
-async def _try_mesa_intelligence(tenant_id: str, matter_id: str | None, question: str) -> dict | None:
-    """
-    Tier 1: Try MESA Core intelligence backend.
-    Returns response dict on success, None on failure/unavailability.
-    """
-    try:
-        from apps.api.adapters.mesa_v4_intelligence import MesaV4HttpAdapter
-        from apps.api.core.ports.intelligence import IntelligenceQuery, OperationState
-        
-        mesa_adapter = MesaV4HttpAdapter()
-        query_obj = IntelligenceQuery(
-            query_text=question,
-            tenant_id=tenant_id,
-            matter_id=matter_id
-        )
-        mesa_response = await mesa_adapter.query(query_obj)
-        await mesa_adapter.close()
-        
-        if mesa_response.state == OperationState.success:
-            citations = []
-            for i, ev in enumerate(mesa_response.evidence or []):
-                citations.append({
-                    "document_id": ev.document_id,
-                    "document_revision_id": "mesa-rev",
-                    "source_locator_id": f"mesa-node-{i}",
-                    "page_number": ev.page_number or 1,
-                    "paragraph_index": i,
-                    "text_snippet": ev.text_snippet[:150] if ev.text_snippet else "MESA Extracted Context",
-                    "verification_state": "verified"
-                })
-                
-            return {
-                "state": "EVIDENCE_FOUND",
-                "answer": mesa_response.summary or "MESA Core returned evidence.",
-                "citations": citations,
-                "source_coverage": "COMPLETE",
-                "processing_state": "READY",
-                "review_warning": False
-            }
-        elif mesa_response.state == OperationState.no_evidence_retrieved:
-            return {
-                "state": "NO_EVIDENCE_RETRIEVED",
-                "answer": "MESA Core did not find sufficient evidence for this query.",
-                "citations": [],
-                "source_coverage": "INCOMPLETE",
-                "processing_state": "READY",
-                "review_warning": False
-            }
-        # Other states (pending, unavailable, etc.) → fall through to degraded mode
+async def _verify_mesa_evidence(
+    session: AsyncSession,
+    *,
+    tenant_id: str,
+    matter_id: str,
+    dataset_id: str,
+    document_filter: str | None,
+    evidence,
+) -> QACitation | None:
+    if evidence.dataset_id != dataset_id:
+        _citation_rejected("mesa_dataset")
         return None
-    except Exception as e:
-        logger.warning(f"MESA integration failed or unavailable: {e}. Falling back to degraded mode.")
+    if document_filter and evidence.document_id != document_filter:
+        _citation_rejected("mesa_document_filter")
         return None
-
-
-async def _try_llm_augmented_answer(question: str, retrieval_results: list[dict]) -> dict | None:
-    """
-    Tier 2: Use LLM to synthesize an answer from retrieved chunks.
-    Returns response dict on success, None on failure.
-    """
-    try:
-        from apps.api.core.llm_client import ask_with_llm, get_llm_client, LLMProvider
-
-        client = get_llm_client()
-        
-        # Skip if mock provider and not explicitly enabled for degraded mode
-        if client.config.provider == LLMProvider.MOCK:
-            logger.info("LLM provider is mock — skipping LLM augmentation in degraded mode")
-            return None
-
-        llm_result = await ask_with_llm(
-            question=question,
-            context_chunks=retrieval_results,
-            client=client,
+    locator_id = evidence.metadata.get("source_locator_id")
+    if not isinstance(locator_id, str):
+        _citation_rejected("mesa_locator_missing")
+        return None
+    row = (
+        await session.execute(
+            select(
+                SourceLocator,
+                DocumentChunk,
+                ParsedPage,
+                DocumentRevision,
+                Document,
+            )
+            .join(DocumentChunk, SourceLocator.chunk_id == DocumentChunk.id)
+            .join(ParsedPage, SourceLocator.parsed_page_id == ParsedPage.id)
+            .join(
+                DocumentRevision,
+                SourceLocator.document_revision_id == DocumentRevision.id,
+            )
+            .join(Document, SourceLocator.document_id == Document.id)
+            .where(
+                SourceLocator.id == locator_id,
+                SourceLocator.tenant_id == tenant_id,
+                SourceLocator.matter_id == matter_id,
+                Document.matter_id == matter_id,
+                Document.tenant_id == tenant_id,
+            )
         )
+    ).one_or_none()
+    if row is None:
+        _citation_rejected("mesa_locator_not_found")
+        return None
+    locator, chunk, page, revision, _ = row
+    if (
+        evidence.document_id != locator.document_id
+        or evidence.revision_id != locator.document_revision_id
+        or evidence.chunk_id != locator.chunk_id
+        or evidence.source_ref
+        != f"mesa-law://{tenant_id}/{matter_id}/{locator.document_id}/"
+        f"{locator.document_revision_id}/{locator.chunk_id}"
+        or locator.character_start is None
+        or locator.character_end is None
+        or locator.evidence_text is None
+        or locator.evidence_sha256 is None
+    ):
+        _citation_rejected("mesa_identity")
+        return None
+    local_evidence = page.text_content[locator.character_start : locator.character_end]
+    if (
+        local_evidence != locator.evidence_text
+        or evidence.evidence_span != local_evidence
+        or evidence.metadata.get("evidence_sha256") != locator.evidence_sha256
+        or hashlib.sha256(local_evidence.encode()).hexdigest()
+        != locator.evidence_sha256
+    ):
+        _citation_rejected("mesa_evidence_hash")
+        return None
+    base = _citation_from_local_chunk(chunk, page, revision)
+    if base is None:
+        return None
+    return base.model_copy(
+        update={
+            "text_start": locator.character_start,
+            "text_end": locator.character_end,
+            "evidence_excerpt": local_evidence[:500],
+            "evidence_sha256": locator.evidence_sha256,
+            "relevance_score": evidence.score,
+        }
+    )
 
-        if llm_result.get("error"):
-            logger.warning(f"LLM augmentation failed: {llm_result['error']}")
-            return None
 
-        answer_text = llm_result.get("answer", "")
-        if not answer_text:
-            return None
-
-        # Build citations from LLM response + original retrieval results
-        llm_citations = llm_result.get("citations", [])
-        
-        # Validate LLM citations against actual retrieval results (hallucination guard)
-        valid_doc_ids = {r["document_id"] for r in retrieval_results}
-        verified_citations = []
-        
-        for cit in llm_citations:
-            doc_id = cit.get("document_id", "")
-            if doc_id in valid_doc_ids:
-                verified_citations.append({
-                    "document_id": doc_id,
-                    "document_revision_id": next(
-                        (r["document_revision_id"] for r in retrieval_results if r["document_id"] == doc_id),
-                        "unknown"
-                    ),
-                    "source_locator_id": next(
-                        (r["chunk_id"] for r in retrieval_results if r["document_id"] == doc_id),
-                        "llm-ref"
-                    ),
-                    "page_number": cit.get("page_number", 1),
-                    "paragraph_index": len(verified_citations),
-                    "text_snippet": cit.get("text_snippet", "")[:150],
-                    "verification_state": "verified"
-                })
+async def _mesa_citations(
+    session: AsyncSession,
+    *,
+    binding: MesaScopeBinding,
+    tenant_id: str,
+    matter_id: str,
+    document_id: str | None,
+    question: str,
+) -> tuple[list[QACitation], str | None]:
+    adapter = MesaV4HttpAdapter()
+    mesa_session_id: str | None = None
+    try:
+        await adapter.preflight_scope(
+            tenant_id=binding.mesa_tenant_id,
+            workspace_id=binding.workspace_id,
+            dataset_id=binding.dataset_id,
+        )
+        mesa_session = await adapter.start_session(
+            SessionStartRequest(
+                tenant_id=binding.mesa_tenant_id,
+                workspace_id=binding.workspace_id,
+                dataset_ids=[binding.dataset_id],
+                agent_id=binding.agent_id,
+            )
+        )
+        mesa_session_id = mesa_session.session_id
+        response = await adapter.query(
+            IntelligenceQuery(
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+                session_id=mesa_session.session_id,
+                dataset_ids=[binding.dataset_id],
+                query_text=question,
+            )
+        )
+        if response.state == OperationState.no_evidence_retrieved:
+            return [], None
+        if response.state != OperationState.success:
+            return [], response.error_message or f"MESA_{response.state.value.upper()}"
+        citations = []
+        for evidence in response.evidence:
+            citation = await _verify_mesa_evidence(
+                session,
+                tenant_id=tenant_id,
+                matter_id=matter_id,
+                dataset_id=binding.dataset_id,
+                document_filter=document_id,
+                evidence=evidence,
+            )
+            if citation is not None:
+                citations.append(citation)
             else:
-                logger.warning(
-                    f"LLM hallucination detected: cited document '{doc_id}' not in retrieval set. "
-                    f"Dropping fabricated citation."
-                )
-
-        # If LLM produced no valid citations, fall back to retrieval-based citations
-        if not verified_citations:
-            verified_citations = _build_citations_from_chunks(retrieval_results)
-
-        has_evidence = llm_result.get("has_sufficient_evidence", True)
-        confidence = llm_result.get("confidence", "medium")
-
-        return {
-            "state": "EVIDENCE_FOUND" if has_evidence else "INSUFFICIENT_EVIDENCE",
-            "answer": answer_text,
-            "citations": verified_citations,
-            "source_coverage": "COMPLETE" if confidence == "high" else "PARTIAL",
-            "processing_state": "READY",
-            "review_warning": confidence == "low",
-            "degraded_mode": True,
-            "llm_augmented": True,
-            "llm_provider": llm_result.get("llm_provider", "unknown"),
-        }
-
-    except ImportError:
-        logger.warning("LLM client not available — skipping LLM augmentation")
-        return None
-    except Exception as e:
-        logger.warning(f"LLM augmentation error: {e}")
-        return None
+                logger.warning("Rejected unverifiable MESA provenance")
+        return citations, None if citations else "MESA_PROVENANCE_UNVERIFIED"
+    except MesaV4Error as exc:
+        return [], f"MESA_UNAVAILABLE:{type(exc).__name__}"
+    finally:
+        if mesa_session_id:
+            try:
+                await adapter.end_session(mesa_session_id)
+            except MesaV4Error:
+                logger.warning("Could not end the ephemeral MESA QA session")
+        await adapter.close()
 
 
-async def ask_matter_question(session: AsyncSession, tenant_id: str, matter_id: str | None, document_id: str | None, question: str) -> dict:
-    """
-    Main QA entry point — tries each tier in order:
-    1. MESA Core intelligence (full RAG)
-    2. LLM-augmented degraded mode (FTS retrieval + LLM synthesis)
-    3. Pure lexical degraded mode (FTS retrieval only, chunk assembly)
-    """
-    # Test environment short-circuit
-    if os.getenv("MESA_LAW_ENVIRONMENT") == "test":
-        return {
-            "state": "MOCK_RESPONSE",
-            "answer": f"[TEST MOCK] Sorduğunuz soru: {question}. Bu bir test yanıtıdır.",
-            "citations": [],
-            "source_coverage": "COMPLETE",
-            "processing_state": "READY",
-            "review_warning": False
-        }
+def _extractive_answer(question: str, citations: list[QACitation]) -> str:
+    excerpts = "\n".join(f"- {citation.evidence_excerpt}" for citation in citations[:5])
+    return f"“{question}” sorusu için doğrulanmış kaynak eşleşmeleri:\n{excerpts}"
 
-    # ── Tier 1: MESA Core ──
-    mesa_result = await _try_mesa_intelligence(tenant_id, matter_id, question)
-    if mesa_result is not None:
-        return mesa_result
 
-    # ── Retrieval (shared by Tier 2 and Tier 3) ──
-    adapter = PostgresLexicalAdapter(session)
-    results = await adapter.search(tenant_id, matter_id, document_id, question)
-    
-    if not results:
-        return {
-            "state": "NO_EVIDENCE_RETRIEVED",
-            "answer": "Dosya kapsamındaki belgelerde bu soruyu yanıtlamak için yeterli bilgi veya delil bulunamadı.",
-            "citations": [],
-            "source_coverage": "INCOMPLETE",
-            "processing_state": "READY",
-            "review_warning": False,
-            "degraded_mode": True
-        }
+async def ask_matter_question(
+    session: AsyncSession,
+    tenant_id: str,
+    matter_id: str,
+    document_id: str | None,
+    question: str,
+) -> QAResponse:
+    started_at = perf_counter()
+    scope = "DOCUMENT" if document_id else "MATTER"
 
-    # ── Tier 2: LLM-Augmented Degraded Mode ──
-    llm_result = await _try_llm_augmented_answer(question, results)
-    if llm_result is not None:
-        return llm_result
+    def retrieval_metadata(
+        engine: Literal["MESA", "LOCAL_FALLBACK", "NONE"],
+        citations: list[QACitation],
+        dataset_id: str | None,
+    ) -> QARetrievalMetadata:
+        return QARetrievalMetadata(
+            scope=scope,
+            engine=engine,
+            dataset_id=dataset_id,
+            verified_document_count=len(
+                {citation.document_id for citation in citations}
+            ),
+            verified_citation_count=len(citations),
+            duration_ms=max(0, round((perf_counter() - started_at) * 1000)),
+        )
 
-    # ── Tier 3: Pure Lexical Degraded Mode ──
-    logger.info("Using pure lexical degraded mode (no LLM available)")
-    
-    citations = _build_citations_from_chunks(results)
-    
-    if not citations:
-        raise ValueError("AI response generated without citations. Blocked by Source/Citation policy.")
+    binding = await session.scalar(
+        select(MesaScopeBinding).where(
+            MesaScopeBinding.tenant_id == tenant_id,
+            MesaScopeBinding.matter_id == matter_id,
+        )
+    )
+    degraded_reason: str | None = None
+    citations: list[QACitation] = []
+    if binding is not None and binding.provisioning_status == "READY":
+        citations, degraded_reason = await _mesa_citations(
+            session,
+            binding=binding,
+            tenant_id=tenant_id,
+            matter_id=matter_id,
+            document_id=document_id,
+            question=question,
+        )
+        if citations:
+            return QAResponse(
+                answer=_extractive_answer(question, citations),
+                status="ANSWERED",
+                citations=citations,
+                retrieval=retrieval_metadata("MESA", citations, binding.dataset_id),
+            )
+    else:
+        degraded_reason = "MESA_SCOPE_NOT_READY"
 
-    if any(c.get("verification_state") == "unverified" for c in citations):
-        return {
-            "state": "UNVERIFIED_CITATION_DETECTED",
-            "answer": "AI tarafından üretilen yanıt doğrulanamayan alıntılar içerdiği için güvenlik politikası gereği engellenmiştir. (Degraded Mode: Lexical Search)",
-            "citations": [],
-            "source_coverage": "INVALID",
-            "processing_state": "BLOCKED",
-            "review_warning": True,
-            "degraded_mode": True
-        }
-
-    answer = f"Sorduğunuz '{question}' sorusuna istinaden dosyadaki deliller incelendi. "
-    answer += "Mevcut kaynaklara göre, belgede geçen ilgili bölümler: "
-    for c in citations:
-        answer += f"\n- Belge ID: {c['document_id']} (Sayfa {c['page_number']}): '{c['text_snippet']}...' "
-    
-    return {
-        "state": "EVIDENCE_FOUND",
-        "answer": answer,
-        "citations": citations,
-        "source_coverage": "COMPLETE",
-        "processing_state": "READY",
-        "review_warning": True,
-        "degraded_mode": True,
-        "llm_augmented": False
-    }
+    lexical = await _lexical_citations(
+        session,
+        tenant_id=tenant_id,
+        matter_id=matter_id,
+        document_id=document_id,
+        question=question,
+    )
+    if lexical:
+        return QAResponse(
+            answer=_extractive_answer(question, lexical),
+            status="DEGRADED",
+            citations=lexical,
+            degraded_reason=degraded_reason or "MESA_NO_VERIFIED_EVIDENCE",
+            retrieval=retrieval_metadata(
+                "LOCAL_FALLBACK",
+                lexical,
+                binding.dataset_id if binding is not None else None,
+            ),
+        )
+    return QAResponse(
+        answer=(
+            "Bu soruyu yanıtlamak için matter kapsamında yeterli doğrulanmış "
+            "kaynak bulunamadı."
+        ),
+        status="ABSTAIN",
+        citations=[],
+        degraded_reason=degraded_reason or "NO_VERIFIED_EVIDENCE",
+        retrieval=retrieval_metadata(
+            "NONE", [], binding.dataset_id if binding is not None else None
+        ),
+    )

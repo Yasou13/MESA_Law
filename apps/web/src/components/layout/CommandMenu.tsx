@@ -3,12 +3,11 @@
 import * as React from 'react'
 import {
   Settings,
-  Smile,
   User,
   Search,
-  FileText,
   Briefcase,
-  ArrowRight,
+  FileStack,
+  MessageSquareText,
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -21,14 +20,19 @@ import {
   CommandShortcut,
 } from '@/components/ui/command'
 import { useRouter } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import { localizedHref } from '@/lib/navigation'
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false)
   const router = useRouter()
+  const locale = useLocale() as 'tr' | 'en'
+  const t = useTranslations('Shell')
+  const navigationT = useTranslations('Navigation')
 
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setOpen((open) => !open)
       }
@@ -46,37 +50,51 @@ export function CommandMenu() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="hidden md:flex items-center gap-2 w-full max-w-sm px-4 py-2 text-sm text-[var(--color-anthracite-400)] bg-[var(--background)] border border-[var(--border-surface)] rounded-xl hover:bg-[var(--bg-surface-hover)] hover:text-[var(--foreground)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-lila-500)]/50 focus:border-transparent"
+        className="hidden h-8 w-full items-center gap-2 rounded-md border border-border bg-surface px-3 text-xs text-foreground-secondary shadow-xs transition-colors hover:bg-surface-subtle hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring md:flex"
+        aria-label={t('openCommand')}
       >
         <Search className="w-4 h-4" />
-        <span className="flex-1 text-left">Search matters, documents, or queries...</span>
-        <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-[var(--bg-surface)] text-[var(--color-anthracite-400)] border border-[var(--border-surface)]">
-          <span className="text-xs">⌘</span>K
+        <span className="flex-1 truncate text-left">{t('commandSearch')}</span>
+        <kbd className="hidden items-center gap-1 rounded border border-border bg-surface-subtle px-1.5 py-0.5 font-mono text-[10px] sm:inline-flex">
+          <span>⌘</span>K
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
-        <CommandInput placeholder="Type a command or search..." />
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('openCommand')}
+        description={t('commandSearch')}
+      >
+        <CommandInput placeholder={t('commandPlaceholder')} />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{t('noCommand')}</CommandEmpty>
           
-          <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => runCommand(() => router.push('/drafts'))}>
-              <FileText className="mr-2 h-4 w-4" />
-              <span>Create New Draft</span>
+          <CommandGroup heading={t('workspaces')}>
+            <CommandItem onSelect={() => runCommand(() => router.push(localizedHref(locale, '/matters')))}>
+              <Briefcase className="mr-2 h-4 w-4" />
+              <span>{navigationT('matters')}</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => router.push(localizedHref(locale, '/documents')))}>
+              <FileStack className="mr-2 h-4 w-4" />
+              <span>{navigationT('documents')}</span>
+            </CommandItem>
+            <CommandItem onSelect={() => runCommand(() => router.push(localizedHref(locale, '/ask-mesa')))}>
+              <MessageSquareText className="mr-2 h-4 w-4" />
+              <span>Ask MESA</span>
             </CommandItem>
           </CommandGroup>
           
           <CommandSeparator />
           
-          <CommandGroup heading="Settings">
-            <CommandItem onSelect={() => runCommand(() => router.push('/admin/members'))}>
+          <CommandGroup heading={t('administration')}>
+            <CommandItem onSelect={() => runCommand(() => router.push(localizedHref(locale, '/admin/members')))}>
               <User className="mr-2 h-4 w-4" />
-              <span>Manage Firm Members</span>
+              <span>{t('firmMembers')}</span>
             </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => router.push('/admin/settings'))}>
+            <CommandItem onSelect={() => runCommand(() => router.push(localizedHref(locale, '/admin/settings')))}>
               <Settings className="mr-2 h-4 w-4" />
-              <span>Firm Settings</span>
+              <span>{t('firmSettings')}</span>
               <CommandShortcut>⌘S</CommandShortcut>
             </CommandItem>
           </CommandGroup>

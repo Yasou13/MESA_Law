@@ -8,4 +8,11 @@ import type { CorrectReviewRequestCorrectedContent } from './correctReviewReques
 
 export interface CorrectReviewRequest {
   corrected_content: CorrectReviewRequestCorrectedContent;
+  /** @minimum 1 */
+  expected_version: number;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
 }

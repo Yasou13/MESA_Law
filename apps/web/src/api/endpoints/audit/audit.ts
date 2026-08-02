@@ -26,6 +26,7 @@ import type {
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -47,55 +48,22 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type listAuditEventsResponse200 = {
-  data: AuditEventResponse[]
-  status: 200
-}
-
-export type listAuditEventsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listAuditEventsResponseSuccess = (listAuditEventsResponse200) & {
-  headers: Headers;
-};
-export type listAuditEventsResponseError = (listAuditEventsResponse422) & {
-  headers: Headers;
-};
-
-export type listAuditEventsResponse = (listAuditEventsResponseSuccess | listAuditEventsResponseError)
-
-export const getListAuditEventsUrl = (params?: ListAuditEventsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/audit/events?${stringifiedParams}` : `/api/v1/audit/events`
-}
-
 /**
  * List audit events.
  * @summary List Audit Events
  */
-export const listAuditEvents = async (params?: ListAuditEventsParams, options?: RequestInit): Promise<listAuditEventsResponse> => {
-
-  return customInstance<listAuditEventsResponse>(getListAuditEventsUrl(params),
-  {
-    ...options,
-    method: 'GET'
+export const listAuditEvents = (
+    params?: ListAuditEventsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<AuditEventResponse[]>(
+      {url: `/api/v1/audit/events`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
 
 
 
@@ -107,7 +75,7 @@ export const getListAuditEventsQueryKey = (params?: ListAuditEventsParams,) => {
     }
 
 
-export const getListAuditEventsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = HTTPValidationError>(params?: ListAuditEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListAuditEventsQueryOptions = <TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = ErrorType<HTTPValidationError>>(params?: ListAuditEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -116,7 +84,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditEvents>>> = ({ signal }) => listAuditEvents(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditEvents>>> = ({ signal }) => listAuditEvents(params, requestOptions, signal);
 
 
 
@@ -126,10 +94,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListAuditEventsQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditEvents>>>
-export type ListAuditEventsQueryError = HTTPValidationError
+export type ListAuditEventsQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = HTTPValidationError>(
+export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = ErrorType<HTTPValidationError>>(
  params: undefined |  ListAuditEventsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAuditEvents>>,
@@ -139,7 +107,7 @@ export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEv
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = HTTPValidationError>(
+export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListAuditEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listAuditEvents>>,
@@ -149,7 +117,7 @@ export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEv
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = HTTPValidationError>(
+export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListAuditEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -157,7 +125,7 @@ export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEv
  * @summary List Audit Events
  */
 
-export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = HTTPValidationError>(
+export function useListAuditEvents<TData = Awaited<ReturnType<typeof listAuditEvents>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListAuditEventsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listAuditEvents>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

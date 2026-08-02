@@ -21,5 +21,3 @@ else:
     storage_uri = redis_url
 
 limiter = Limiter(key_func=get_remote_address, storage_uri=storage_uri)
-
-

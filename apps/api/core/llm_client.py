@@ -7,14 +7,15 @@ Supports OpenAI, Anthropic, and Google Gemini with:
 - Streaming support via SSE
 - Structured output parsing for legal domain tasks
 """
+
 import asyncio
 import json
 import logging
 import os
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import AsyncIterator
 
 import httpx
 from tenacity import (
@@ -58,6 +59,7 @@ class LLMResponse:
 @dataclass
 class LLMConfig:
     """Configuration for an LLM provider."""
+
     provider: LLMProvider = LLMProvider.MOCK
     model: str = ""
     api_key: str = ""
@@ -79,7 +81,7 @@ class BaseLLMClient(ABC):
         """Send a completion request and return the response."""
 
     @abstractmethod
-    async def stream(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
+    def stream(self, messages: list[LLMMessage]) -> AsyncIterator[str]:
         """Stream a completion response, yielding text chunks."""
 
     async def close(self):
@@ -155,7 +157,9 @@ class OpenAIClient(BaseLLMClient):
             "stream": True,
         }
 
-        async with client.stream("POST", f"{base_url}/chat/completions", json=payload) as response:
+        async with client.stream(
+            "POST", f"{base_url}/chat/completions", json=payload
+        ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if line.startswith("data: "):
@@ -215,7 +219,9 @@ class AnthropicClient(BaseLLMClient):
         data = response.json()
 
         content_blocks = data.get("content", [])
-        content = "".join(b.get("text", "") for b in content_blocks if b.get("type") == "text")
+        content = "".join(
+            b.get("text", "") for b in content_blocks if b.get("type") == "text"
+        )
         usage = data.get("usage", {})
 
         return LLMResponse(
@@ -250,7 +256,9 @@ class AnthropicClient(BaseLLMClient):
         if system_msg:
             payload["system"] = system_msg
 
-        async with client.stream("POST", f"{base_url}/messages", json=payload) as response:
+        async with client.stream(
+            "POST", f"{base_url}/messages", json=payload
+        ) as response:
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if line.startswith("data: "):
@@ -305,12 +313,6 @@ class MockLLMClient(BaseLLMClient):
 # Factory & Singleton
 # ---------------------------------------------------------------------------
 
-_PROVIDER_MAP = {
-    LLMProvider.OPENAI: OpenAIClient,
-    LLMProvider.ANTHROPIC: AnthropicClient,
-    LLMProvider.MOCK: MockLLMClient,
-}
-
 _cached_client: BaseLLMClient | None = None
 
 
@@ -340,9 +342,14 @@ def create_llm_client(config: LLMConfig | None = None) -> BaseLLMClient:
     if config is None:
         config = get_llm_config()
 
-    client_class = _PROVIDER_MAP.get(config.provider, MockLLMClient)
-    logger.info(f"Creating LLM client: provider={config.provider.value}, model={config.model}")
-    return client_class(config)
+    logger.info(
+        f"Creating LLM client: provider={config.provider.value}, model={config.model}"
+    )
+    if config.provider == LLMProvider.OPENAI:
+        return OpenAIClient(config)
+    if config.provider == LLMProvider.ANTHROPIC:
+        return AnthropicClient(config)
+    return MockLLMClient(config)
 
 
 def get_llm_client() -> BaseLLMClient:
@@ -407,11 +414,13 @@ async def ask_with_llm(
         doc_id = chunk.get("document_id", "unknown")
         page = chunk.get("page_number", "?")
         text = chunk.get("text", chunk.get("text_content", ""))
-        context_parts.append(
-            f"[Belge: {doc_id}, Sayfa: {page}]\n{text}"
-        )
+        context_parts.append(f"[Belge: {doc_id}, Sayfa: {page}]\n{text}")
 
-    context_text = "\n\n---\n\n".join(context_parts) if context_parts else "Bağlam bilgisi bulunamadı."
+    context_text = (
+        "\n\n---\n\n".join(context_parts)
+        if context_parts
+        else "Bağlam bilgisi bulunamadı."
+    )
 
     messages = [
         LLMMessage(role="system", content=LEGAL_QA_SYSTEM_PROMPT),
@@ -452,12 +461,12 @@ async def ask_with_llm(
                 "tokens_used": response.total_tokens,
             }
 
-    except Exception as e:
-        logger.error(f"LLM call failed: {e}")
+    except Exception as exc:  # noqa: BLE001 - isolate arbitrary provider failures
+        logger.error(f"LLM call failed: {exc}")
         return {
             "answer": "",
             "citations": [],
             "confidence": "none",
             "has_sufficient_evidence": False,
-            "error": str(e),
+            "error": str(exc),
         }

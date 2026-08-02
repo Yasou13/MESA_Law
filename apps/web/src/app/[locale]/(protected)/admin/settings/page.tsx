@@ -1,248 +1,69 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Settings, Building2, Sliders, Shield, Database, Save, Server, Loader2, Sparkles, CheckCircle2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Clock3, Database, Shield } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { useGetSystemSettings, useUpdateSystemSettings } from '@/api/endpoints/system/system'
-import { toast } from 'react-hot-toast'
+import { useGetSystemSettings } from '@/api/endpoints/system/system'
+import { ErrorState, LoadingState } from '@/components/ui/async-state'
+import { PageHeader } from '@/components/ui/page-header'
+import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
+import { StatusBadge } from '@/components/ui/status-badge'
 
-// UI Stub for Phase 29
 export default function AdminSettingsPage() {
-  const [activeTab, setActiveTab] = useState<'firm' | 'ai' | 'security'>('firm')
+  const t = useTranslations('SystemSettings')
+  const common = useTranslations('Common')
+  const settingsQuery = useGetSystemSettings()
 
-  const { data: settingsResponse, isLoading } = useGetSystemSettings()
-  const { mutateAsync: updateSettings, isPending: isUpdating } = useUpdateSystemSettings()
-  const settings: any = settingsResponse || {}
+  if (settingsQuery.isLoading) return <LoadingState label={common('loading')} />
+  if (settingsQuery.isError || !settingsQuery.data) return <ErrorState title={t('loadError')} description={t('loadErrorDescription')} onRetry={() => settingsQuery.refetch()} />
 
-  const [localSettings, setLocalSettings] = useState<any>(null)
-
-  // Sync state when data loads
-  if (settings.features && !localSettings) {
-    setLocalSettings(settings)
-  }
-
-  const updateMutation = useUpdateSystemSettings({
-    mutation: {
-      onSuccess: () => {
-        toast.success("Settings saved successfully")
-      },
-      onError: () => {
-        toast.error("Failed to save settings")
-      }
-    }
-  })
-
-  const handleSave = () => {
-    if (localSettings) {
-      updateMutation.mutate({ data: localSettings })
-    }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--color-lila-500)]" />
-      </div>
-    )
-  }
+  const settings = settingsQuery.data
+  const features = [
+    [t('documentScanning'), settings.features.document_ocr_enabled],
+    [t('mesaRebuild'), settings.features.mesa_rebuild_enabled],
+    [t('externalResearch'), settings.features.external_research_enabled],
+    [t('drafting'), settings.features.drafting_ai_enabled],
+    [t('deadlineAi'), settings.features.deadline_ai_enabled],
+  ] as const
 
   return (
-    <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">System Settings</h1>
-          <p className="text-[var(--color-anthracite-500)] mt-1">Manage firm-wide configuration, AI models, and security policies.</p>
-        </div>
-        <Button onClick={handleSave} disabled={updateMutation.isPending} className="gap-2 bg-[var(--color-lila-600)] text-white hover:bg-[var(--color-lila-500)]">
-          {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-          {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
-        </Button>
-      </div>
+    <div className="space-y-6">
+      <PageHeader title={t('title')} description={t('description')} />
 
-      <div className="flex flex-col md:flex-row gap-8">
-        
-        {/* Navigation Sidebar */}
-        <div className="w-full md:w-64 shrink-0 space-y-2">
-          <button 
-            onClick={() => setActiveTab('firm')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'firm' 
-                ? 'bg-[var(--color-lila-500)]/10 text-[var(--color-lila-500)]' 
-                : 'text-[var(--color-anthracite-400)] hover:bg-[var(--bg-surface-hover)]'
-            }`}
-          >
-            <Building2 className="w-5 h-5" /> Firm Profile
-          </button>
-          <button 
-            onClick={() => setActiveTab('ai')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'ai' 
-                ? 'bg-[var(--color-lila-500)]/10 text-[var(--color-lila-500)]' 
-                : 'text-[var(--color-anthracite-400)] hover:bg-[var(--bg-surface-hover)]'
-            }`}
-          >
-            <Sparkles className="w-5 h-5" /> AI & Models
-          </button>
-          <button 
-            onClick={() => setActiveTab('security')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-              activeTab === 'security' 
-                ? 'bg-[var(--color-lila-500)]/10 text-[var(--color-lila-500)]' 
-                : 'text-[var(--color-anthracite-400)] hover:bg-[var(--bg-surface-hover)]'
-            }`}
-          >
-            <Shield className="w-5 h-5" /> Security & Compliance
-          </button>
-        </div>
-
-        {/* Content Area */}
-        <div className="flex-1 space-y-6">
-          
-          {activeTab === 'firm' && (
-            <div className="glass-card rounded-xl border border-[var(--border-surface)] p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-[var(--foreground)] border-b border-[var(--border-surface)] pb-4 mb-6">
-                Firm Details
-              </h2>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label htmlFor="firmName" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Firm Name</label>
-                  <Input id="firmName" defaultValue="MESA Law Partners" className="bg-[var(--background)] border-[var(--border-surface)]" />
-                </div>
-                <div className="space-y-2">
-                  <label htmlFor="domain" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Primary Domain</label>
-                  <Input id="domain" defaultValue="mesalaw.com" className="bg-[var(--background)] border-[var(--border-surface)]" />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <label htmlFor="address" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Headquarters Address</label>
-                  <Input id="address" defaultValue="1200 Legal Avenue, Suite 400, New York, NY 10001" className="bg-[var(--background)] border-[var(--border-surface)]" />
-                </div>
-              </div>
+      <Panel>
+        <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Database className="size-4 text-primary-content" />{t('features')}</h2></PanelHeader>
+        <PanelBody className="divide-y divide-border-subtle py-0">
+          {features.map(([name, enabled]) => (
+            <div key={name} className="flex items-start justify-between gap-4 py-4">
+              <div><p className="font-medium">{name}</p>{!enabled && <p className="mt-1 text-xs text-foreground-muted">{t('unavailableNote')}</p>}</div>
+              <StatusBadge status={enabled ? 'success' : 'degraded'} label={enabled ? t('enabled') : t('unavailable')} />
             </div>
-          )}
+          ))}
+        </PanelBody>
+      </Panel>
 
-          {activeTab === 'ai' && (
-            <div className="glass-card rounded-xl border border-[var(--border-surface)] p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-[var(--foreground)] border-b border-[var(--border-surface)] pb-4 mb-6 flex items-center gap-2">
-                AI Engine Configuration
-              </h2>
-              
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Primary LLM Provider</label>
-                  <Select defaultValue="mesa-claude">
-                    <SelectTrigger className="w-full md:w-[400px] bg-[var(--background)] border-[var(--border-surface)]">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mesa-claude">Anthropic Claude 3.5 Sonnet (MESA Secured)</SelectItem>
-                      <SelectItem value="mesa-gpt4">OpenAI GPT-4o (MESA Secured)</SelectItem>
-                      <SelectItem value="mesa-local">Llama 3 70B (On-Premise)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-sm text-[var(--color-anthracite-500)] mt-2">
-                    This model powers drafting, analysis, and global Q&A. All selected models comply with SOC2 data retention policies.
-                  </p>
-                </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Panel>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Shield className="size-4 text-primary-content" />{t('authPolicy')}</h2></PanelHeader>
+          <PanelBody>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('mfa')}</dt><dd className="font-medium">{settings.security.require_mfa ? t('yes') : t('no')}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('sessionTimeout')}</dt><dd className="font-medium">{t('minutes', { value: settings.security.session_timeout_minutes })}</dd></div>
+            </dl>
+            <p className="mt-5 text-xs leading-5 text-foreground-muted">{t('authNote')}</p>
+          </PanelBody>
+        </Panel>
 
-                <div className="space-y-4 pt-6 border-t border-[var(--border-surface)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Auto-Extraction on Upload</label>
-                      <p className="text-sm text-[var(--color-anthracite-500)] mt-1 max-w-lg">
-                        Automatically extract entities, claims, and dates from documents the moment they are uploaded.
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={localSettings?.features?.document_ocr_enabled} 
-                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, features: { ...prev.features, document_ocr_enabled: checked } }))} 
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-[var(--border-surface)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Internet-Enabled Research</label>
-                      <p className="text-sm text-[var(--color-anthracite-500)] mt-1 max-w-lg">
-                        Allow the AI agent to browse public court dockets and news sites when internal knowledge is insufficient.
-                      </p>
-                    </div>
-                    <Switch 
-                      checked={localSettings?.features?.advanced_search_enabled} 
-                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, features: { ...prev.features, advanced_search_enabled: checked } }))} 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'security' && (
-            <div className="glass-card rounded-xl border border-[var(--border-surface)] p-6 space-y-6">
-              <h2 className="text-xl font-semibold text-[var(--foreground)] border-b border-[var(--border-surface)] pb-4 mb-6 flex items-center gap-2">
-                Security & Access Control
-              </h2>
-              
-              <div className="space-y-6">
-                <div className="flex items-start gap-4 p-4 rounded-xl border border-[var(--color-semantic-success)]/20 bg-[var(--color-semantic-success)]/5">
-                  <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-[var(--foreground)]">SOC2 Compliance Active</h3>
-                    <p className="text-sm text-[var(--color-anthracite-400)] mt-1">
-                      Data is encrypted at rest (AES-256) and in transit (TLS 1.3). Zero data is used for training foundation models.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Require Multi-Factor Authentication (MFA)</label>
-                      <p className="text-sm text-[var(--color-anthracite-500)] mt-1">Enforce MFA for all firm members across all devices.</p>
-                    </div>
-                    <Switch 
-                      checked={localSettings?.security?.require_mfa} 
-                      onCheckedChange={(checked) => setLocalSettings((prev: any) => ({ ...prev, security: { ...prev.security, require_mfa: checked } }))} 
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-[var(--border-surface)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Strict Ethical Wall Enforcement</label>
-                      <p className="text-sm text-[var(--color-anthracite-500)] mt-1">Prevent search cross-contamination between restricted matters.</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-6 border-t border-[var(--border-surface)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <label className="text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Allow Anonymous Telemetry</label>
-                      <p className="text-sm text-[var(--color-anthracite-500)] mt-1">Share anonymized usage data to help MESA improve the product. Does not include matter data or prompts.</p>
-                    </div>
-                    <Switch defaultChecked={false} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
+        <Panel>
+          <PanelHeader><h2 className="flex items-center gap-2 font-semibold"><Clock3 className="size-4 text-primary-content" />{t('retention')}</h2></PanelHeader>
+          <PanelBody>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('auditLog')}</dt><dd className="font-medium">{t('days', { value: settings.retention.audit_log_days })}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-foreground-secondary">{t('deletedMarker')}</dt><dd className="font-medium">{t('days', { value: settings.retention.deleted_document_days })}</dd></div>
+            </dl>
+            <p className="mt-5 text-xs leading-5 text-foreground-muted">{t('retentionNote')}</p>
+          </PanelBody>
+        </Panel>
       </div>
     </div>
   )

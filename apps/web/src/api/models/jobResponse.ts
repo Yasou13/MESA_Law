@@ -7,15 +7,15 @@
 import type { JobResponsePayload } from './jobResponsePayload';
 
 export interface JobResponse {
-  id: string;
-  type: string;
-  status: string;
-  tenant_id: string;
-  matter_id?: string | null;
   created_at: string;
-  updated_at: string;
   error_message?: string | null;
-  retries: number;
+  id: string;
+  matter_id?: string | null;
   max_retries: number;
   payload: JobResponsePayload;
+  retries: number;
+  status: string;
+  tenant_id: string;
+  type: string;
+  updated_at: string;
 }

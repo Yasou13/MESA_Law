@@ -2,11 +2,11 @@
 Tests for the Evaluation Pipeline — verifies golden dataset validity,
 metric computations, and gate evaluation logic.
 """
+
 import json
 from pathlib import Path
 
 import pytest
-
 from evaluation.metrics import (
     EvaluationReport,
     compute_answer_coverage,
@@ -23,19 +23,24 @@ from evaluation.metrics import (
     evaluate_gate,
 )
 
-GOLDEN_DATASET_PATH = Path(__file__).parent.parent / "evaluation" / "golden_dataset.json"
+GOLDEN_DATASET_PATH = (
+    Path(__file__).parent.parent / "evaluation" / "golden_dataset.json"
+)
 
 
 # ---------------------------------------------------------------------------
 # Golden Dataset Integrity Tests
 # ---------------------------------------------------------------------------
 
+
 class TestGoldenDatasetIntegrity:
     """Verify the golden dataset itself is valid and well-formed."""
 
     def test_golden_dataset_exists(self):
         """Golden dataset file must exist."""
-        assert GOLDEN_DATASET_PATH.exists(), f"Golden dataset not found at {GOLDEN_DATASET_PATH}"
+        assert GOLDEN_DATASET_PATH.exists(), (
+            f"Golden dataset not found at {GOLDEN_DATASET_PATH}"
+        )
 
     def test_golden_dataset_valid_json(self):
         """Golden dataset must be valid JSON."""
@@ -48,7 +53,9 @@ class TestGoldenDatasetIntegrity:
         """Golden dataset must have at least 10 entries."""
         with open(GOLDEN_DATASET_PATH) as f:
             data = json.load(f)
-        assert len(data["entries"]) >= 10, f"Expected >= 10 entries, got {len(data['entries'])}"
+        assert len(data["entries"]) >= 10, (
+            f"Expected >= 10 entries, got {len(data['entries'])}"
+        )
 
     def test_golden_dataset_has_required_fields(self):
         """Every entry must have id, category, and expected fields."""
@@ -56,7 +63,9 @@ class TestGoldenDatasetIntegrity:
             data = json.load(f)
         for entry in data["entries"]:
             assert "id" in entry, f"Entry missing 'id': {entry}"
-            assert "category" in entry, f"Entry {entry.get('id', '?')} missing 'category'"
+            assert "category" in entry, (
+                f"Entry {entry.get('id', '?')} missing 'category'"
+            )
             assert "expected" in entry, f"Entry {entry['id']} missing 'expected'"
 
     def test_golden_dataset_categories_coverage(self):
@@ -73,7 +82,7 @@ class TestGoldenDatasetIntegrity:
         with open(GOLDEN_DATASET_PATH) as f:
             data = json.load(f)
         ids = [e["id"] for e in data["entries"]]
-        assert len(ids) == len(set(ids)), f"Duplicate entry IDs found"
+        assert len(ids) == len(set(ids)), "Duplicate entry IDs found"
 
     def test_golden_dataset_has_version(self):
         """Golden dataset must have a version field."""
@@ -85,6 +94,7 @@ class TestGoldenDatasetIntegrity:
 # ---------------------------------------------------------------------------
 # Core Metric Computation Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCoreMetrics:
     """Tests for F1, precision, and recall computations."""
@@ -125,21 +135,18 @@ class TestCoreMetrics:
 # Citation Integrity Metric Tests
 # ---------------------------------------------------------------------------
 
+
 class TestCitationMetrics:
     """Tests for citation-specific metrics."""
 
     def test_citation_precision_all_valid(self):
         result = compute_citation_precision(
-            ["doc-1", "doc-2"],
-            {"doc-1", "doc-2", "doc-3"}
+            ["doc-1", "doc-2"], {"doc-1", "doc-2", "doc-3"}
         )
         assert result == 1.0
 
     def test_citation_precision_with_fabricated(self):
-        result = compute_citation_precision(
-            ["doc-1", "fake-doc"],
-            {"doc-1", "doc-2"}
-        )
+        result = compute_citation_precision(["doc-1", "fake-doc"], {"doc-1", "doc-2"})
         assert result == 0.5
 
     def test_citation_precision_empty_citations(self):
@@ -157,35 +164,33 @@ class TestCitationMetrics:
     def test_fabricated_citation_rate_clean(self):
         result = compute_fabricated_citation_rate(
             [{"document_id": "doc-1", "page_number": 1}],
-            [{"id": "doc-1", "total_pages": 5}]
+            [{"id": "doc-1", "total_pages": 5}],
         )
         assert result == 0.0
 
     def test_fabricated_citation_rate_nonexistent_doc(self):
         result = compute_fabricated_citation_rate(
             [{"document_id": "fake-doc", "page_number": 1}],
-            [{"id": "doc-1", "total_pages": 5}]
+            [{"id": "doc-1", "total_pages": 5}],
         )
         assert result == 1.0
 
     def test_fabricated_citation_rate_impossible_page(self):
         result = compute_fabricated_citation_rate(
             [{"document_id": "doc-1", "page_number": 15}],
-            [{"id": "doc-1", "total_pages": 3}]
+            [{"id": "doc-1", "total_pages": 3}],
         )
         assert result == 1.0
 
     def test_cross_matter_contamination_clean(self):
         result = compute_cross_matter_contamination_rate(
-            "Bu bir iş davası hakkındadır.",
-            ["Ali Veli", "kira sözleşmesi"]
+            "Bu bir iş davası hakkındadır.", ["Ali Veli", "kira sözleşmesi"]
         )
         assert result == 0.0
 
     def test_cross_matter_contamination_detected(self):
         result = compute_cross_matter_contamination_rate(
-            "Ali Veli'nin kira sözleşmesi incelendi.",
-            ["Ali Veli", "kira sözleşmesi"]
+            "Ali Veli'nin kira sözleşmesi incelendi.", ["Ali Veli", "kira sözleşmesi"]
         )
         assert result == 1.0
 
@@ -194,13 +199,14 @@ class TestCitationMetrics:
 # Answer Quality Metric Tests
 # ---------------------------------------------------------------------------
 
+
 class TestAnswerQualityMetrics:
     """Tests for answer coverage and unsupported claim metrics."""
 
     def test_answer_coverage_full(self):
         coverage, missing = compute_answer_coverage(
             "Fatma Öztürk kıdem tazminatı ve fazla mesai talep etti.",
-            ["Fatma Öztürk", "kıdem tazminatı", "fazla mesai"]
+            ["Fatma Öztürk", "kıdem tazminatı", "fazla mesai"],
         )
         assert coverage == 1.0
         assert missing == []
@@ -208,7 +214,7 @@ class TestAnswerQualityMetrics:
     def test_answer_coverage_partial(self):
         coverage, missing = compute_answer_coverage(
             "Fatma Öztürk tazminat talep etti.",
-            ["Fatma Öztürk", "kıdem tazminatı", "fazla mesai"]
+            ["Fatma Öztürk", "kıdem tazminatı", "fazla mesai"],
         )
         assert 0.0 < coverage < 1.0
         assert len(missing) > 0
@@ -217,7 +223,7 @@ class TestAnswerQualityMetrics:
         coverage, _ = compute_answer_coverage(
             "Bu konuda bilgi bulunamadı. Ali dosyasından bilgi.",
             ["bulunamadı"],
-            ["Ali dosyasından"]
+            ["Ali dosyasından"],
         )
         # Coverage should be penalized due to must_not_contain violation
         assert coverage < 1.0
@@ -225,14 +231,13 @@ class TestAnswerQualityMetrics:
     def test_unsupported_claim_rate_all_supported(self):
         result = compute_unsupported_claim_rate(
             ["kıdem tazminatı ödenmemiştir"],
-            ["İşçinin kıdem tazminatı ödenmediği tespit edilmiştir."]
+            ["İşçinin kıdem tazminatı ödenmediği tespit edilmiştir."],
         )
         assert result == 0.0
 
     def test_unsupported_claim_rate_unsupported(self):
         result = compute_unsupported_claim_rate(
-            ["uzay mekiği fırlatıldı"],
-            ["İş davası ile ilgili belgeler incelendi."]
+            ["uzay mekiği fırlatıldı"], ["İş davası ile ilgili belgeler incelendi."]
         )
         assert result > 0.0
 
@@ -240,6 +245,7 @@ class TestAnswerQualityMetrics:
 # ---------------------------------------------------------------------------
 # Entity Extraction Metric Tests
 # ---------------------------------------------------------------------------
+
 
 class TestExtractionMetrics:
     """Tests for entity extraction F1 and role accuracy."""
@@ -262,8 +268,14 @@ class TestExtractionMetrics:
         assert compute_entity_extraction_f1(predicted, expected) == 0.0
 
     def test_role_accuracy_correct(self):
-        predicted = [{"name": "Mehmet", "role": "PLAINTIFF"}, {"name": "ABC", "role": "DEFENDANT"}]
-        expected = [{"name": "Mehmet", "role": "PLAINTIFF"}, {"name": "ABC", "role": "DEFENDANT"}]
+        predicted = [
+            {"name": "Mehmet", "role": "PLAINTIFF"},
+            {"name": "ABC", "role": "DEFENDANT"},
+        ]
+        expected = [
+            {"name": "Mehmet", "role": "PLAINTIFF"},
+            {"name": "ABC", "role": "DEFENDANT"},
+        ]
         assert compute_role_accuracy(predicted, expected) == 1.0
 
     def test_role_accuracy_wrong_role(self):
@@ -275,6 +287,7 @@ class TestExtractionMetrics:
 # ---------------------------------------------------------------------------
 # Gate Evaluation Tests
 # ---------------------------------------------------------------------------
+
 
 class TestGateEvaluation:
     """Tests for quality gate evaluation logic."""
@@ -295,11 +308,15 @@ class TestGateEvaluation:
 
     def test_gate_inverse_metric_pass(self):
         """Inverse metrics (lower is better) should pass when score <= threshold."""
-        result = evaluate_gate("fabricated_citation_rate", 0.0, threshold=0.0, is_inverse=True)
+        result = evaluate_gate(
+            "fabricated_citation_rate", 0.0, threshold=0.0, is_inverse=True
+        )
         assert result.passed is True
 
     def test_gate_inverse_metric_fail(self):
-        result = evaluate_gate("fabricated_citation_rate", 0.05, threshold=0.0, is_inverse=True)
+        result = evaluate_gate(
+            "fabricated_citation_rate", 0.05, threshold=0.0, is_inverse=True
+        )
         assert result.passed is False
 
     def test_evaluation_report_all_passed(self):

@@ -1,212 +1,136 @@
 import asyncio
+import hashlib
 import logging
 import os
 import tempfile
 
-from apps.api.core.config import settings
+import docx2txt
 from apps.api.core.storage import storage_service
-from apps.api.models.document import Document, DocumentState
-from apps.api.models.parser import ParsedDocument, ParsedPage
+from apps.api.models.document import Document, DocumentRevision, DocumentState
+from apps.api.models.queue import Job
+from apps.worker.ingestion import persist_parsed_pages
+from apps.worker.jobs import TerminalJobError
+from apps.worker.parsers.pdf import PyMuPDFParser
+from apps.worker.provenance import LOW_PROVENANCE, VERIFIED_PDF, normalize_text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-
-try:
-    from llama_parse import LlamaParse
-    HAS_LLAMA_PARSE = True
-except ImportError:
-    HAS_LLAMA_PARSE = False
-
-try:
-    import importlib.util
-    HAS_FITZ = importlib.util.find_spec("fitz") is not None
-except ImportError:
-    HAS_FITZ = False
-    
-try:
-    import docx2txt
-    HAS_DOCX2TXT = True
-except ImportError:
-    HAS_DOCX2TXT = False
 
 logger = logging.getLogger("worker.parser")
 
-async def handle_parse_document(payload: dict, session: AsyncSession):
+
+async def handle_parse_document(payload: dict, session: AsyncSession) -> None:
     document_id = payload.get("document_id")
     revision_id = payload.get("revision_id")
-    s3_key = payload.get("s3_key")
-    
-    if not document_id or not revision_id or not s3_key:
-        logger.error("Missing required payload fields")
-        return
-        
-    # Get the document to get the tenant_id
-    doc = await session.get(Document, document_id)
-    if not doc:
-        logger.error(f"Document {document_id} not found")
-        return
-        
-    tenant_id = doc.tenant_id
-        
-    logger.info(f"Parsing document {document_id} (revision {revision_id})")
-    
-    # Download file to temp preserving extension
-    ext = os.path.splitext(s3_key)[1].lower() if s3_key else ".pdf"
-    if not ext:
-        ext = ".pdf"
-    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
-        temp_path = temp_file.name
-        
-    try:
-        async with storage_service.session.client('s3', endpoint_url=storage_service.endpoint_url,
-                                         aws_access_key_id=storage_service.aws_access_key_id,
-                                         aws_secret_access_key=storage_service.aws_secret_access_key,
-                                         config=storage_service.config) as s3:
-            await s3.download_file(storage_service.bucket_name, s3_key, temp_path)
-            
-            # Parse
-            parsed_text = ""
-            pages = []
-            
-            api_key = os.getenv("LLAMA_CLOUD_API_KEY")
-            
-            is_docx = (ext == ".docx")
-            parser_used_name = "mock"
-            
-            if HAS_LLAMA_PARSE and api_key and not is_docx:
-                logger.info("Using LlamaParse for document extraction")
-                parser = LlamaParse(api_key=api_key, result_type="markdown")
-                documents = await asyncio.to_thread(parser.load_data, temp_path)
-                parser_used_name = "llama-parse"
-                
-                for i, d in enumerate(documents):
-                    pages.append({"page_number": i + 1, "text": d.text, "layout": None})
-                    parsed_text += f"\n\n--- Page {i+1} ---\n\n" + d.text
-            elif is_docx and HAS_DOCX2TXT:
-                logger.info("Using docx2txt for docx extraction")
-                text = await asyncio.to_thread(docx2txt.process, temp_path)
-                parser_used_name = "docx2txt"
-                pages = [{"page_number": 1, "text": text, "layout": None}]
-                parsed_text = text
-            elif HAS_FITZ and not is_docx:
-                logger.info("Using PyMuPDF (fitz) for PDF extraction")
-                parser_used_name = "pymupdf-fitz"
-                
-                from apps.worker.parsers.pdf import PyMuPDFParser
-                with open(temp_path, "rb") as f:
-                    pdf_bytes = f.read()
-                    
-                pdf_parser = PyMuPDFParser()
-                pages_data = []
-                async for p_data in pdf_parser.parse(pdf_bytes):
-                    pages_data.append(p_data)
-                
-                pages = []
-                for pd in pages_data:
-                    pages.append({
-                        "page_number": pd["page_number"],
-                        "text": pd["text_content"],
-                        "layout": pd["layout_data"]
-                    })
-                    parsed_text += f"\n\n--- Page {pd['page_number']} ---\n\n" + pd["text_content"]
-            else:
-                if settings.is_secure_environment:
-                    raise RuntimeError("No parser available. Mock extraction is strictly prohibited in production.")
-                logger.warning("No parser available. Using mock extraction.")
-                parser_used_name = "mock"
-                pages = [
-                    {"page_number": 1, "text": "Mock parsed content for page 1.", "layout": None}
-                ]
-                parsed_text = "Mock parsed content for page 1."
-                
-            parsed_doc = ParsedDocument(
-                tenant_id=tenant_id,
-                document_id=document_id,
-                revision_id=revision_id,
-                parser_used=parser_used_name,
-                status="completed"
-            )
-            session.add(parsed_doc)
-            
-            # Update Revision Status
-            from apps.api.models.document import DocumentRevision
-            rev = await session.get(DocumentRevision, revision_id)
-            if rev:
-                rev.scan_status = DocumentState.READY
-                
-            await session.flush()
-            
-            # Phase 7: Mark old citations as STALE_REVISION
-            from sqlalchemy import text
-            await session.execute(
-                text("UPDATE draft_citations SET verification_state = 'STALE_REVISION' WHERE document_id = :doc_id AND document_revision_id != :new_rev AND verification_state != 'STALE_REVISION'"),
-                {"doc_id": document_id, "new_rev": revision_id}
-            )
-            
-            # Save pages and chunks
-            from apps.api.models.parser import DocumentChunk
-            
-            for page in pages:
-                p = ParsedPage(
-                    parsed_document_id=parsed_doc.id,
-                    page_number=page["page_number"],
-                    text_content=page["text"],
-                    layout_data=page.get("layout")
+    object_key = payload.get("s3_key")
+    if not document_id or not revision_id or not object_key:
+        raise TerminalJobError("Missing required parse payload fields")
+
+    document = await session.get(Document, document_id)
+    revision = await session.get(DocumentRevision, revision_id)
+    if document is None:
+        raise TerminalJobError(f"Document {document_id} not found")
+    if revision is None or revision.document_id != document.id:
+        raise TerminalJobError(
+            f"Revision {revision_id} does not belong to document {document_id}"
+        )
+    if not revision.is_canonical or revision.s3_key != object_key:
+        raise TerminalJobError("Only the immutable canonical revision may be parsed")
+
+    file_bytes = await storage_service.get_object_bytes(
+        object_key, max_bytes=100 * 1024 * 1024 + 1
+    )
+    if not file_bytes or len(file_bytes) > 100 * 1024 * 1024:
+        raise TerminalJobError("Canonical document bytes are missing or oversized")
+    if hashlib.sha256(file_bytes).hexdigest() != revision.file_hash:
+        raise TerminalJobError("Canonical document hash verification failed")
+
+    revision.scan_status = DocumentState.PARSING
+    pages: list[dict] = []
+    parser_used: str
+    provenance_state: str
+
+    if revision.mime_type == "application/pdf":
+        parser_used = "pymupdf-exact-v2"
+        provenance_state = VERIFIED_PDF
+        pdf_parser = PyMuPDFParser()
+        extracted_pages = [page async for page in pdf_parser.parse(file_bytes)]
+        if any(page["layout_data"].get("ocr_required") for page in extracted_pages):
+            revision.scan_status = DocumentState.OCR_REQUIRED
+            session.add(
+                Job(
+                    type="OCR_DOCUMENT",
+                    tenant_id=document.tenant_id,
+                    matter_id=document.matter_id,
+                    idempotency_key=f"ocr:{revision.id}:{revision.file_hash}",
+                    payload={
+                        "document_id": document.id,
+                        "revision_id": revision.id,
+                        "s3_key": revision.s3_key,
+                        "matter_id": document.matter_id,
+                    },
                 )
-                session.add(p)
-                await session.flush()
-                
-                layout_data = page.get("layout") or {}
-                blocks = layout_data.get("blocks", [])
-                
-                for chunk_idx, block in enumerate(blocks):
-                    bbox = block.get("bbox")
-                    block_text = block.get("text", "")
-                    if not block_text.strip():
-                        continue
-                        
-                    bbox_id = block.get("id", f"b{chunk_idx}")
-                    watermark = f"[MESA_WATERMARK: {document_id}:{p.id}:{bbox_id}]"
-                    watermarked_text = f"{block_text}\n{watermark}"
-                    
-                    chunk = DocumentChunk(
-                        tenant_id=tenant_id,
-                        document_id=document_id,
-                        page_id=p.id,
-                        chunk_index=chunk_idx,
-                        chunk_type="block",
-                        text_content=block_text,
-                        watermarked_text=watermarked_text,
-                        bbox=bbox
-                    )
-                    session.add(chunk)
-                
-            from apps.api.models.queue import Job
-            
-            # Upload parsed markdown to S3
-            parsed_s3_key = f"{tenant_id}/{doc.matter_id}/parsed_{revision_id}.md"
-            await s3.put_object(
-                Bucket=storage_service.bucket_name,
-                Key=parsed_s3_key,
-                Body=parsed_text.encode('utf-8'),
-                ContentType="text/markdown"
             )
-            logger.info(f"Uploaded parsed document to {parsed_s3_key}")
-            
-            # Trigger extraction job
-            job = Job(
-                type="EXTRACT_LEGAL_DATA",
-                tenant_id=payload["tenant_id"],
-                payload={
-                    "parsed_document_id": parsed_doc.id,
-                    "matter_id": doc.matter_id
-                }
-            )
-            session.add(job)
-            
-            await session.commit()
-            
-    except Exception as e:
-        logger.error(f"Failed to parse document: {e}", exc_info=True)
-        raise
-    finally:
-        if os.path.exists(temp_path):
+            return
+        pages = [
+            {
+                "page_number": page["page_number"],
+                "text": page["text_content"],
+                "layout": page["layout_data"],
+            }
+            for page in extracted_pages
+        ]
+    elif (
+        revision.mime_type
+        == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ):
+        parser_used = "docx2txt-v0.9"
+        provenance_state = LOW_PROVENANCE
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as temp_file:
+            temp_path = temp_file.name
+            temp_file.write(file_bytes)
+        try:
+            extracted_text = await asyncio.to_thread(docx2txt.process, temp_path)
+        finally:
             os.remove(temp_path)
+        pages = [
+            {
+                "page_number": 0,
+                "text": normalize_text(extracted_text),
+                "layout": {"page_unavailable": True, "blocks": []},
+            }
+        ]
+    elif revision.mime_type == "text/plain":
+        parser_used = "utf8-text-v1"
+        provenance_state = LOW_PROVENANCE
+        try:
+            extracted_text = file_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise TerminalJobError("Text document is not valid UTF-8") from exc
+        pages = [
+            {
+                "page_number": 0,
+                "text": normalize_text(extracted_text),
+                "layout": {"page_unavailable": True, "blocks": []},
+            }
+        ]
+    else:
+        raise TerminalJobError(f"Unsupported canonical MIME type: {revision.mime_type}")
+
+    await session.execute(
+        text(
+            "UPDATE draft_citations SET verification_state = 'STALE_REVISION' "
+            "WHERE document_id = :doc_id "
+            "AND document_revision_id != :new_rev "
+            "AND verification_state != 'STALE_REVISION'"
+        ),
+        {"doc_id": document_id, "new_rev": revision_id},
+    )
+    await persist_parsed_pages(
+        session,
+        document=document,
+        revision=revision,
+        pages=pages,
+        parser_used=parser_used,
+        provenance_state=provenance_state,
+    )
+    logger.info("Parsed immutable revision %s with %s", revision.id, parser_used)

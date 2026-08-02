@@ -8,7 +8,7 @@ import type { ParsedPageResponseLayoutData } from './parsedPageResponseLayoutDat
 
 export interface ParsedPageResponse {
   id: string;
+  layout_data?: ParsedPageResponseLayoutData;
   page_number: number;
   text_content: string;
-  layout_data?: ParsedPageResponseLayoutData;
 }

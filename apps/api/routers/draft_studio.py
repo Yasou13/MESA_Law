@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from apps.api.core.config import settings
 from apps.api.core.database import get_db
 from apps.api.core.models import RequestContext
 from apps.api.core.policies import (
@@ -6,6 +9,7 @@ from apps.api.core.policies import (
     MatterAccessPolicy,
 )
 from apps.api.dependencies.auth import require_recent_auth, setup_tenant_context
+from apps.api.models.domain import MatterMember
 from apps.api.models.draft import Draft
 from apps.api.models.queue import Job
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -15,69 +19,108 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/draft-studio", tags=["draft-studio"])
 
+
 class SaveDraftRequest(BaseModel):
     matter_id: str
     title: str
     content: str
+
 
 class UpdateDraftRequest(BaseModel):
     title: str | None = None
     content: str | None = None
     expected_version: int | None = None
 
+
 class ExportDraftRequest(BaseModel):
     format: str  # 'pdf' or 'docx'
 
-@router.post("/drafts")
+
+class DraftSummaryResponse(BaseModel):
+    id: str
+    matter_id: str
+    title: str
+    version: int
+    status: str
+    updated_at: datetime | None
+
+
+class DraftDetailResponse(DraftSummaryResponse):
+    content: str
+    etag: str | None = None
+
+
+class DraftStatusResponse(BaseModel):
+    status: str
+
+
+class DraftCitationResponse(BaseModel):
+    id: str
+    document_id: str | None
+    citation_text: str
+    verification_state: str
+
+
+class ExportDraftResponse(BaseModel):
+    message: str
+    job_id: str
+    format: str
+    version: int
+
+
+class GenerateDraftResponse(BaseModel):
+    message: str
+    job_id: str
+
+
+@router.post("/drafts", response_model=DraftDetailResponse, operation_id="saveDraft")
 async def save_draft(
     request: Request,
     payload: SaveDraftRequest,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     DraftAccessPolicy.can_manage(context)
+    await MatterAccessPolicy.can_write(context, db, payload.matter_id)
     draft = Draft(
         tenant_id=context.tenant_id,
         matter_id=payload.matter_id,
         title=payload.title,
         content=payload.content,
-        version=1
+        version=1,
     )
     db.add(draft)
     await db.commit()
     await db.refresh(draft)
-    return {"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "status": draft.status}
+    return {
+        "id": draft.id,
+        "matter_id": draft.matter_id,
+        "version": draft.version,
+        "title": draft.title,
+        "content": draft.content,
+        "status": draft.status,
+        "updated_at": draft.updated_at,
+        "etag": draft.etag,
+    }
 
-@router.get("/drafts/matter/{matter_id}")
+
+@router.get(
+    "/drafts/matter/{matter_id}",
+    response_model=list[DraftSummaryResponse],
+    operation_id="listMatterDrafts",
+)
 async def list_matter_drafts(
     request: Request,
     matter_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     await MatterAccessPolicy.can_read(context, db, matter_id)
-    stmt = select(Draft).where(Draft.matter_id == matter_id, Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
-    result = await db.execute(stmt)
-    drafts = result.scalars().all()
-    return [
-        {
-            "id": d.id,
-            "title": d.title,
-            "version": d.version,
-            "status": d.status,
-            "updated_at": d.updated_at.isoformat() if d.updated_at else None
-        }
-        for d in drafts
-    ]
-
-@router.get("/drafts")
-async def list_all_drafts(
-    request: Request,
-    context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
-):
-    await MatterAccessPolicy.can_read(context, db)
-    stmt = select(Draft).where(Draft.tenant_id == context.tenant_id).order_by(Draft.updated_at.desc())
+    stmt = (
+        select(Draft)
+        .where(Draft.matter_id == matter_id, Draft.tenant_id == context.tenant_id)
+        .order_by(Draft.updated_at.desc())
+    )
     result = await db.execute(stmt)
     drafts = result.scalars().all()
     return [
@@ -86,24 +129,67 @@ async def list_all_drafts(
             "matter_id": d.matter_id,
             "title": d.title,
             "version": d.version,
-            "updated_at": d.updated_at.isoformat() if d.updated_at else None
+            "status": d.status,
+            "updated_at": d.updated_at.isoformat() if d.updated_at else None,
         }
         for d in drafts
     ]
 
-@router.get("/drafts/{draft_id}")
+
+@router.get(
+    "/drafts",
+    response_model=list[DraftSummaryResponse],
+    operation_id="listAllDrafts",
+)
+async def list_all_drafts(
+    request: Request,
+    context: RequestContext = Depends(setup_tenant_context),
+    db: AsyncSession = Depends(get_db),
+):
+    MatterAccessPolicy.can_list(context)
+    stmt = (
+        select(Draft)
+        .join(
+            MatterMember,
+            (MatterMember.matter_id == Draft.matter_id)
+            & (MatterMember.user_id == context.principal_id),
+        )
+        .where(
+            Draft.tenant_id == context.tenant_id,
+            MatterMember.tenant_id == context.tenant_id,
+        )
+        .order_by(Draft.updated_at.desc())
+    )
+    result = await db.execute(stmt)
+    drafts = result.scalars().all()
+    return [
+        {
+            "id": d.id,
+            "matter_id": d.matter_id,
+            "title": d.title,
+            "version": d.version,
+            "status": d.status,
+            "updated_at": d.updated_at.isoformat() if d.updated_at else None,
+        }
+        for d in drafts
+    ]
+
+
+@router.get(
+    "/drafts/{draft_id}", response_model=DraftDetailResponse, operation_id="getDraft"
+)
 async def get_draft(
     request: Request,
     draft_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     await MatterAccessPolicy.can_read(context, db, draft.matter_id)
-        
+
     return {
         "id": draft.id,
         "matter_id": draft.matter_id,
@@ -111,214 +197,314 @@ async def get_draft(
         "content": draft.content,
         "version": draft.version,
         "status": draft.status,
-        "updated_at": draft.updated_at.isoformat() if draft.updated_at else None
+        "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+        "etag": draft.etag,
     }
 
-@router.put("/drafts/{draft_id}")
+
+@router.put(
+    "/drafts/{draft_id}",
+    response_model=DraftDetailResponse,
+    operation_id="updateDraft",
+)
 async def update_draft(
     request: Request,
     draft_id: str,
     payload: UpdateDraftRequest,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     from apps.api.models.draft import DraftRevision
-    
+
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     DraftAccessPolicy.can_manage(context)
-        
+    await MatterAccessPolicy.can_write(context, db, draft.matter_id)
+
     # Phase 11: If-Match ETag checking
     if_match = request.headers.get("if-match")
     if if_match and if_match.strip('"') != draft.etag:
         raise HTTPException(status_code=412, detail="VERSION_CONFLICT: ETag mismatch")
-        
+
     # Also support body expected_version
-    if payload.expected_version is not None and draft.version != payload.expected_version:
-        raise HTTPException(status_code=409, detail="VERSION_CONFLICT: Draft has been modified by another process")
-        
+    if (
+        payload.expected_version is not None
+        and draft.version != payload.expected_version
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="VERSION_CONFLICT: Draft has been modified by another process",
+        )
+
     # 1. Save old content as a DraftRevision
     old_revision = DraftRevision(
         tenant_id=context.tenant_id,
         draft_id=draft.id,
         version=draft.version,
         content=draft.content,
-        change_summary="Auto-saved revision prior to update"
+        change_summary="Auto-saved revision prior to update",
     )
     db.add(old_revision)
-        
+
     # 2. Update Draft
     if payload.title is not None:
         draft.title = payload.title
     if payload.content is not None:
         draft.content = payload.content
-        
+
     if draft.status == "APPROVED_FOR_EXTERNAL_USE":
         draft.status = "DRAFT"
-        
+
     draft.version += 1
     draft.etag = f"v{draft.version}"
-    
+
     await db.commit()
     await db.refresh(draft)
-    
+
     from fastapi.responses import JSONResponse
-    response = JSONResponse(content={"id": draft.id, "version": draft.version, "title": draft.title, "content": draft.content, "status": draft.status, "etag": draft.etag})
+
+    response = JSONResponse(
+        content={
+            "id": draft.id,
+            "matter_id": draft.matter_id,
+            "version": draft.version,
+            "title": draft.title,
+            "content": draft.content,
+            "status": draft.status,
+            "etag": draft.etag,
+            "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+        }
+    )
     response.headers["ETag"] = f'"{draft.etag}"'
     return response
 
-@router.post("/drafts/{draft_id}/submit-review", operation_id="submitReviewDraft")
+
+@router.post(
+    "/drafts/{draft_id}/submit-review",
+    operation_id="submitReviewDraft",
+    response_model=DraftStatusResponse,
+)
 async def submit_review_draft(
     request: Request,
     draft_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     DraftAccessPolicy.can_manage(context)
-    
+    await MatterAccessPolicy.can_write(context, db, draft.matter_id)
+
     if draft.status.upper() not in ["DRAFT", "REJECTED"]:
-        raise HTTPException(status_code=400, detail="Only DRAFT or REJECTED drafts can be submitted for review")
-        
+        raise HTTPException(
+            status_code=400,
+            detail="Only DRAFT or REJECTED drafts can be submitted for review",
+        )
+
     draft.status = "IN_REVIEW"
     await db.commit()
     return {"status": draft.status}
 
-@router.post("/drafts/{draft_id}/approve", operation_id="approveDraft")
+
+@router.post(
+    "/drafts/{draft_id}/approve",
+    operation_id="approveDraft",
+    response_model=DraftStatusResponse,
+)
 async def approve_draft(
     request: Request,
     draft_id: str,
     context: RequestContext = Depends(setup_tenant_context),
     db: AsyncSession = Depends(get_db),
-    _=Depends(require_recent_auth)
+    _=Depends(require_recent_auth),
 ):
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     DraftAccessPolicy.can_approve_external(context)
-    
+    await MatterAccessPolicy.can_write(context, db, draft.matter_id)
+
     if draft.status != "IN_REVIEW":
-        raise HTTPException(status_code=400, detail="Only IN_REVIEW drafts can be approved")
-        
+        raise HTTPException(
+            status_code=400, detail="Only IN_REVIEW drafts can be approved"
+        )
+
     from apps.api.models.draft import DraftCitation
     from sqlalchemy import select
+
     stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id)
     citations = await db.execute(stmt)
     for citation in citations.scalars():
         if citation.verification_state in ["unverified", "STALE_REVISION"]:
-            raise HTTPException(status_code=403, detail=f"Cannot approve draft. Contains {citation.verification_state} citations.")
-            
+            raise HTTPException(
+                status_code=403,
+                detail=f"Cannot approve draft. Contains {citation.verification_state} citations.",
+            )
+
     draft.status = "APPROVED_FOR_EXTERNAL_USE"
     await db.commit()
     return {"status": draft.status}
 
-@router.get("/drafts/{draft_id}/citations", operation_id="getDraftCitations")
+
+@router.get(
+    "/drafts/{draft_id}/citations",
+    operation_id="getDraftCitations",
+    response_model=list[DraftCitationResponse],
+)
 async def get_draft_citations(
     request: Request,
     draft_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     await MatterAccessPolicy.can_read(context, db, draft.matter_id)
-        
+
     from apps.api.models.draft import DraftCitation
     from sqlalchemy import select
+
     stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id)
     result = await db.execute(stmt)
     citations = result.scalars().all()
-    
+
     return [
         {
             "id": c.id,
             "document_id": c.document_id,
-            "text_snippet": c.text_snippet,
-            "verification_state": c.verification_state
+            "citation_text": c.citation_text,
+            "verification_state": c.verification_state,
         }
         for c in citations
     ]
 
-@router.post("/drafts/{draft_id}/export")
+
+@router.post(
+    "/drafts/{draft_id}/export",
+    response_model=ExportDraftResponse,
+    operation_id="exportDraft",
+)
 async def export_draft(
     request: Request,
     draft_id: str,
     payload: ExportDraftRequest,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     idem_key = request.headers.get("Idempotency-Key")
     if idem_key:
         from apps.api.core.idempotency import check_idempotency, complete_idempotency
+
         cached = await check_idempotency(db, idem_key)
         if cached:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=cached.status_code or 200, content=cached.response_body)
-            
+
+            return JSONResponse(
+                status_code=cached.status_code or 200, content=cached.response_body
+            )
+
     draft = await db.get(Draft, draft_id)
     if not draft or draft.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Draft not found")
-        
+
     ExportAccessPolicy.can_export(context)
-        
+    await MatterAccessPolicy.can_read(context, db, draft.matter_id)
+
     if payload.format not in ["pdf", "docx"]:
-        raise HTTPException(status_code=400, detail="MIME Error: Only 'pdf' and 'docx' formats are supported")
-        
+        raise HTTPException(
+            status_code=400,
+            detail="MIME Error: Only 'pdf' and 'docx' formats are supported",
+        )
+
     if draft.status != "APPROVED_FOR_EXTERNAL_USE":
-        raise HTTPException(status_code=403, detail="Draft must be APPROVED_FOR_EXTERNAL_USE to be exported")
-        
+        raise HTTPException(
+            status_code=403,
+            detail="Draft must be APPROVED_FOR_EXTERNAL_USE to be exported",
+        )
+
     from apps.api.models.draft import DraftCitation
-    stmt = select(DraftCitation).where(DraftCitation.draft_id == draft_id, DraftCitation.verification_state == "unverified")
+
+    stmt = select(DraftCitation).where(
+        DraftCitation.draft_id == draft_id,
+        DraftCitation.verification_state == "unverified",
+    )
     res = await db.execute(stmt)
     if res.scalars().first():
-        raise HTTPException(status_code=403, detail="Draft cannot be exported while containing UNVERIFIED citations")
-        
+        raise HTTPException(
+            status_code=403,
+            detail="Draft cannot be exported while containing UNVERIFIED citations",
+        )
+
     job = Job(
         type="EXPORT_DRAFT",
         tenant_id=context.tenant_id,
+        matter_id=draft.matter_id,
+        requested_by=context.principal_id,
+        idempotency_key=(f"export:{draft.id}:{idem_key}" if idem_key else None),
         payload={
             "draft_id": draft_id,
-            "format": payload.format
-        }
+            "format": payload.format,
+            "matter_id": draft.matter_id,
+        },
     )
     db.add(job)
     await db.commit()
-    
-    resp_body = {"message": "Export job queued", "job_id": job.id, "format": payload.format, "version": draft.version}
+
+    resp_body = {
+        "message": "Export job queued",
+        "job_id": job.id,
+        "format": payload.format,
+        "version": draft.version,
+    }
     if idem_key:
         await complete_idempotency(db, idem_key, 200, resp_body)
-        
+
     return resp_body
+
 
 class GenerateDraftRequest(BaseModel):
     matter_id: str
     template_name: str | None = None
 
-@router.post("/drafts/generate")
+
+@router.post(
+    "/drafts/generate",
+    response_model=GenerateDraftResponse,
+    operation_id="generateDraft",
+)
 async def generate_draft(
     request: Request,
     payload: GenerateDraftRequest,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
+    if not settings.drafting_ai_enabled:
+        raise HTTPException(
+            status_code=501, detail="AI draft generation is disabled in the MVP"
+        )
     DraftAccessPolicy.can_manage(context)
+    await MatterAccessPolicy.can_write(context, db, payload.matter_id)
     job = Job(
         type="GENERATE_DRAFT",
         tenant_id=context.tenant_id,
+        matter_id=payload.matter_id,
+        requested_by=context.principal_id,
         payload={
             "tenant_id": context.tenant_id,
             "matter_id": payload.matter_id,
-            "template_name": payload.template_name or "default"
-        }
+            "template_name": payload.template_name or "default",
+        },
     )
     db.add(job)
     await db.commit()
     return {"message": "Draft generation job queued", "job_id": job.id}
+
+
+from datetime import datetime

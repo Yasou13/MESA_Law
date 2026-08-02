@@ -1,135 +1,244 @@
-import React, { useState } from 'react';
-import { useAskQuestion } from '@/api/endpoints/qa/qa';
-import { Send, Loader2, BookOpen, AlertCircle } from 'lucide-react';
+'use client'
 
-export function QAShell({ matterId = "1" }: { matterId?: string }) {
-  const [query, setQuery] = useState('');
-  const [messages, setMessages] = useState<{role: 'user' | 'ai', content: string, citations?: string[], review_warning?: boolean, source_coverage?: string, degraded_mode?: boolean}[]>([]);
-  
-  const qaMutation = useAskQuestion();
+import Link from 'next/link'
+import { useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import {
+  AlertTriangle,
+  BookOpen,
+  Clock3,
+  FileSearch,
+  Loader2,
+  Search,
+  ShieldCheck,
+} from 'lucide-react'
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
+import { useAskQuestion } from '@/api/endpoints/qa/qa'
+import type { QACitation, QAResponse } from '@/api/models'
+import { Button } from '@/components/ui/button'
+import { InlineAlert } from '@/components/ui/inline-alert'
+import { Panel, PanelBody, PanelHeader } from '@/components/ui/panel'
+import { SourceBadge } from '@/components/ui/source-badge'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { Textarea } from '@/components/ui/textarea'
+import { ApiError, getApiResponseMetadata } from '@/lib/api/client'
+import { localizedHref, type AppLocale } from '@/lib/navigation'
 
-    const newQuery = query;
-    setMessages(prev => [...prev, { role: 'user', content: newQuery }]);
-    setQuery('');
+interface QAResult {
+  id: number
+  question: string
+  response?: QAResponse
+  error?: string
+  traceId?: string
+}
 
+function degradedMessage(reason: string | null | undefined, translate: (key: string) => string): string | null {
+  if (!reason) return null
+  if (reason === 'MESA_SCOPE_NOT_READY') return translate('scopeNotReady')
+  if (reason === 'MESA_NO_VERIFIED_EVIDENCE' || reason === 'MESA_PROVENANCE_UNVERIFIED') return translate('provenanceUnverified')
+  if (reason === 'NO_VERIFIED_EVIDENCE') return translate('noEvidence')
+  if (reason.startsWith('MESA_UNAVAILABLE')) return translate('mesaUnavailable')
+  return reason
+}
+
+function citationHref(citation: QACitation, locale: AppLocale): string {
+  const query = new URLSearchParams({
+    revision: citation.revision_id,
+    chunk: citation.chunk_id,
+    start: String(citation.text_start),
+    end: String(citation.text_end),
+  })
+  if (citation.page_number) query.set('page', String(citation.page_number))
+  return localizedHref(locale, `/documents/${citation.document_id}?${query.toString()}`)
+}
+
+function CitationCard({ citation, index }: { citation: QACitation; index: number }) {
+  const t = useTranslations('QA')
+  const locale = useLocale() as AppLocale
+  return (
+    <li className="rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{t('source', { index: index + 1, document: citation.document_id.slice(0, 8) })}</p>
+          <p className="technical-id mt-1 text-xs text-foreground-muted">
+            rev {citation.revision_id.slice(0, 8)} · chunk {citation.chunk_id.slice(0, 8)} · {citation.text_start}–{citation.text_end}
+          </p>
+        </div>
+        <SourceBadge lowProvenance={citation.low_provenance} />
+      </div>
+      <blockquote className="legal-reading mt-3 border-l-2 border-primary pl-3 text-sm leading-6">
+        {citation.evidence_excerpt}
+      </blockquote>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-foreground-muted">
+        <span>
+          {citation.low_provenance ? t('lowPage') : t('page', { page: citation.page_number ?? '—' })}
+          {citation.relevance_score !== null && citation.relevance_score !== undefined
+            ? ` · ${t('relevance', { score: citation.relevance_score.toFixed(3) })}`
+            : ''}
+        </span>
+        <Button render={<Link href={citationHref(citation, locale)} />} variant="link" size="sm">
+          {t('openSource')}
+        </Button>
+      </div>
+      <p className="technical-id mt-2 break-all text-[0.68rem] text-foreground-muted">SHA-256 {citation.evidence_sha256}</p>
+    </li>
+  )
+}
+
+export function QAShell({ matterId }: { matterId: string }) {
+  const t = useTranslations('QA')
+  const [question, setQuestion] = useState('')
+  const [results, setResults] = useState<QAResult[]>([])
+  const qaMutation = useAskQuestion<ApiError>()
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+    const submittedQuestion = question.trim()
+    if (!submittedQuestion) return
+    const resultId = Date.now()
+    setQuestion('')
+    setResults((current) => [{ id: resultId, question: submittedQuestion }, ...current])
     qaMutation.mutate(
-      { data: { matter_id: matterId, question: newQuery } },
+      { data: { matter_id: matterId, question: submittedQuestion } },
       {
-        onSuccess: (res: any) => {
-          const data = res;
-          const formattedCitations = data.citations?.map((c: any) => `Doc ID: ${c.document_id.substring(0,8)} (Page ${c.page_number})`) || [];
-          
-          setMessages(prev => [...prev, { 
-            role: 'ai', 
-            content: data.answer || 'No relevant answer found.', 
-            citations: formattedCitations,
-            review_warning: data.review_warning,
-            source_coverage: data.source_coverage,
-            degraded_mode: data.degraded_mode
-          }]);
+        onSuccess: (response) => {
+          const metadata = getApiResponseMetadata(response)
+          setResults((current) =>
+            current.map((result) =>
+              result.id === resultId
+                ? { ...result, response, traceId: metadata?.traceId ?? metadata?.correlationId }
+                : result,
+            ),
+          )
         },
-        onError: (error: any) => {
-          const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.toLowerCase().includes('timeout');
-          setMessages(prev => [...prev, { 
-            role: 'ai', 
-            content: isTimeout 
-              ? 'Request timed out. The legal retrieval engine took too long to respond. Please try again.' 
-              : `Error: ${error.response?.data?.detail || 'Failed to retrieve answer from Q&A service.'}`
-          }]);
-        }
-      }
-    );
-  };
+        onError: (error) => {
+          setResults((current) =>
+            current.map((result) =>
+              result.id === resultId
+                ? { ...result, error: error.referenceId ? `${error.message} · ${t('reference')} ${error.referenceId}` : error.message }
+                : result,
+            ),
+          )
+        },
+      },
+    )
+  }
 
   return (
-    <div className="flex flex-col h-[500px] border border-[var(--border-surface)] rounded-xl overflow-hidden bg-[var(--bg-surface)] shadow-sm">
-      <div className="bg-[var(--bg-surface-hover)] p-4 border-b border-[var(--border-surface)] flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-[var(--color-lila-500)]" />
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">Matter Q&A Assistant</h2>
-        </div>
-        <span className="text-xs bg-[var(--color-lila-500)]/10 text-[var(--color-lila-400)] px-2.5 py-1 rounded-full border border-[var(--color-lila-500)]/20 font-medium">MESA Legal Review Profile</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center text-[var(--color-anthracite-400)] mt-10 text-sm max-w-sm mx-auto">
-            Ask any question about this matter. Responses are grounded in uploaded documents and verified legal sources.
+    <div className="space-y-5">
+      <Panel>
+        <PanelHeader className="items-start">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold"><BookOpen className="size-4 text-primary-content" />{t('queryTitle')}</h2>
+            <p className="mt-1 text-sm text-foreground-secondary">{t('queryDescription')}</p>
           </div>
-        )}
-        
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl p-4 text-sm shadow-sm ${msg.role === 'user' ? 'bg-[var(--color-anthracite-800)] text-white border border-[var(--color-anthracite-700)] rounded-tr-sm' : msg.review_warning ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 rounded-tl-sm' : 'bg-[var(--bg-surface-hover)] text-[var(--foreground)] border border-[var(--border-surface)] rounded-tl-sm'}`}>
-                <div className="flex gap-2 mb-2 items-center">
-                  {msg.review_warning && (
-                    <div className="flex items-center gap-1.5 text-amber-600 bg-amber-50 px-2 py-1 rounded text-xs font-medium border border-amber-200">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Requires Review
-                    </div>
-                  )}
-                  {msg.degraded_mode && (
-                    <div className="flex items-center gap-1.5 text-red-600 bg-red-50 px-2 py-1 rounded text-xs font-medium border border-red-200">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      Degraded Mode (MESA Offline)
-                    </div>
-                  )}
-                </div>
-              {msg.source_coverage === 'INVALID' && (
-                <div className="text-red-500 font-medium mb-1">
-                  Response blocked due to unverified citations.
-                </div>
-              )}
-              <p className="leading-relaxed">{msg.content}</p>
-              {msg.citations && msg.citations.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-[var(--border-surface)]">
-                  <span className="text-xs font-semibold text-[var(--color-anthracite-400)] block mb-2 uppercase tracking-wider">Citations</span>
-                  <ul className="text-xs space-y-1.5">
-                    {msg.citations.map((cit, cIdx) => (
-                      <li key={cIdx} className="text-[var(--color-lila-400)] flex items-start gap-1.5">
-                        <span className="mt-0.5">•</span>
-                        <span>{cit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+          <StatusBadge status="verified" label={t('failClosed')} />
+        </PanelHeader>
+        <PanelBody>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium">{t('question')}</span>
+              <Textarea
+                value={question}
+                onChange={(event) => setQuestion(event.target.value)}
+                placeholder={t('placeholder')}
+                className="min-h-24"
+                disabled={qaMutation.isPending}
+              />
+            </label>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-foreground-muted">{t('abstainNote')}</p>
+              <Button type="submit" disabled={qaMutation.isPending || !question.trim()}>
+                {qaMutation.isPending ? <Loader2 className="animate-spin" /> : <Search />}{t('search')}
+              </Button>
             </div>
-          </div>
-        ))}
-        
-        {qaMutation.isPending && (
-          <div className="flex justify-start">
-            <div className="bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-2xl rounded-tl-sm p-4 flex gap-2 items-center">
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce"></div>
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce delay-75"></div>
-              <div className="w-1.5 h-1.5 bg-[var(--color-lila-500)] rounded-full animate-bounce delay-150"></div>
-            </div>
-          </div>
-        )}
-      </div>
+          </form>
+        </PanelBody>
+      </Panel>
 
-      <form onSubmit={handleSubmit} className="p-3 bg-[var(--bg-surface)] border-t border-[var(--border-surface)] flex gap-2">
-        <input 
-          type="text" 
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Ask a question..." 
-          className="flex-1 bg-[var(--bg-surface-hover)] border border-[var(--border-surface)] rounded-xl px-4 py-2 text-sm text-[var(--foreground)] focus:outline-none focus:border-[var(--color-lila-500)] transition-colors placeholder:text-[var(--color-anthracite-500)]"
-          disabled={qaMutation.isPending}
-        />
-        <button 
-          type="submit" 
-          disabled={qaMutation.isPending || !query.trim()}
-          className="bg-[var(--color-lila-600)] hover:bg-[var(--color-lila-500)] disabled:opacity-50 disabled:hover:bg-[var(--color-lila-600)] text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm flex items-center justify-center min-w-[3rem]"
-        >
-          {qaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
-      </form>
+      {results.length === 0 && (
+        <InlineAlert tone="info" title={t('scopeTitle')}>
+          <p>{t('scopeDescription')}</p>
+        </InlineAlert>
+      )}
+
+      <div className="space-y-5" aria-live="polite">
+        {results.map((result) => {
+          const response = result.response
+          const citations = response?.citations ?? []
+          const degraded = degradedMessage(response?.degraded_reason, t)
+          return (
+            <article key={result.id} className="overflow-hidden rounded-lg border border-border bg-surface">
+              <header className="border-b border-border bg-surface-subtle px-5 py-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">{t('question')}</p>
+                <h2 className="mt-1 text-base font-semibold">{result.question}</h2>
+              </header>
+              <div className="space-y-6 p-5">
+                {!response && !result.error && (
+                  <div className="flex items-center gap-2 text-sm text-foreground-secondary" role="status">
+                    <Loader2 className="size-4 animate-spin" />{t('verifying')}
+                  </div>
+                )}
+                {result.error && <InlineAlert tone="danger" title={t('failed')}><p>{result.error}</p></InlineAlert>}
+                {response && (
+                  <>
+                    <section aria-labelledby={`answer-${result.id}`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <h3 id={`answer-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('result')}</h3>
+                        <StatusBadge
+                          status={response.status === 'ANSWERED' ? 'verified' : response.status === 'DEGRADED' ? 'degraded' : 'warning'}
+                          label={response.status}
+                        />
+                      </div>
+                      <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{response.answer}</p>
+                    </section>
+
+                    <section aria-labelledby={`basis-${result.id}`}>
+                      <h3 id={`basis-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('basis')}</h3>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div className="rounded-md border border-border p-3"><FileSearch className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('scope')}</p><p className="mt-1 text-sm font-medium">{response.retrieval?.scope ?? 'MATTER'}</p></div>
+                        <div className="rounded-md border border-border p-3"><ShieldCheck className="mb-2 size-4 text-verified" /><p className="text-xs text-foreground-muted">Engine</p><p className="mt-1 text-sm font-medium">{response.retrieval?.engine ?? 'NONE'}</p></div>
+                        <div className="rounded-md border border-border p-3"><BookOpen className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('verifiedSource')}</p><p className="tabular-nums mt-1 text-sm font-medium">{t('sourceCount', { documents: response.retrieval?.verified_document_count ?? 0, citations: response.retrieval?.verified_citation_count ?? citations.length })}</p></div>
+                        <div className="rounded-md border border-border p-3"><Clock3 className="mb-2 size-4 text-primary-content" /><p className="text-xs text-foreground-muted">{t('duration')}</p><p className="tabular-nums mt-1 text-sm font-medium">{response.retrieval?.duration_ms ?? 0} ms</p></div>
+                      </div>
+                      {response.retrieval?.dataset_id && <p className="technical-id mt-2 text-xs text-foreground-muted">Dataset {response.retrieval.dataset_id}</p>}
+                      {result.traceId && <p className="technical-id mt-1 text-xs text-foreground-muted">Trace {result.traceId}</p>}
+                    </section>
+
+                    <section aria-labelledby={`uncertainty-${result.id}`}>
+                      <h3 id={`uncertainty-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('uncertainty')}</h3>
+                      {degraded ? (
+                        <InlineAlert tone={response.status === 'ABSTAIN' ? 'warning' : 'info'} title={response.status === 'ABSTAIN' ? t('noAnswer') : t('degraded')} className="mt-3">
+                          <p>{degraded}</p>
+                        </InlineAlert>
+                      ) : (
+                        <p className="mt-2 text-sm text-foreground-secondary">{t('noExtraUncertainty')}</p>
+                      )}
+                    </section>
+
+                    <section aria-labelledby={`sources-${result.id}`}>
+                      <h3 id={`sources-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('sources')}</h3>
+                      {citations.length > 0 ? (
+                        <ol
+                          tabIndex={0}
+                          aria-label={t('sourceListLabel')}
+                          className="mt-3 max-h-[64rem] space-y-3 overflow-y-auto overscroll-contain pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        >
+                          {citations.map((citation, index) => (
+                            <CitationCard key={`${citation.revision_id}:${citation.chunk_id}:${citation.text_start}`} citation={citation} index={index} />
+                          ))}
+                        </ol>
+                      ) : (
+                        <div className="mt-3 flex items-center gap-2 text-sm text-foreground-secondary"><AlertTriangle className="size-4 text-warning" />{t('noCitations')}</div>
+                      )}
+                    </section>
+                  </>
+                )}
+              </div>
+            </article>
+          )
+        })}
+      </div>
     </div>
-  );
+  )
 }

@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Deadlines"])
 
+
 class DeadlineResponse(BaseModel):
     id: str
     matter_id: str
@@ -19,47 +20,67 @@ class DeadlineResponse(BaseModel):
     description: str
     is_completed: bool
 
+
 @router.get("", response_model=list[DeadlineResponse], operation_id="listDeadlines")
 async def list_deadlines(
     matter_id: str | None = None,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    await MatterAccessPolicy.can_read(context, db, matter_id)
-    query = select(ApprovedDeadline).where(
-        ApprovedDeadline.tenant_id == context.tenant_id,
-        ApprovedDeadline.is_completed == False
-    ).order_by(ApprovedDeadline.due_date.asc())
-    
+    if matter_id:
+        await MatterAccessPolicy.can_read(context, db, matter_id)
+    else:
+        MatterAccessPolicy.can_list(context)
+    query = (
+        select(ApprovedDeadline)
+        .where(
+            ApprovedDeadline.tenant_id == context.tenant_id,
+            ApprovedDeadline.is_completed == False,
+        )
+        .order_by(ApprovedDeadline.due_date.asc())
+    )
+
     if matter_id:
         query = query.where(ApprovedDeadline.matter_id == matter_id)
-        
+    else:
+        from apps.api.models.domain import MatterMember
+
+        query = query.join(
+            MatterMember, ApprovedDeadline.matter_id == MatterMember.matter_id
+        ).where(
+            MatterMember.user_id == context.principal_id,
+            MatterMember.tenant_id == context.tenant_id,
+        )
+
     result = await db.execute(query)
     deadlines = result.scalars().all()
-    
+
     return [
         {
             "id": d.id,
             "matter_id": d.matter_id,
             "due_date": d.due_date,
             "description": d.description,
-            "is_completed": d.is_completed
-        } for d in deadlines
+            "is_completed": d.is_completed,
+        }
+        for d in deadlines
     ]
+
 
 @router.post("/{deadline_id}/complete", operation_id="completeDeadline")
 async def complete_deadline(
     deadline_id: str,
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     deadline = await db.get(ApprovedDeadline, deadline_id)
     if not deadline or deadline.tenant_id != context.tenant_id:
         raise HTTPException(status_code=404, detail="Deadline not found")
-        
+
     DeadlineAccessPolicy.can_manage(context)
-        
+    await MatterAccessPolicy.can_write(context, db, deadline.matter_id)
+
     deadline.is_completed = True
     await db.commit()
-    
+
     return {"status": "success"}

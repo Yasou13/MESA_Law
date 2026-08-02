@@ -26,10 +26,13 @@ import type {
 import type {
   HTTPValidationError,
   SupportAccessRequest,
-  UpdateUserProfileRequest
+  SupportAccessResponse,
+  UpdateUserProfileRequest,
+  UserProfileResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType , BodyType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -51,107 +54,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type getCurrentUserProfileApiV1UsersMeGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getCurrentUserProfileApiV1UsersMeGetResponseSuccess = (getCurrentUserProfileApiV1UsersMeGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getCurrentUserProfileApiV1UsersMeGetResponse = (getCurrentUserProfileApiV1UsersMeGetResponseSuccess)
-
-export const getGetCurrentUserProfileApiV1UsersMeGetUrl = () => {
-
-
-
-
-  return `/api/v1/users/me`
-}
-
 /**
  * @summary Get Current User Profile
  */
-export const getCurrentUserProfileApiV1UsersMeGet = async ( options?: RequestInit): Promise<getCurrentUserProfileApiV1UsersMeGetResponse> => {
+export const getCurrentUserProfile = (
 
-  return customInstance<getCurrentUserProfileApiV1UsersMeGetResponse>(getGetCurrentUserProfileApiV1UsersMeGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<UserProfileResponse>(
+      {url: `/api/v1/users/me`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getGetCurrentUserProfileApiV1UsersMeGetQueryKey = () => {
+export const getGetCurrentUserProfileQueryKey = () => {
     return [
     `/api/v1/users/me`
     ] as const;
     }
 
 
-export const getGetCurrentUserProfileApiV1UsersMeGetQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetCurrentUserProfileQueryOptions = <TData = Awaited<ReturnType<typeof getCurrentUserProfile>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetCurrentUserProfileApiV1UsersMeGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetCurrentUserProfileQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>> = ({ signal }) => getCurrentUserProfileApiV1UsersMeGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getCurrentUserProfile>>> = ({ signal }) => getCurrentUserProfile(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetCurrentUserProfileApiV1UsersMeGetQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>>
-export type GetCurrentUserProfileApiV1UsersMeGetQueryError = unknown
+export type GetCurrentUserProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getCurrentUserProfile>>>
+export type GetCurrentUserProfileQueryError = ErrorType<unknown>
 
 
-export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData>> & Pick<
+export function useGetCurrentUserProfile<TData = Awaited<ReturnType<typeof getCurrentUserProfile>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>,
+          Awaited<ReturnType<typeof getCurrentUserProfile>>,
           TError,
-          Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>
+          Awaited<ReturnType<typeof getCurrentUserProfile>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData>> & Pick<
+export function useGetCurrentUserProfile<TData = Awaited<ReturnType<typeof getCurrentUserProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>,
+          Awaited<ReturnType<typeof getCurrentUserProfile>>,
           TError,
-          Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>
+          Awaited<ReturnType<typeof getCurrentUserProfile>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetCurrentUserProfile<TData = Awaited<ReturnType<typeof getCurrentUserProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Current User Profile
  */
 
-export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfileApiV1UsersMeGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetCurrentUserProfile<TData = Awaited<ReturnType<typeof getCurrentUserProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getCurrentUserProfile>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetCurrentUserProfileApiV1UsersMeGetQueryOptions(options)
+  const queryOptions = getGetCurrentUserProfileQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -163,54 +146,29 @@ export function useGetCurrentUserProfileApiV1UsersMeGet<TData = Awaited<ReturnTy
 
 
 
-export type updateCurrentUserProfileResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type updateCurrentUserProfileResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type updateCurrentUserProfileResponseSuccess = (updateCurrentUserProfileResponse200) & {
-  headers: Headers;
-};
-export type updateCurrentUserProfileResponseError = (updateCurrentUserProfileResponse422) & {
-  headers: Headers;
-};
-
-export type updateCurrentUserProfileResponse = (updateCurrentUserProfileResponseSuccess | updateCurrentUserProfileResponseError)
-
-export const getUpdateCurrentUserProfileUrl = () => {
-
-
-
-
-  return `/api/v1/users/me`
-}
-
 /**
  * @summary Update Current User Profile
  */
-export const updateCurrentUserProfile = async (updateUserProfileRequest: UpdateUserProfileRequest, options?: RequestInit): Promise<updateCurrentUserProfileResponse> => {
-
-  return customInstance<updateCurrentUserProfileResponse>(getUpdateCurrentUserProfileUrl(),
-  {
-    ...options,
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(updateUserProfileRequest)
-  }
-);}
+export const updateCurrentUserProfile = (
+    updateUserProfileRequest: BodyType<UpdateUserProfileRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
+      return customInstance<UserProfileResponse>(
+      {url: `/api/v1/users/me`, method: 'PUT',
+      headers: {'Content-Type': 'application/json', },
+      data: updateUserProfileRequest, signal
+    },
+      options);
+    }
 
 
 
-export const getUpdateCurrentUserProfileMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext> => {
+
+export const getUpdateCurrentUserProfileMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: BodyType<UpdateUserProfileRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: BodyType<UpdateUserProfileRequest>}, TContext> => {
 
 const mutationKey = ['updateCurrentUserProfile'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -222,7 +180,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCurrentUserProfile>>, {data: UpdateUserProfileRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateCurrentUserProfile>>, {data: BodyType<UpdateUserProfileRequest>}> = (props) => {
           const {data} = props ?? {};
 
           return  updateCurrentUserProfile(data,requestOptions)
@@ -236,70 +194,45 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateCurrentUserProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateCurrentUserProfile>>>
-    export type UpdateCurrentUserProfileMutationBody = UpdateUserProfileRequest
-    export type UpdateCurrentUserProfileMutationError = HTTPValidationError
+    export type UpdateCurrentUserProfileMutationBody = BodyType<UpdateUserProfileRequest>
+    export type UpdateCurrentUserProfileMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Update Current User Profile
  */
-export const useUpdateCurrentUserProfile = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: UpdateUserProfileRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useUpdateCurrentUserProfile = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateCurrentUserProfile>>, TError,{data: BodyType<UpdateUserProfileRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof updateCurrentUserProfile>>,
         TError,
-        {data: UpdateUserProfileRequest},
+        {data: BodyType<UpdateUserProfileRequest>},
         TContext
       > => {
       return useMutation(getUpdateCurrentUserProfileMutationOptions(options), queryClient);
     }
-    export type grantSupportAccessResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type grantSupportAccessResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type grantSupportAccessResponseSuccess = (grantSupportAccessResponse200) & {
-  headers: Headers;
-};
-export type grantSupportAccessResponseError = (grantSupportAccessResponse422) & {
-  headers: Headers;
-};
-
-export type grantSupportAccessResponse = (grantSupportAccessResponseSuccess | grantSupportAccessResponseError)
-
-export const getGrantSupportAccessUrl = () => {
-
-
-
-
-  return `/api/v1/users/me/support-access`
-}
-
-/**
+    /**
  * @summary Grant Support Access
  */
-export const grantSupportAccess = async (supportAccessRequest: SupportAccessRequest, options?: RequestInit): Promise<grantSupportAccessResponse> => {
-
-  return customInstance<grantSupportAccessResponse>(getGrantSupportAccessUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(supportAccessRequest)
-  }
-);}
+export const grantSupportAccess = (
+    supportAccessRequest: BodyType<SupportAccessRequest>,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
+      return customInstance<SupportAccessResponse>(
+      {url: `/api/v1/users/me/support-access`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: supportAccessRequest, signal
+    },
+      options);
+    }
 
 
 
-export const getGrantSupportAccessMutationOptions = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
-): UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext> => {
+
+export const getGrantSupportAccessMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: BodyType<SupportAccessRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: BodyType<SupportAccessRequest>}, TContext> => {
 
 const mutationKey = ['grantSupportAccess'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -311,7 +244,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantSupportAccess>>, {data: SupportAccessRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof grantSupportAccess>>, {data: BodyType<SupportAccessRequest>}> = (props) => {
           const {data} = props ?? {};
 
           return  grantSupportAccess(data,requestOptions)
@@ -325,18 +258,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type GrantSupportAccessMutationResult = NonNullable<Awaited<ReturnType<typeof grantSupportAccess>>>
-    export type GrantSupportAccessMutationBody = SupportAccessRequest
-    export type GrantSupportAccessMutationError = HTTPValidationError
+    export type GrantSupportAccessMutationBody = BodyType<SupportAccessRequest>
+    export type GrantSupportAccessMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Grant Support Access
  */
-export const useGrantSupportAccess = <TError = HTTPValidationError,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: SupportAccessRequest}, TContext>, request?: SecondParameter<typeof customInstance>}
+export const useGrantSupportAccess = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof grantSupportAccess>>, TError,{data: BodyType<SupportAccessRequest>}, TContext>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient): UseMutationResult<
         Awaited<ReturnType<typeof grantSupportAccess>>,
         TError,
-        {data: SupportAccessRequest},
+        {data: BodyType<SupportAccessRequest>},
         TContext
       > => {
       return useMutation(getGrantSupportAccessMutationOptions(options), queryClient);

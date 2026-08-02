@@ -6,7 +6,7 @@
  */
 
 export interface UpdateDraftRequest {
-  title?: string | null;
   content?: string | null;
   expected_version?: number | null;
+  title?: string | null;
 }

@@ -7,6 +7,7 @@ from apps.api.models.research import LegalSource, SourcePackage
 from .benchmark import BenchmarkDataset, BenchmarkItem, GoldAnnotation
 from .document import Document, DocumentRevision
 from .domain import Firm, Matter, Membership, User
+from .mesa import MesaScopeBinding, MesaSyncRecord
 from .parser import ParsedDocument, ParsedPage
 from .queue import Job, JobAttempt, Outbox
 from .review import AuditLog, ExtractionSuggestion, ReviewItem
@@ -15,6 +16,8 @@ __all__ = [
     "ApprovedDeadline",
     "AuditEvent",
     "AuditLog",
+    "BenchmarkDataset",
+    "BenchmarkItem",
     "Claim",
     "DeadlineCandidate",
     "DeadlineRule",
@@ -26,12 +29,16 @@ __all__ = [
     "EvidenceItem",
     "ExtractionSuggestion",
     "Firm",
+    "GoldAnnotation",
     "Job",
+    "JobAttempt",
     "LegalAssertion",
     "LegalSource",
     "Matter",
     "MatterParty",
     "Membership",
+    "MesaScopeBinding",
+    "MesaSyncRecord",
     "Notification",
     "Outbox",
     "ParsedDocument",

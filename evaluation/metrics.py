@@ -4,6 +4,7 @@ MESA Law Evaluation Metrics — computes real F1, precision, recall, and domain-
 This module provides the core evaluation logic that replaces the previously hardcoded metrics.
 All functions take (predicted, expected) pairs and return float scores in [0.0, 1.0].
 """
+
 import logging
 from dataclasses import dataclass, field
 
@@ -13,6 +14,7 @@ logger = logging.getLogger("evaluation.metrics")
 @dataclass
 class MetricResult:
     """Single metric result with pass/fail gate."""
+
     name: str
     score: float
     threshold: float
@@ -23,6 +25,7 @@ class MetricResult:
 @dataclass
 class EvaluationReport:
     """Full evaluation report across all benchmarks."""
+
     metrics: list[MetricResult] = field(default_factory=list)
 
     @property
@@ -46,6 +49,7 @@ class EvaluationReport:
 # ---------------------------------------------------------------------------
 # Core metric functions
 # ---------------------------------------------------------------------------
+
 
 def compute_f1(predicted_set: set[str], expected_set: set[str]) -> float:
     """
@@ -89,6 +93,7 @@ def compute_recall(predicted_set: set[str], expected_set: set[str]) -> float:
 # ---------------------------------------------------------------------------
 # Citation integrity metrics
 # ---------------------------------------------------------------------------
+
 
 def compute_citation_precision(
     cited_document_ids: list[str],
@@ -174,6 +179,7 @@ def compute_cross_matter_contamination_rate(
 # Answer quality metrics
 # ---------------------------------------------------------------------------
 
+
 def compute_answer_coverage(
     answer_text: str,
     must_contain: list[str],
@@ -228,7 +234,22 @@ def compute_unsupported_claim_rate(
     for claim in answer_claims:
         claim_words = set(claim.lower().split())
         # Remove stop words (Turkish + English basics)
-        stop_words = {"bir", "ve", "ile", "için", "da", "de", "bu", "o", "the", "is", "a", "an", "in", "of"}
+        stop_words = {
+            "bir",
+            "ve",
+            "ile",
+            "için",
+            "da",
+            "de",
+            "bu",
+            "o",
+            "the",
+            "is",
+            "a",
+            "an",
+            "in",
+            "of",
+        }
         meaningful_words = claim_words - stop_words
 
         if not meaningful_words:
@@ -239,7 +260,9 @@ def compute_unsupported_claim_rate(
 
         if support_ratio < 0.5:
             unsupported += 1
-            logger.warning(f"Unsupported claim: '{claim[:80]}...' (support ratio: {support_ratio:.2f})")
+            logger.warning(
+                f"Unsupported claim: '{claim[:80]}...' (support ratio: {support_ratio:.2f})"
+            )
 
     return unsupported / len(answer_claims)
 
@@ -247,6 +270,7 @@ def compute_unsupported_claim_rate(
 # ---------------------------------------------------------------------------
 # Extraction metrics
 # ---------------------------------------------------------------------------
+
 
 def compute_entity_extraction_f1(
     predicted_entities: list[dict],

@@ -6,29 +6,44 @@ from apps.api.dependencies.auth import setup_tenant_context
 from apps.api.models.audit import Notification
 from apps.api.models.deadline import ApprovedDeadline
 from apps.api.models.domain import Matter
-from apps.api.models.queue import Job
+from apps.api.models.queue import Job, JobStatus
 from apps.api.models.review import ReviewItem
 from apps.api.routers.system import get_dependencies
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(tags=["Dashboard"])
 
-@router.get("/api/v1/dashboard/metrics")
+
+class DashboardMetricsResponse(BaseModel):
+    active_matters: int
+    pending_reviews: int
+    upcoming_deadlines: int
+    unread_notifications: int
+    failed_operations: int
+    degraded_capabilities: list[str]
+    system_status: str
+
+
+@router.get(
+    "/api/v1/dashboard/metrics",
+    response_model=DashboardMetricsResponse,
+    operation_id="getDashboardMetrics",
+)
 async def get_dashboard_metrics(
     context: RequestContext = Depends(setup_tenant_context),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     tenant_id = context.tenant_id
 
     from apps.api.models.review import ReviewState
-    
+
     # Active Matters
     matters_count = await db.scalar(
         select(func.count(Matter.id)).where(
-            Matter.tenant_id == tenant_id, 
-            Matter.status.in_(["open", "OPEN"])
+            Matter.tenant_id == tenant_id, Matter.status.in_(["open", "OPEN"])
         )
     )
 
@@ -36,7 +51,7 @@ async def get_dashboard_metrics(
     reviews_count = await db.scalar(
         select(func.count(ReviewItem.id)).where(
             ReviewItem.tenant_id == tenant_id,
-            ReviewItem.status == ReviewState.PENDING
+            ReviewItem.status == ReviewState.PROPOSED,
         )
     )
 
@@ -44,8 +59,7 @@ async def get_dashboard_metrics(
     now = datetime.now(UTC)
     deadlines_count = await db.scalar(
         select(func.count(ApprovedDeadline.id)).where(
-            ApprovedDeadline.tenant_id == tenant_id,
-            ApprovedDeadline.due_date >= now
+            ApprovedDeadline.tenant_id == tenant_id, ApprovedDeadline.due_date >= now
         )
     )
 
@@ -53,18 +67,18 @@ async def get_dashboard_metrics(
     notifs_count = await db.scalar(
         select(func.count(Notification.id)).where(
             Notification.tenant_id == tenant_id,
-            Notification.status.in_(["CREATED", "created", "UNREAD", "unread"])
+            Notification.status.in_(["CREATED", "created", "UNREAD", "unread"]),
         )
     )
-    
+
     # Failed Operations
     failed_ops = await db.scalar(
         select(func.count(Job.id)).where(
             Job.tenant_id == tenant_id,
-            Job.status == "failed"
+            Job.status.in_([JobStatus.FAILED, JobStatus.DEAD]),
         )
     )
-    
+
     # Degraded Capabilities
     deps = await get_dependencies(db)
     degraded = [k for k, v in deps.items() if v not in ("ok", "down")]
@@ -76,5 +90,5 @@ async def get_dashboard_metrics(
         "unread_notifications": notifs_count or 0,
         "failed_operations": failed_ops or 0,
         "degraded_capabilities": degraded,
-        "system_status": "ok" if not degraded else "degraded"
+        "system_status": "ok" if not degraded else "degraded",
     }

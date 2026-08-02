@@ -19,7 +19,12 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
+import type {
+  DashboardMetricsResponse
+} from '../../models';
+
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -41,107 +46,87 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type getDashboardMetricsApiV1DashboardMetricsGetResponse200 = {
-  data: unknown
-  status: 200
-}
-
-export type getDashboardMetricsApiV1DashboardMetricsGetResponseSuccess = (getDashboardMetricsApiV1DashboardMetricsGetResponse200) & {
-  headers: Headers;
-};
-;
-
-export type getDashboardMetricsApiV1DashboardMetricsGetResponse = (getDashboardMetricsApiV1DashboardMetricsGetResponseSuccess)
-
-export const getGetDashboardMetricsApiV1DashboardMetricsGetUrl = () => {
-
-
-
-
-  return `/api/v1/dashboard/metrics`
-}
-
 /**
  * @summary Get Dashboard Metrics
  */
-export const getDashboardMetricsApiV1DashboardMetricsGet = async ( options?: RequestInit): Promise<getDashboardMetricsApiV1DashboardMetricsGetResponse> => {
+export const getDashboardMetrics = (
 
-  return customInstance<getDashboardMetricsApiV1DashboardMetricsGetResponse>(getGetDashboardMetricsApiV1DashboardMetricsGetUrl(),
-  {
-    ...options,
-    method: 'GET'
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
+      return customInstance<DashboardMetricsResponse>(
+      {url: `/api/v1/dashboard/metrics`, method: 'GET', signal
+    },
+      options);
+    }
 
 
 
 
-
-export const getGetDashboardMetricsApiV1DashboardMetricsGetQueryKey = () => {
+export const getGetDashboardMetricsQueryKey = () => {
     return [
     `/api/v1/dashboard/metrics`
     ] as const;
     }
 
 
-export const getGetDashboardMetricsApiV1DashboardMetricsGetQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getGetDashboardMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getDashboardMetrics>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetDashboardMetricsApiV1DashboardMetricsGetQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetDashboardMetricsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>> = ({ signal }) => getDashboardMetricsApiV1DashboardMetricsGet({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDashboardMetrics>>> = ({ signal }) => getDashboardMetrics(requestOptions, signal);
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetDashboardMetricsApiV1DashboardMetricsGetQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>>
-export type GetDashboardMetricsApiV1DashboardMetricsGetQueryError = unknown
+export type GetDashboardMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getDashboardMetrics>>>
+export type GetDashboardMetricsQueryError = ErrorType<unknown>
 
 
-export function useGetDashboardMetricsApiV1DashboardMetricsGet<TData = Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData>> & Pick<
+export function useGetDashboardMetrics<TData = Awaited<ReturnType<typeof getDashboardMetrics>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>,
+          Awaited<ReturnType<typeof getDashboardMetrics>>,
           TError,
-          Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>
+          Awaited<ReturnType<typeof getDashboardMetrics>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDashboardMetricsApiV1DashboardMetricsGet<TData = Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData>> & Pick<
+export function useGetDashboardMetrics<TData = Awaited<ReturnType<typeof getDashboardMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>,
+          Awaited<ReturnType<typeof getDashboardMetrics>>,
           TError,
-          Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>
+          Awaited<ReturnType<typeof getDashboardMetrics>>
         > , 'initialData'
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetDashboardMetricsApiV1DashboardMetricsGet<TData = Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetDashboardMetrics<TData = Awaited<ReturnType<typeof getDashboardMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 /**
  * @summary Get Dashboard Metrics
  */
 
-export function useGetDashboardMetricsApiV1DashboardMetricsGet<TData = Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetricsApiV1DashboardMetricsGet>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export function useGetDashboardMetrics<TData = Awaited<ReturnType<typeof getDashboardMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getDashboardMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetDashboardMetricsApiV1DashboardMetricsGetQueryOptions(options)
+  const queryOptions = getGetDashboardMetricsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

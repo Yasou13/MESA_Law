@@ -22,10 +22,12 @@ import type {
 import type {
   HTTPValidationError,
   JobResponse,
-  ListJobsParams
+  ListJobsParams,
+  OperationalMetricsResponse
 } from '../../models';
 
 import { customInstance } from '../../../lib/api/client';
+import type { ErrorType } from '../../../lib/api/client';
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
@@ -47,55 +49,22 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type listJobsResponse200 = {
-  data: JobResponse[]
-  status: 200
-}
-
-export type listJobsResponse422 = {
-  data: HTTPValidationError
-  status: 422
-}
-
-export type listJobsResponseSuccess = (listJobsResponse200) & {
-  headers: Headers;
-};
-export type listJobsResponseError = (listJobsResponse422) & {
-  headers: Headers;
-};
-
-export type listJobsResponse = (listJobsResponseSuccess | listJobsResponseError)
-
-export const getListJobsUrl = (params?: ListJobsParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/api/v1/operations/jobs?${stringifiedParams}` : `/api/v1/operations/jobs`
-}
-
 /**
  * List background worker jobs.
  * @summary List Jobs
  */
-export const listJobs = async (params?: ListJobsParams, options?: RequestInit): Promise<listJobsResponse> => {
-
-  return customInstance<listJobsResponse>(getListJobsUrl(params),
-  {
-    ...options,
-    method: 'GET'
+export const listJobs = (
+    params?: ListJobsParams,
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
 
 
-  }
-);}
-
+      return customInstance<JobResponse[]>(
+      {url: `/api/v1/operations/jobs`, method: 'GET',
+        params, signal
+    },
+      options);
+    }
 
 
 
@@ -107,7 +76,7 @@ export const getListJobsQueryKey = (params?: ListJobsParams,) => {
     }
 
 
-export const getListJobsQueryOptions = <TData = Awaited<ReturnType<typeof listJobs>>, TError = HTTPValidationError>(params?: ListJobsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+export const getListJobsQueryOptions = <TData = Awaited<ReturnType<typeof listJobs>>, TError = ErrorType<HTTPValidationError>>(params?: ListJobsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -116,7 +85,7 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listJobs>>> = ({ signal }) => listJobs(params, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listJobs>>> = ({ signal }) => listJobs(params, requestOptions, signal);
 
 
 
@@ -126,10 +95,10 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type ListJobsQueryResult = NonNullable<Awaited<ReturnType<typeof listJobs>>>
-export type ListJobsQueryError = HTTPValidationError
+export type ListJobsQueryError = ErrorType<HTTPValidationError>
 
 
-export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = HTTPValidationError>(
+export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = ErrorType<HTTPValidationError>>(
  params: undefined |  ListJobsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof listJobs>>,
@@ -139,7 +108,7 @@ export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = HTTPValidationError>(
+export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListJobsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof listJobs>>,
@@ -149,7 +118,7 @@ export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError
       >, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = HTTPValidationError>(
+export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListJobsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
@@ -157,12 +126,105 @@ export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError
  * @summary List Jobs
  */
 
-export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = HTTPValidationError>(
+export function useListJobs<TData = Awaited<ReturnType<typeof listJobs>>, TError = ErrorType<HTTPValidationError>>(
  params?: ListJobsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listJobs>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListJobsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+/**
+ * Return bounded, tenant- and matter-scoped operational snapshots.
+ * @summary Get Operational Metrics
+ */
+export const getOperationalMetrics = (
+
+ options?: SecondParameter<typeof customInstance>,signal?: AbortSignal
+) => {
+
+
+      return customInstance<OperationalMetricsResponse>(
+      {url: `/api/v1/operations/metrics`, method: 'GET', signal
+    },
+      options);
+    }
+
+
+
+
+export const getGetOperationalMetricsQueryKey = () => {
+    return [
+    `/api/v1/operations/metrics`
+    ] as const;
+    }
+
+
+export const getGetOperationalMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOperationalMetricsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOperationalMetrics>>> = ({ signal }) => getOperationalMetrics(requestOptions, signal);
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetOperationalMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getOperationalMetrics>>>
+export type GetOperationalMetricsQueryError = ErrorType<unknown>
+
+
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalMetrics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOperationalMetrics>>,
+          TError,
+          Awaited<ReturnType<typeof getOperationalMetrics>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+/**
+ * @summary Get Operational Metrics
+ */
+
+export function useGetOperationalMetrics<TData = Awaited<ReturnType<typeof getOperationalMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getOperationalMetrics>>, TError, TData>>, request?: SecondParameter<typeof customInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetOperationalMetricsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

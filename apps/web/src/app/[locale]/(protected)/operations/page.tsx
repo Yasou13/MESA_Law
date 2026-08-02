@@ -159,8 +159,8 @@ export default function OperationsPage() {
               <dt className="text-foreground-secondary">{common('status')}</dt><dd><StatusBadge status={jobTone(selectedJob.status)} label={selectedJob.status} /></dd>
               <dt className="text-foreground-secondary">{t('matter')}</dt><dd className="technical-id break-all">{selectedJob.matter_id ?? common('notAvailable')}</dd>
               <dt className="text-foreground-secondary">{t('attempt')}</dt><dd>{selectedJob.retries + 1} / {selectedJob.max_retries}</dd>
-              <dt className="text-foreground-secondary">Payload</dt><dd><pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-subtle p-3 text-xs">{JSON.stringify(selectedJob.payload, null, 2)}</pre></dd>
-              {selectedJob.error_message && <><dt className="text-danger">Error</dt><dd className="break-words rounded-md bg-danger-soft p-3 text-danger">{selectedJob.error_message}</dd></>}
+              <dt className="text-foreground-secondary">{t('payload')}</dt><dd><pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all rounded-md bg-surface-subtle p-3 text-xs">{JSON.stringify(selectedJob.payload, null, 2)}</pre></dd>
+              {selectedJob.error_message && <><dt className="text-danger">{t('error')}</dt><dd className="break-words rounded-md bg-danger-soft p-3 text-danger">{selectedJob.error_message}</dd></>}
             </dl>
           )}
         </DialogContent>

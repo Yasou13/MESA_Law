@@ -57,7 +57,7 @@ async function capture(page: Page, testInfo: TestInfo, name: string) {
   await expect(page).toHaveScreenshot(`${name}.png`, {
     animations: 'disabled',
     caret: 'hide',
-    maxDiffPixelRatio: 0.01,
+    maxDiffPixelRatio: 0.001,
   })
 }
 

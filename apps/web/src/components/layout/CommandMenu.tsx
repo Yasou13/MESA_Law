@@ -60,7 +60,12 @@ export function CommandMenu() {
         </kbd>
       </button>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('openCommand')}
+        description={t('commandSearch')}
+      >
         <CommandInput placeholder={t('commandPlaceholder')} />
         <CommandList>
           <CommandEmpty>{t('noCommand')}</CommandEmpty>

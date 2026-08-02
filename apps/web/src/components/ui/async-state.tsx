@@ -4,14 +4,17 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
 import { InlineAlert } from '@/components/ui/inline-alert'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useTranslations } from 'next-intl'
 
-export function LoadingState({ label = 'Yükleniyor' }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const common = useTranslations('Common')
+  const resolvedLabel = label ?? common('loading')
   return (
-    <div className="space-y-3" role="status" aria-label={label}>
+    <div className="space-y-3" role="status" aria-label={resolvedLabel}>
       <Skeleton className="h-10 w-full" />
       <Skeleton className="h-16 w-full" />
       <Skeleton className="h-16 w-full" />
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{resolvedLabel}</span>
     </div>
   )
 }
@@ -22,13 +25,14 @@ export function ErrorState({ title, description, referenceId, onRetry }: {
   referenceId?: string
   onRetry?: () => void
 }) {
+  const common = useTranslations('Common')
   return (
     <div className="space-y-3">
       <InlineAlert tone="danger" title={title}>
         <p>{description}</p>
-        {referenceId && <p className="technical-id mt-1">Referans: {referenceId}</p>}
+        {referenceId && <p className="technical-id mt-1">{common('reference')}: {referenceId}</p>}
       </InlineAlert>
-      {onRetry && <Button variant="outline" size="sm" onClick={onRetry}><RotateCcw />Yeniden dene</Button>}
+      {onRetry && <Button variant="outline" size="sm" onClick={onRetry}><RotateCcw />{common('retry')}</Button>}
     </div>
   )
 }

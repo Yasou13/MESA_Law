@@ -219,7 +219,11 @@ export function QAShell({ matterId }: { matterId: string }) {
                     <section aria-labelledby={`sources-${result.id}`}>
                       <h3 id={`sources-${result.id}`} className="text-sm font-semibold uppercase tracking-wide text-foreground-muted">{t('sources')}</h3>
                       {citations.length > 0 ? (
-                        <ol className="mt-3 space-y-3">
+                        <ol
+                          tabIndex={0}
+                          aria-label={t('sourceListLabel')}
+                          className="mt-3 max-h-[64rem] space-y-3 overflow-y-auto overscroll-contain pr-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        >
                           {citations.map((citation, index) => (
                             <CitationCard key={`${citation.revision_id}:${citation.chunk_id}:${citation.text_start}`} citation={citation} index={index} />
                           ))}

@@ -18,7 +18,8 @@
     "reference": "Reference",
     "systemGenerated": "System generated",
     "lowProvenance": "Low provenance",
-    "verifiedSource": "Verified source"
+    "verifiedSource": "Verified source",
+    "close": "Close"
   },
   "DataTable": {
     "previous": "Previous page",
@@ -139,6 +140,8 @@
     "technicalDetail": "Technical detail",
     "details": "Open details",
     "closeDetails": "Close details",
+    "payload": "Job payload",
+    "error": "Error",
     "matterTitle": "Matter operations",
     "matterDescription": "Matter-scoped document processing and MESA publication queue.",
     "matterLoadError": "Operations could not be loaded",
@@ -359,7 +362,7 @@
     "saveBindingLabel": "Save binding and run preflight"
   },
   "ErrorBoundary": {
-    "title": "Something went wrong",
+    "title": "This page couldn’t load",
     "description": "An unexpected error occurred while rendering this page. Your data was not changed.",
     "unknown": "Unknown application error",
     "tryAgain": "Try again",
@@ -431,6 +434,7 @@
     "degraded": "Degraded operation",
     "noExtraUncertainty": "The backend reported no additional uncertainty or conflict information.",
     "sources": "Sources",
+    "sourceListLabel": "Verified source list",
     "noCitations": "No verified citation is available.",
     "source": "Source {index} · Document {document}",
     "lowPage": "No verified PDF page",
@@ -534,6 +538,7 @@
     "noEvidenceText": "No evidence text.",
     "openSource": "Open source",
     "confidence": "Confidence category",
+    "extraction": "Extraction details",
     "auditHistory": "Audit history",
     "documentUnverified": "Canonical document could not be verified"
   }

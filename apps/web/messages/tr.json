@@ -18,7 +18,8 @@
     "reference": "Referans",
     "systemGenerated": "Sistem üretimi",
     "lowProvenance": "Düşük provenance",
-    "verifiedSource": "Doğrulanmış kaynak"
+    "verifiedSource": "Doğrulanmış kaynak",
+    "close": "Kapat"
   },
   "DataTable": {
     "previous": "Önceki sayfa",
@@ -139,6 +140,8 @@
     "technicalDetail": "Teknik ayrıntı",
     "details": "Ayrıntıları aç",
     "closeDetails": "Ayrıntıları kapat",
+    "payload": "İş verisi",
+    "error": "Hata",
     "matterTitle": "Dosya operasyonları",
     "matterDescription": "Belge işleme ve MESA yayın kuyruğunun bu dosyaya ait görünümü.",
     "matterLoadError": "Operasyonlar yüklenemedi",
@@ -359,7 +362,7 @@
     "saveBindingLabel": "Binding kaydet ve preflight çalıştır"
   },
   "ErrorBoundary": {
-    "title": "Bir sorun oluştu",
+    "title": "Sayfa yüklenemedi",
     "description": "Bu sayfa oluşturulurken beklenmeyen bir hata oluştu. Verilerinizde değişiklik yapılmadı.",
     "unknown": "Bilinmeyen uygulama hatası",
     "tryAgain": "Yeniden dene",
@@ -431,6 +434,7 @@
     "degraded": "Degraded çalışma",
     "noExtraUncertainty": "Backend ek bir belirsizlik veya çelişki bilgisi bildirmedi.",
     "sources": "Kaynaklar",
+    "sourceListLabel": "Doğrulanmış kaynak listesi",
     "noCitations": "Doğrulanmış citation bulunmuyor.",
     "source": "Kaynak {index} · Belge {document}",
     "lowPage": "Doğrulanmış PDF sayfası yok",
@@ -533,7 +537,8 @@
     "textRange": "Metin aralığı",
     "noEvidenceText": "Evidence metni yok.",
     "openSource": "Kaynakta aç",
-    "confidence": "Confidence category",
+    "confidence": "Güven kategorisi",
+    "extraction": "Çıkarma bilgisi",
     "auditHistory": "Audit geçmişi",
     "documentUnverified": "Canonical belge doğrulanamadı"
   }

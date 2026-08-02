@@ -428,7 +428,7 @@ export function ReviewWorkspace({ matterId }: { matterId?: string }) {
 
           {reviewContext?.suggestion && (
             <Panel>
-              <PanelHeader><h3 className="text-sm font-semibold">Extraction</h3></PanelHeader>
+              <PanelHeader><h3 className="text-sm font-semibold">{t('extraction')}</h3></PanelHeader>
               <PanelBody className="space-y-2 text-xs">
                 <p>{reviewContext.suggestion.extractor_name} · {reviewContext.suggestion.extractor_version}</p>
                 <p>Parser {reviewContext.suggestion.parser_version}</p>

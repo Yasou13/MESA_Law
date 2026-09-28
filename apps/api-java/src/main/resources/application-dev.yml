@@ -1,0 +1,25 @@
+# Development profile overrides
+spring:
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true
+    show-sql: true
+
+  flyway:
+    clean-disabled: false
+
+mesa-law:
+  environment: development
+  clamav:
+    required: false
+  intelligence:
+    adapter: mock
+  test-auth-enabled: false
+  observability-enabled: false
+
+logging:
+  level:
+    com.mesalaw: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE

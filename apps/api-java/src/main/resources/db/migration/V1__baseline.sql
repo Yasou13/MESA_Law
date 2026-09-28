@@ -1,0 +1,12 @@
+-- Flyway baseline migration for MESA Law
+-- This is intentionally empty because the database schema already exists
+-- (created by the Python/Alembic migrations).
+--
+-- When connecting to an existing database, Flyway will recognize this as
+-- the baseline and only apply newer migrations (V2, V3, etc.)
+--
+-- To generate a full baseline from the existing schema, run:
+--   pg_dump --schema-only --no-owner --no-acl mesa_law > V1__baseline.sql
+--
+-- For now, we use Hibernate's validate mode to ensure entity mappings match
+-- the existing schema.

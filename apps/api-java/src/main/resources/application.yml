@@ -1,0 +1,172 @@
+server:
+  port: ${MESA_LAW_API_PORT:8001}
+  shutdown: graceful
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: mesa-law-api
+
+  # ── JPA / Hibernate ──
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate  # Flyway handles schema; Hibernate only validates
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+        default_schema: public
+
+  # ── Database ──
+  datasource:
+    url: ${MESA_LAW_DATABASE_URL:jdbc:postgresql://localhost:5432/mesa_law}
+    username: ${MESA_LAW_DB_USERNAME:mesa_law_app}
+    password: ${MESA_LAW_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${MESA_LAW_DATABASE_POOL_SIZE:5}
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: mesa-law-pool
+
+  # ── Flyway ──
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: "0"
+
+  # ── Redis ──
+  data:
+    redis:
+      url: ${MESA_LAW_REDIS_URL:redis://localhost:6379/0}
+      timeout: 5000ms
+
+  # ── Security (Keycloak JWT) ──
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_PUBLIC_ISSUER:http://localhost:8080/realms/mesa_law}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URL:http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs}
+
+  # ── Jackson ──
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+  # ── Virtual Threads (Java 21) ──
+  threads:
+    virtual:
+      enabled: true
+
+  # ── Async ──
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 100
+      thread-name-prefix: mesa-worker-
+
+# ── Actuator / Health ──
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+# ── Application-specific config ──
+mesa-law:
+  environment: ${MESA_LAW_ENVIRONMENT:development}
+  secret-key: ${MESA_LAW_SECRET_KEY:MUST_BE_PROVIDED_IN_ENV}
+
+  # CORS
+  cors:
+    allowed-origins:
+      - http://localhost:3000
+      - http://127.0.0.1:3000
+
+  # Keycloak
+  keycloak:
+    client-id: ${KEYCLOAK_CLIENT_ID:mesa-client}
+    client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+    issuer: ${KEYCLOAK_PUBLIC_ISSUER:http://localhost:8080/realms/mesa_law}
+    jwks-url: ${KEYCLOAK_JWKS_URL:http://localhost:8080/realms/mesa_law/protocol/openid-connect/certs}
+    internal-url: ${KEYCLOAK_INTERNAL_URL:}
+
+  # S3 / MinIO
+  storage:
+    endpoint: ${MESA_LAW_STORAGE_ENDPOINT:http://localhost:9000}
+    access-key: ${MESA_LAW_STORAGE_ACCESS_KEY:}
+    secret-key: ${MESA_LAW_STORAGE_SECRET_KEY:}
+    bucket: ${MESA_LAW_STORAGE_BUCKET:mesa-law-docs}
+    upload-url-ttl-seconds: 600
+    download-url-ttl-seconds: 300
+
+  # Intelligence / MESA Core
+  intelligence:
+    adapter: ${MESA_LAW_INTELLIGENCE_ADAPTER:mock}
+    mesa-api-key: ${MESA_LAW_MESA_API_KEY:}
+    mesa-backend-url: ${MESA_LAW_MESA_BACKEND_URL:http://localhost:8000}
+
+  # LLM
+  llm:
+    provider: ${MESA_LAW_LLM_PROVIDER:mock}
+    model: ${MESA_LAW_LLM_MODEL:}
+    api-key: ${MESA_LAW_LLM_API_KEY:}
+    base-url: ${MESA_LAW_LLM_BASE_URL:}
+    max-tokens: ${MESA_LAW_LLM_MAX_TOKENS:4096}
+    temperature: ${MESA_LAW_LLM_TEMPERATURE:0.1}
+    timeout-seconds: ${MESA_LAW_LLM_TIMEOUT:60}
+
+  # ClamAV
+  clamav:
+    host: ${CLAMAV_HOST:clamav}
+    port: ${CLAMAV_PORT:3310}
+    required: ${MESA_LAW_CLAMAV_REQUIRED:true}
+
+  # Feature Flags
+  features:
+    mesa-rebuild-enabled: ${MESA_LAW_MESA_REBUILD_ENABLED:false}
+    external-research-enabled: ${MESA_LAW_EXTERNAL_RESEARCH_ENABLED:false}
+    drafting-ai-enabled: ${MESA_LAW_DRAFTING_AI_ENABLED:false}
+    deadline-ai-enabled: ${MESA_LAW_DEADLINE_AI_ENABLED:false}
+
+  # Worker
+  worker:
+    concurrency: ${MESA_LAW_WORKER_CONCURRENCY:1}
+    lease-minutes: 5
+
+  # Auth
+  test-auth-enabled: ${MESA_LAW_TEST_AUTH_ENABLED:false}
+
+  # Observability
+  observability-enabled: ${MESA_LAW_OBSERVABILITY_ENABLED:false}
+
+# ── Logging ──
+logging:
+  level:
+    root: INFO
+    com.mesalaw: INFO
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

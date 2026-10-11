@@ -2,7 +2,6 @@ package com.mesalaw.controller;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +11,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.mesalaw.dto.ReviewDto.ApproveRequest;
+import com.mesalaw.dto.ReviewDto.CorrectRequest;
+import com.mesalaw.dto.ReviewDto.MutationResponse;
+import com.mesalaw.dto.ReviewDto.RejectRequest;
+import com.mesalaw.dto.ReviewDto.ReviewItemResponse;
 import com.mesalaw.entity.review.ReviewItem;
 import com.mesalaw.entity.review.ReviewState;
 import com.mesalaw.exception.ProblemException;
@@ -20,10 +24,6 @@ import com.mesalaw.security.RequestContext;
 import com.mesalaw.security.RequestContextHolder;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -36,55 +36,6 @@ import lombok.RequiredArgsConstructor;
 public class ReviewController {
 
     private final ReviewItemRepository reviewItemRepository;
-
-    // ── DTOs ──
-
-    @Data
-    public static class ReviewItemResponse {
-        private String id;
-        private String matterId;
-        private String entityType;
-        private String entityId;
-        private String proposedContent;
-        private String correctedContent;
-        private ReviewState status;
-        private String suggestionId;
-        private String decisionReason;
-        private int versionId;
-    }
-
-    @Data
-    public static class ApproveRequest {
-        @NotNull @Min(1) private Integer expectedVersion;
-        @Size(min = 3, max = 1000) private String reason;
-    }
-
-    @Data
-    public static class RejectRequest {
-        @NotNull @Min(1) private Integer expectedVersion;
-        @NotNull @Size(min = 3, max = 1000) private String reason;
-    }
-
-    @Data
-    public static class CorrectRequest {
-        @NotNull @Min(1) private Integer expectedVersion;
-        @NotNull @Size(min = 3, max = 1000) private String reason;
-        @NotNull private String correctedContent;
-    }
-
-    @Data
-    public static class MutationResponse {
-        private String id;
-        private ReviewState status;
-        private int versionId;
-        private String publicationJobId;
-
-        public MutationResponse(String id, ReviewState status, int versionId) {
-            this.id = id;
-            this.status = status;
-            this.versionId = versionId;
-        }
-    }
 
     // ── Endpoints ──
 

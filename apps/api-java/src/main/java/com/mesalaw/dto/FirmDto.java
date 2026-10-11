@@ -8,11 +8,13 @@ import lombok.Data;
 
 /**
  * DTO classes for Firm endpoints.
- * Replaces Python's FirmCreateRequest, FirmResponse, FirmMemberResponse from routers/firms.py.
+ * Replaces Python's FirmCreateRequest, FirmResponse, FirmMemberResponse from
+ * routers/firms.py.
  */
 public final class FirmDto {
 
-    private FirmDto() {}
+    private FirmDto() {
+    }
 
     @Data
     public static class CreateRequest {

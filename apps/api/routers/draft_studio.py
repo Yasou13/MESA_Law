@@ -13,7 +13,7 @@ from apps.api.models.domain import MatterMember
 from apps.api.models.draft import Draft
 from apps.api.models.queue import Job
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +29,7 @@ class SaveDraftRequest(BaseModel):
 class UpdateDraftRequest(BaseModel):
     title: str | None = None
     content: str | None = None
-    expected_version: int | None = None
+    expected_version: int = Field(ge=1)
 
 
 class ExportDraftRequest(BaseModel):
@@ -47,7 +47,6 @@ class DraftSummaryResponse(BaseModel):
 
 class DraftDetailResponse(DraftSummaryResponse):
     content: str
-    etag: str | None = None
 
 
 class DraftStatusResponse(BaseModel):
@@ -100,7 +99,6 @@ async def save_draft(
         "content": draft.content,
         "status": draft.status,
         "updated_at": draft.updated_at,
-        "etag": draft.etag,
     }
 
 
@@ -198,7 +196,6 @@ async def get_draft(
         "version": draft.version,
         "status": draft.status,
         "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
-        "etag": draft.etag,
     }
 
 
@@ -208,7 +205,6 @@ async def get_draft(
     operation_id="updateDraft",
 )
 async def update_draft(
-    request: Request,
     draft_id: str,
     payload: UpdateDraftRequest,
     context: RequestContext = Depends(setup_tenant_context),
@@ -223,16 +219,7 @@ async def update_draft(
     DraftAccessPolicy.can_manage(context)
     await MatterAccessPolicy.can_write(context, db, draft.matter_id)
 
-    # Phase 11: If-Match ETag checking
-    if_match = request.headers.get("if-match")
-    if if_match and if_match.strip('"') != draft.etag:
-        raise HTTPException(status_code=412, detail="VERSION_CONFLICT: ETag mismatch")
-
-    # Also support body expected_version
-    if (
-        payload.expected_version is not None
-        and draft.version != payload.expected_version
-    ):
+    if draft.version != payload.expected_version:
         raise HTTPException(
             status_code=409,
             detail="VERSION_CONFLICT: Draft has been modified by another process",
@@ -258,27 +245,20 @@ async def update_draft(
         draft.status = "DRAFT"
 
     draft.version += 1
-    draft.etag = f"v{draft.version}"
+    draft.version_id += 1
 
     await db.commit()
     await db.refresh(draft)
 
-    from fastapi.responses import JSONResponse
-
-    response = JSONResponse(
-        content={
-            "id": draft.id,
-            "matter_id": draft.matter_id,
-            "version": draft.version,
-            "title": draft.title,
-            "content": draft.content,
-            "status": draft.status,
-            "etag": draft.etag,
-            "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
-        }
-    )
-    response.headers["ETag"] = f'"{draft.etag}"'
-    return response
+    return {
+        "id": draft.id,
+        "matter_id": draft.matter_id,
+        "version": draft.version,
+        "title": draft.title,
+        "content": draft.content,
+        "status": draft.status,
+        "updated_at": draft.updated_at.isoformat() if draft.updated_at else None,
+    }
 
 
 @router.post(
@@ -306,6 +286,7 @@ async def submit_review_draft(
         )
 
     draft.status = "IN_REVIEW"
+    draft.version_id += 1
     await db.commit()
     return {"status": draft.status}
 
@@ -347,6 +328,7 @@ async def approve_draft(
             )
 
     draft.status = "APPROVED_FOR_EXTERNAL_USE"
+    draft.version_id += 1
     await db.commit()
     return {"status": draft.status}
 

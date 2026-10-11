@@ -1,9 +1,9 @@
 package com.mesalaw.controller;
 
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,15 +18,14 @@ import com.mesalaw.entity.document.DocumentState;
 import com.mesalaw.exception.ProblemException;
 import com.mesalaw.repository.DocumentRepository;
 import com.mesalaw.repository.DocumentRevisionRepository;
+import com.mesalaw.repository.MatterMemberRepository;
 import com.mesalaw.security.RequestContext;
 import com.mesalaw.security.RequestContextHolder;
 
+import com.mesalaw.dto.DocumentDto;
+
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -40,43 +39,10 @@ public class DocumentController {
 
     private final DocumentRepository documentRepository;
     private final DocumentRevisionRepository documentRevisionRepository;
+    private final MatterMemberRepository matterMemberRepository;
 
-    // ── DTOs ──
-
-    @Data
-    public static class UploadIntentRequest {
-        @NotBlank private String matterId;
-        @NotBlank @Size(max = 255) private String filename;
-        @NotBlank @Size(max = 100) private String mimeType;
-        @Min(1) @Max(104857600) private long sizeBytes;
-    }
-
-    @Data
-    public static class UploadIntentResponse {
-        private String documentId;
-        private String revisionId;
-        private String presignedUrl;
-        private String storageKey;
-
-        public UploadIntentResponse(String documentId, String revisionId, String presignedUrl, String storageKey) {
-            this.documentId = documentId;
-            this.revisionId = revisionId;
-            this.presignedUrl = presignedUrl;
-            this.storageKey = storageKey;
-        }
-    }
-
-    @Data
-    public static class DocumentResponse {
-        private String id;
-        private String matterId;
-        private String title;
-        private String status;
-        private String latestRevisionId;
-        private String provenanceState;
-        private String failureReason;
-        private OffsetDateTime createdAt;
-    }
+    private static final Set<String> DOCUMENT_LIST_ROLES = Set.of(
+            "FIRM_ADMIN", "ATTORNEY", "PARALEGAL", "READ_ONLY", "AUDITOR");
 
     // ── Endpoints ──
 
@@ -85,8 +51,11 @@ public class DocumentController {
      * Matches Python: POST /documents/upload-intent → createUploadIntent
      */
     @PostMapping("/upload-intent")
-    public UploadIntentResponse createUploadIntent(@Valid @RequestBody UploadIntentRequest request) {
+    @Transactional
+    public DocumentDto.UploadIntentResponse createUploadIntent(
+            @Valid @RequestBody DocumentDto.UploadIntentRequest request) {
         RequestContext ctx = RequestContextHolder.get();
+        requireMatterAccess(ctx, request.getMatterId(), true);
 
         // Validate MIME type
         var allowedMimes = List.of("application/pdf",
@@ -126,7 +95,7 @@ public class DocumentController {
         // TODO: Generate actual presigned URL via S3/MinIO service
         String presignedUrl = "https://storage.example.com/upload?key=" + quarantineKey;
 
-        return new UploadIntentResponse(doc.getId(), rev.getId(), presignedUrl, quarantineKey);
+        return new DocumentDto.UploadIntentResponse(doc.getId(), rev.getId(), presignedUrl, quarantineKey);
     }
 
     /**
@@ -134,12 +103,20 @@ public class DocumentController {
      * Matches Python: GET /documents → listAllDocuments
      */
     @GetMapping
-    public List<DocumentResponse> listAllDocuments() {
+    public List<DocumentDto.DocumentResponse> listAllDocuments() {
         RequestContext ctx = RequestContextHolder.get();
-        // Simplified: RLS handles tenant filtering
-        List<Document> docs = documentRepository.findByMatterIdAndDeletedFalse(null);
-        // For now, return empty list — real implementation needs matter member join
-        return new ArrayList<>();
+        if (!ctx.hasAnyRole(DOCUMENT_LIST_ROLES)) {
+            throw new ProblemException(403, "Forbidden", "Requires one of scopes: list assigned matters");
+        }
+
+        List<Document> docs = documentRepository.findAccessibleDocuments(ctx.tenantId(), ctx.principalId());
+
+        return docs.stream().map(d -> {
+            List<DocumentRevision> revs = documentRevisionRepository
+                    .findByDocumentIdAndTenantIdOrderByVersionDesc(d.getId(), ctx.tenantId());
+            DocumentRevision latestRev = revs.isEmpty() ? null : revs.get(0);
+            return toResponse(d, latestRev);
+        }).toList();
     }
 
     /**
@@ -147,13 +124,14 @@ public class DocumentController {
      * Matches Python: GET /documents/matters/{matter_id} → listMatterDocuments
      */
     @GetMapping("/matters/{matterId}")
-    public List<DocumentResponse> listMatterDocuments(@PathVariable String matterId) {
+    public List<DocumentDto.DocumentResponse> listMatterDocuments(@PathVariable String matterId) {
         RequestContext ctx = RequestContextHolder.get();
-        List<Document> docs = documentRepository.findByMatterIdAndDeletedFalse(matterId);
+        requireMatterAccess(ctx, matterId, false);
+        List<Document> docs = documentRepository.findByMatterIdAndTenantIdAndDeletedFalse(matterId, ctx.tenantId());
 
         return docs.stream().map(d -> {
             List<DocumentRevision> revs = documentRevisionRepository
-                    .findByDocumentIdOrderByVersionDesc(d.getId());
+                    .findByDocumentIdAndTenantIdOrderByVersionDesc(d.getId(), ctx.tenantId());
             DocumentRevision latestRev = revs.isEmpty() ? null : revs.get(0);
             return toResponse(d, latestRev);
         }).toList();
@@ -164,17 +142,18 @@ public class DocumentController {
      * Matches Python: GET /documents/{document_id} → getDocument
      */
     @GetMapping("/{documentId}")
-    public DocumentResponse getDocument(@PathVariable String documentId) {
+    public DocumentDto.DocumentResponse getDocument(@PathVariable String documentId) {
         RequestContext ctx = RequestContextHolder.get();
         Document doc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ProblemException(404, "Not Found", "Document not found"));
 
-        if (!doc.getTenantId().equals(ctx.tenantId())) {
+        if (!doc.getTenantId().equals(ctx.tenantId()) || doc.isDeleted()) {
             throw new ProblemException(404, "Not Found", "Document not found");
         }
+        requireMatterAccess(ctx, doc.getMatterId(), false);
 
         List<DocumentRevision> revs = documentRevisionRepository
-                .findByDocumentIdOrderByVersionDesc(doc.getId());
+                .findByDocumentIdAndTenantIdOrderByVersionDesc(doc.getId(), ctx.tenantId());
         DocumentRevision latestRev = revs.isEmpty() ? null : revs.get(0);
         return toResponse(doc, latestRev);
     }
@@ -189,19 +168,27 @@ public class DocumentController {
         Document doc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ProblemException(404, "Not Found", "Document not found"));
 
-        if (!doc.getTenantId().equals(ctx.tenantId())) {
+        if (!doc.getTenantId().equals(ctx.tenantId()) || doc.isDeleted()) {
             throw new ProblemException(404, "Not Found", "Document not found");
         }
+        requireMatterAccess(ctx, doc.getMatterId(), true);
 
         List<DocumentRevision> revs = documentRevisionRepository
-                .findByDocumentIdOrderByVersionDesc(doc.getId());
+                .findByDocumentIdAndTenantIdOrderByVersionDesc(doc.getId(), ctx.tenantId());
         if (revs.isEmpty()) {
             throw new ProblemException(404, "Not Found", "Revision not found");
         }
 
         DocumentRevision rev = revs.get(0);
         if (rev.getScanStatus() == DocumentState.UPLOADING) {
-            // TODO: Verify file in storage, compute hash, create scan job
+            if (rev.getQuarantineKey() == null || rev.isCanonical()) {
+                throw new ProblemException(409, "Conflict", "Invalid upload revision state");
+            }
+            if (rev.getSizeBytes() == null || rev.getSizeBytes() < 1 || rev.getSizeBytes() > 104857600) {
+                throw new ProblemException(400, "Bad Request", "Invalid upload size");
+            }
+            // Storage verification and scan job creation require the planned MinIO
+            // integration.
             rev.setScanStatus(DocumentState.SCANNING);
             documentRevisionRepository.save(rev);
         }
@@ -219,12 +206,13 @@ public class DocumentController {
         Document doc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new ProblemException(404, "Not Found", "Document not found"));
 
-        if (!doc.getTenantId().equals(ctx.tenantId())) {
+        if (!doc.getTenantId().equals(ctx.tenantId()) || doc.isDeleted()) {
             throw new ProblemException(404, "Not Found", "Document not found");
         }
+        requireMatterAccess(ctx, doc.getMatterId(), false);
 
         List<DocumentRevision> revs = documentRevisionRepository
-                .findByDocumentIdOrderByVersionDesc(doc.getId());
+                .findByDocumentIdAndTenantIdOrderByVersionDesc(doc.getId(), ctx.tenantId());
         if (revs.isEmpty()) {
             throw new ProblemException(404, "Not Found", "Revision not found");
         }
@@ -242,8 +230,8 @@ public class DocumentController {
         return Map.of("presigned_url", url, "expires_in_seconds", 300);
     }
 
-    private DocumentResponse toResponse(Document doc, DocumentRevision rev) {
-        DocumentResponse resp = new DocumentResponse();
+    private DocumentDto.DocumentResponse toResponse(Document doc, DocumentRevision rev) {
+        DocumentDto.DocumentResponse resp = new DocumentDto.DocumentResponse();
         resp.setId(doc.getId());
         resp.setMatterId(doc.getMatterId());
         resp.setTitle(doc.getTitle());
@@ -254,10 +242,30 @@ public class DocumentController {
 
         if (rev != null && rev.getScanStatus() == DocumentState.READY) {
             resp.setProvenanceState("application/pdf".equals(rev.getMimeType())
-                    ? "VERIFIED_PDF" : "LOW_PROVENANCE");
+                    ? "VERIFIED_PDF"
+                    : "LOW_PROVENANCE");
         } else {
             resp.setProvenanceState("PENDING_VERIFICATION");
         }
         return resp;
+    }
+
+    private void requireMatterAccess(RequestContext ctx, String matterId, boolean write) {
+        Set<String> allowedRoles = write
+                ? Set.of("FIRM_ADMIN", "ATTORNEY", "PARALEGAL")
+                : DOCUMENT_LIST_ROLES;
+        if (!ctx.hasAnyRole(allowedRoles)) {
+            throw new ProblemException(403, "Forbidden", write
+                    ? "You do not have permission to upload documents"
+                    : "You do not have permission to read documents");
+        }
+
+        var member = matterMemberRepository.findByMatterIdAndUserIdAndTenantIdAndDeletedFalse(
+                matterId, ctx.principalId(), ctx.tenantId())
+                .orElseThrow(() -> new ProblemException(403, "Forbidden", "You are not a member of this matter"));
+        Set<String> allowedScopes = write ? Set.of("write", "admin") : Set.of("read", "write", "admin");
+        if (!allowedScopes.contains(member.getAccessScope())) {
+            throw new ProblemException(403, "Forbidden", "Insufficient matter access scope");
+        }
     }
 }

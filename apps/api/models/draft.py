@@ -17,7 +17,6 @@ class Draft(Base, AuditMixin, TenantAwareMixin):
     )  # JSON or HTML content from Tiptap
     version: Mapped[int] = mapped_column(default=1, nullable=False)
 
-    etag: Mapped[str] = mapped_column(String, nullable=False, default="v1")
     # State tracking for export: draft, review, APPROVED_FOR_EXTERNAL_USE
     status: Mapped[str] = mapped_column(String, default="draft", nullable=False)
 

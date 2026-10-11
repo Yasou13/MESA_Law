@@ -11,4 +11,6 @@ import com.mesalaw.entity.document.DocumentRevision;
 public interface DocumentRevisionRepository extends JpaRepository<DocumentRevision, String> {
 
     List<DocumentRevision> findByDocumentIdOrderByVersionDesc(String documentId);
+
+    List<DocumentRevision> findByDocumentIdAndTenantIdOrderByVersionDesc(String documentId, String tenantId);
 }

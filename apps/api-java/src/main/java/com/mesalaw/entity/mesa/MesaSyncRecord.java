@@ -49,7 +49,7 @@ public class MesaSyncRecord extends TenantAwareEntity {
     @Column(name = "payload_hash", nullable = false, length = 64)
     private String payloadHash;
 
-    @Column(name = "request_payload", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "request_payload", nullable = false, columnDefinition = "json")
     private String requestPayload;
 
     @Column(name = "mutation_id")

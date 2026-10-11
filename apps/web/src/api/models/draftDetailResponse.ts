@@ -7,7 +7,6 @@
 
 export interface DraftDetailResponse {
   content: string;
-  etag?: string | null;
   id: string;
   matter_id: string;
   status: string;

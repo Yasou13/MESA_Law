@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -51,7 +52,7 @@ public class FirmController {
         List<Membership> memberships = membershipRepository.findByUserIdAndActiveTrue(ctx.principalId());
 
         return memberships.stream()
-                .map(m -> firmRepository.findById(m.getFirmId()).orElse(null))
+                .map(Membership::getFirm)
                 .filter(f -> f != null)
                 .map(f -> new FirmDto.Response(f.getId(), f.getName()))
                 .collect(Collectors.toList());
@@ -68,7 +69,7 @@ public class FirmController {
 
         return memberships.stream()
                 .map(m -> {
-                    User user = userRepository.findById(m.getUserId()).orElse(null);
+                    User user = m.getUser();
                     if (user == null) return null;
                     return new FirmDto.MemberResponse(
                             user.getId(),
@@ -127,6 +128,7 @@ public class FirmController {
      * PUT /firms/{firmId}/members/{userId}/role — Change a member's role.
      * Matches Python: PUT /firms/{firm_id}/members/{user_id}/role → elevateRole
      */
+    @PreAuthorize("hasRole('FIRM_ADMIN')")
     @PutMapping("/{firmId}/members/{userId}/role")
     public java.util.Map<String, String> elevateRole(
             @PathVariable String firmId,
@@ -135,9 +137,6 @@ public class FirmController {
 
         RequestContext ctx = RequestContextHolder.get();
 
-        if (!ctx.hasRole("FIRM_ADMIN")) {
-            throw new ProblemException(403, "Forbidden", "Only FIRM_ADMIN can manage roles");
-        }
         if (!ctx.tenantId().equals(firmId)) {
             throw new ProblemException(403, "Forbidden", "Cross-tenant access forbidden");
         }

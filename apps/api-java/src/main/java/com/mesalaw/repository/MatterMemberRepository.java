@@ -16,4 +16,7 @@ public interface MatterMemberRepository extends JpaRepository<MatterMember, Stri
     Optional<MatterMember> findByMatterIdAndUserId(String matterId, String userId);
 
     boolean existsByMatterIdAndUserId(String matterId, String userId);
+
+    Optional<MatterMember> findByMatterIdAndUserIdAndTenantIdAndDeletedFalse(
+            String matterId, String userId, String tenantId);
 }

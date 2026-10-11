@@ -23,7 +23,7 @@ public class Outbox extends BaseEntity {
     @Column(name = "event_type", nullable = false)
     private String eventType;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "payload", nullable = false, columnDefinition = "json")
     private String payload;
 
     @Column(name = "status")

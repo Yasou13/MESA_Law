@@ -1,0 +1,457 @@
+[
+  {
+    "router": "mesa_bindings",
+    "method": "GET",
+    "path": "/{matter_id}/mesa-binding",
+    "function": "get_mesa_binding",
+    "docstring": null
+  },
+  {
+    "router": "mesa_bindings",
+    "method": "PUT",
+    "path": "/{matter_id}/mesa-binding",
+    "function": "create_mesa_binding",
+    "docstring": null
+  },
+  {
+    "router": "deadlines",
+    "method": "GET",
+    "path": "",
+    "function": "list_deadlines",
+    "docstring": null
+  },
+  {
+    "router": "deadlines",
+    "method": "POST",
+    "path": "/{deadline_id}/complete",
+    "function": "complete_deadline",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "GET",
+    "path": "/health/live",
+    "function": "live",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "GET",
+    "path": "/health/ready",
+    "function": "ready",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "GET",
+    "path": "/api/v1/system/dependencies",
+    "function": "system_dependencies",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "GET",
+    "path": "/api/v1/system/settings",
+    "function": "get_system_settings",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "PUT",
+    "path": "/api/v1/system/settings",
+    "function": "update_system_settings",
+    "docstring": null
+  },
+  {
+    "router": "system",
+    "method": "POST",
+    "path": "/api/v1/system/sync-mesa-core",
+    "function": "sync_mesa_core",
+    "docstring": null
+  },
+  {
+    "router": "reviews",
+    "method": "GET",
+    "path": "",
+    "function": "list_draft_reviews",
+    "docstring": null
+  },
+  {
+    "router": "reviews",
+    "method": "GET",
+    "path": "/{review_id}/context",
+    "function": "get_review_context",
+    "docstring": null
+  },
+  {
+    "router": "reviews",
+    "method": "POST",
+    "path": "/{review_id}/approve",
+    "function": "approve_review",
+    "docstring": null
+  },
+  {
+    "router": "reviews",
+    "method": "POST",
+    "path": "/{review_id}/reject",
+    "function": "reject_review",
+    "docstring": null
+  },
+  {
+    "router": "reviews",
+    "method": "POST",
+    "path": "/{review_id}/correct",
+    "function": "correct_review",
+    "docstring": null
+  },
+  {
+    "router": "audit",
+    "method": "GET",
+    "path": "/events",
+    "function": "list_audit_events",
+    "docstring": "List audit events."
+  },
+  {
+    "router": "research",
+    "method": "POST",
+    "path": "/start",
+    "function": "start_legal_research",
+    "docstring": null
+  },
+  {
+    "router": "research",
+    "method": "GET",
+    "path": "/search",
+    "function": "search_legal_research",
+    "docstring": null
+  },
+  {
+    "router": "users",
+    "method": "GET",
+    "path": "/me",
+    "function": "get_current_user_profile",
+    "docstring": null
+  },
+  {
+    "router": "users",
+    "method": "PUT",
+    "path": "/me",
+    "function": "update_current_user_profile",
+    "docstring": null
+  },
+  {
+    "router": "users",
+    "method": "POST",
+    "path": "/me/support-access",
+    "function": "grant_support_access",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "POST",
+    "path": "/drafts",
+    "function": "save_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "GET",
+    "path": "/drafts/matter/{matter_id}",
+    "function": "list_matter_drafts",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "GET",
+    "path": "/drafts",
+    "function": "list_all_drafts",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "GET",
+    "path": "/drafts/{draft_id}",
+    "function": "get_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "PUT",
+    "path": "/drafts/{draft_id}",
+    "function": "update_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "POST",
+    "path": "/drafts/{draft_id}/submit-review",
+    "function": "submit_review_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "POST",
+    "path": "/drafts/{draft_id}/approve",
+    "function": "approve_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "GET",
+    "path": "/drafts/{draft_id}/citations",
+    "function": "get_draft_citations",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "POST",
+    "path": "/drafts/{draft_id}/export",
+    "function": "export_draft",
+    "docstring": null
+  },
+  {
+    "router": "draft_studio",
+    "method": "POST",
+    "path": "/drafts/generate",
+    "function": "generate_draft",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "POST",
+    "path": "/upload-intent",
+    "function": "create_upload_intent",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "GET",
+    "path": "/matters/{matter_id}",
+    "function": "list_matter_documents",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "GET",
+    "path": "",
+    "function": "list_all_documents",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "GET",
+    "path": "/{document_id}/viewer-context",
+    "function": "get_document_viewer_context",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "GET",
+    "path": "/{document_id}",
+    "function": "get_document",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "POST",
+    "path": "/{document_id}/complete",
+    "function": "complete_upload",
+    "docstring": null
+  },
+  {
+    "router": "documents",
+    "method": "GET",
+    "path": "/{document_id}/download",
+    "function": "download_document",
+    "docstring": null
+  },
+  {
+    "router": "session",
+    "method": "GET",
+    "path": "/context",
+    "function": "get_session_context",
+    "docstring": null
+  },
+  {
+    "router": "session",
+    "method": "POST",
+    "path": "/active-firm",
+    "function": "set_active_firm",
+    "docstring": "Verified tenant switch flow.\nValidates that the currently authenticated user is an active member of the requested firm.\nReturns the firm details and role, setting a secure server-side cookie."
+  },
+  {
+    "router": "parser",
+    "method": "GET",
+    "path": "/document/{document_id}",
+    "function": "list_parsed_documents",
+    "docstring": null
+  },
+  {
+    "router": "parser",
+    "method": "GET",
+    "path": "/{parsed_document_id}/pages",
+    "function": "list_parsed_pages",
+    "docstring": null
+  },
+  {
+    "router": "dashboard",
+    "method": "GET",
+    "path": "/api/v1/dashboard/metrics",
+    "function": "get_dashboard_metrics",
+    "docstring": null
+  },
+  {
+    "router": "operations",
+    "method": "GET",
+    "path": "/jobs",
+    "function": "list_jobs",
+    "docstring": "List background worker jobs."
+  },
+  {
+    "router": "operations",
+    "method": "GET",
+    "path": "/metrics",
+    "function": "get_operational_metrics",
+    "docstring": "Return bounded, tenant- and matter-scoped operational snapshots."
+  },
+  {
+    "router": "firms",
+    "method": "GET",
+    "path": "/firms",
+    "function": "list_user_firms",
+    "docstring": null
+  },
+  {
+    "router": "firms",
+    "method": "GET",
+    "path": "/firms/members",
+    "function": "list_firm_members",
+    "docstring": null
+  },
+  {
+    "router": "firms",
+    "method": "GET",
+    "path": "/firms/{firm_id}",
+    "function": "get_firm_details",
+    "docstring": null
+  },
+  {
+    "router": "firms",
+    "method": "POST",
+    "path": "/firms",
+    "function": "create_firm",
+    "docstring": null
+  },
+  {
+    "router": "firms",
+    "method": "PUT",
+    "path": "/firms/{firm_id}/members/{user_id}/role",
+    "function": "elevate_role",
+    "docstring": null
+  },
+  {
+    "router": "notifications",
+    "method": "GET",
+    "path": "/sse",
+    "function": "sse_endpoint",
+    "docstring": "Server-Sent Events endpoint for real-time notifications."
+  },
+  {
+    "router": "notifications",
+    "method": "GET",
+    "path": "",
+    "function": "get_notifications",
+    "docstring": "Get all notifications for the current tenant and user."
+  },
+  {
+    "router": "matters",
+    "method": "GET",
+    "path": "",
+    "function": "list_matters",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "GET",
+    "path": "/{matter_id}",
+    "function": "get_matter",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "POST",
+    "path": "",
+    "function": "create_matter",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "POST",
+    "path": "/{matter_id}/rebuild-mesa",
+    "function": "rebuild_matter_mesa",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "POST",
+    "path": "/{matter_id}/qa",
+    "function": "matter_qa_endpoint",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "GET",
+    "path": "/{matter_id}/parties",
+    "function": "list_matter_parties",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "POST",
+    "path": "/conflict-check",
+    "function": "check_conflicts",
+    "docstring": null
+  },
+  {
+    "router": "matters",
+    "method": "POST",
+    "path": "/{matter_id}/override-conflict",
+    "function": "override_conflict",
+    "docstring": null
+  },
+  {
+    "router": "qa",
+    "method": "POST",
+    "path": "/ask",
+    "function": "ask_question",
+    "docstring": null
+  },
+  {
+    "router": "domain_data",
+    "method": "GET",
+    "path": "/matters/{matter_id}/claims",
+    "function": "list_claims",
+    "docstring": null
+  },
+  {
+    "router": "domain_data",
+    "method": "GET",
+    "path": "/matters/{matter_id}/evidence",
+    "function": "list_evidence",
+    "docstring": null
+  },
+  {
+    "router": "domain_data",
+    "method": "GET",
+    "path": "/matters/{matter_id}/timeline",
+    "function": "list_timeline_events",
+    "docstring": null
+  },
+  {
+    "router": "domain_data",
+    "method": "GET",
+    "path": "/matters/{matter_id}/claims-evidence",
+    "function": "list_claims_with_evidence",
+    "docstring": null
+  }
+]

@@ -123,7 +123,6 @@ explanations = {
     'deadlineCandidateId': 'Onaylanan taslak sürenin ID\\'si.',
     'dueDate': 'Son tarih.',
     'completed': 'Süre tamamlandý / Ýþ yapýldý mý?',
-    'etag': 'Versiyonlama ve önbellek (cache) kontrolü için ETag.',
     'draftId': 'Baðlý olduðu taslaðýn ID\\'si.',
     'changeSummary': 'Bu versiyonda yapýlan deðiþikliklerin özeti.',
     'draftRevisionId': 'Baðlý olduðu taslak versiyonunun ID\\'si.',

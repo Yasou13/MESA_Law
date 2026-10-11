@@ -39,6 +39,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
   ```bash
   pnpm run api:generate
   ```
+- **Java API:** Set `NEXT_PUBLIC_MESA_LAW_JAVA_API_BASE_URL` to the Spring Boot API origin to send requests for implemented Java endpoints to it. The shared client maps the Java-supported endpoints and adapts JSON field casing; requests without a matching Java controller keep using `NEXT_PUBLIC_MESA_LAW_API_BASE_URL` (or the same-origin API proxy).
 
 ### UI Components & Styling
 - **shadcn/ui:** We use shadcn/ui to build composable, accessible components. Components are located in `src/components/ui`.
@@ -56,5 +57,6 @@ We enforce high standards for frontend quality:
 
 Check `.env.example` (or configure your local `.env`) for required variables. Typically, you will need:
 - `NEXT_PUBLIC_MESA_LAW_API_BASE_URL`: Optional FastAPI origin. Leave unset for same-origin deployments; do not append `/api/v1`.
+- `NEXT_PUBLIC_MESA_LAW_JAVA_API_BASE_URL`: Optional Spring Boot origin for endpoints implemented in `apps/api-java`. Leave unset to keep all requests on the existing API. The Java origin must allow the frontend origin through CORS when the browser calls it directly.
 - `NEXTAUTH_SECRET`: Secret for NextAuth session encryption.
 - `NEXTAUTH_URL`: Canonical URL of the frontend.

@@ -38,7 +38,7 @@ public class ExtractionSuggestion extends BaseEntity {
     @Column(name = "suggestion_type", nullable = false)
     private String suggestionType;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "payload", nullable = false, columnDefinition = "json")
     private String payload;
 
     @Column(name = "extractor_name", nullable = false)

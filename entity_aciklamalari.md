@@ -328,7 +328,6 @@ Bu dosya, projede bulunan tüm paketlerdeki tüm entity'lerin (veritabanı tablo
 * **`title`** (`String`): Başlık.
 * **`content`** (`String`): İçerik (Metin, HTML veya JSON).
 * **`version`** (`int`): Versiyon / Sürüm numarası.
-* **`etag`** (`String`): Versiyonlama ve önbellek (cache) kontrolü için ETag.
 * **`status`** (`String`): Mevcut durum veya aşama.
 
 ### `DraftCitation`
@@ -680,4 +679,3 @@ Bu dosya, projede bulunan tüm paketlerdeki tüm entity'lerin (veritabanı tablo
 * `PUBLISHING`
 * `PUBLISHED`
 * `PUBLICATION_FAILED`
-

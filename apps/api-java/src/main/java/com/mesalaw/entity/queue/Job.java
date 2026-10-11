@@ -31,7 +31,7 @@ public class Job extends BaseEntity {
     @Column(name = "type", nullable = false)
     private String type;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "payload", nullable = false, columnDefinition = "json")
     private String payload;
 
     @Enumerated(EnumType.STRING)

@@ -36,7 +36,7 @@ public class DeadlineCandidate extends TenantAwareEntity {
     @Column(name = "trigger_date")
     private LocalDate triggerDate;
 
-    @Column(name = "calculation_trace", columnDefinition = "jsonb")
+    @Column(name = "calculation_trace", columnDefinition = "json")
     private String calculationTrace;
 
     @Column(name = "calculated_date", nullable = false)

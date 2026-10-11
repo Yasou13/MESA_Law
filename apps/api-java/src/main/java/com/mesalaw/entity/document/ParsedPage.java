@@ -36,7 +36,7 @@ public class ParsedPage extends BaseEntity {
     private String textContent;
 
     // layout_data is JSON — stored as String, parsed by service layer
-    @Column(name = "layout_data", columnDefinition = "jsonb")
+    @Column(name = "layout_data", columnDefinition = "json")
     private String layoutData;
 
     // fts_vector is managed by PostgreSQL — not mapped here

@@ -26,13 +26,13 @@ public class ConflictCheckResult extends TenantAwareEntity {
     @Column(name = "requested_by", nullable = false)
     private String requestedBy;
 
-    @Column(name = "party_names", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "party_names", nullable = false, columnDefinition = "json")
     private String partyNames;
 
     @Column(name = "has_conflicts", nullable = false)
     private boolean hasConflicts = false;
 
-    @Column(name = "results", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "results", nullable = false, columnDefinition = "json")
     private String results;
 
     @Column(name = "status", nullable = false)

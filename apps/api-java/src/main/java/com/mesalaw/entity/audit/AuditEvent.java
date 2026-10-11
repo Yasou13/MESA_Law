@@ -37,7 +37,7 @@ public class AuditEvent extends BaseEntity {
     @Column(name = "entity_id", nullable = false)
     private String entityId;
 
-    @Column(name = "changes", columnDefinition = "jsonb")
+    @Column(name = "changes", columnDefinition = "json")
     private String changes;
 
     @Column(name = "timestamp", nullable = false)

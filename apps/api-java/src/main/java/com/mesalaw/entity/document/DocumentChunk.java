@@ -63,7 +63,7 @@ public class DocumentChunk extends TenantAwareEntity {
     private String provenanceState = "LOW_PROVENANCE";
 
     // bbox is JSON — stored as String
-    @Column(name = "bbox", columnDefinition = "jsonb")
+    @Column(name = "bbox", columnDefinition = "json")
     private String bbox;
 
     // fts_vector is managed by PostgreSQL — not mapped here

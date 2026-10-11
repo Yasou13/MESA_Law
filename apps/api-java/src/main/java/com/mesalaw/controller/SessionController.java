@@ -27,55 +27,54 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SessionController {
 
-    private final MembershipRepository membershipRepository;
-    private final AppProperties appProperties;
+        private final MembershipRepository membershipRepository;
+        private final AppProperties appProperties;
 
-    /**
-     * GET /session/context — Returns the resolved tenant/user context.
-     * Matches Python: GET /session/context → getSessionContext
-     */
-    @GetMapping("/context")
-    public SessionDto.ContextResponse getSessionContext() {
-        RequestContext ctx = RequestContextHolder.get();
-        return new SessionDto.ContextResponse(
-                "success",
-                ctx.tenantId(),
-                ctx.principalId(),
-                ctx.roles()
-        );
-    }
+        /**
+         * GET /session/context — Returns the resolved tenant/user context.
+         * Matches Python: GET /session/context → getSessionContext
+         */
+        @GetMapping("/context")
+        public SessionDto.ContextResponse getSessionContext() {
+                RequestContext ctx = RequestContextHolder.get();
+                return new SessionDto.ContextResponse(
+                                "success",
+                                ctx.tenantId(),
+                                ctx.principalId(),
+                                ctx.roles());
+        }
 
-    /**
-     * POST /session/active-firm — Switch the active tenant via secure cookie.
-     * Matches Python: POST /session/active-firm → setActiveFirm
-     */
-    @PostMapping("/active-firm")
-    public SessionDto.ActiveFirmResponse setActiveFirm(
-            @RequestBody SessionDto.SetActiveFirmRequest request,
-            HttpServletResponse response) {
+        /**
+         * POST /session/active-firm — Switch the active tenant via secure cookie.
+         * Matches Python: POST /session/active-firm → setActiveFirm
+         */
+        @PostMapping("/active-firm")
+        public SessionDto.ActiveFirmResponse setActiveFirm(
+                        @RequestBody SessionDto.SetActiveFirmRequest request,
+                        HttpServletResponse response) {
 
-        RequestContext ctx = RequestContextHolder.get();
-        String firmId = request.getFirmId();
+                RequestContext ctx = RequestContextHolder.get();
+                String firmId = request.getFirmId();
 
-        Membership membership = membershipRepository
-                .findByUserIdAndFirmId(ctx.principalId(), firmId)
-                .filter(Membership::isActive)
-                .orElseThrow(() -> new ProblemException(
-                        403, "Forbidden", "User is not an active member of the requested firm"));
+                Membership membership = membershipRepository
+                                .findByUserIdAndFirmId(ctx.principalId(), firmId)
+                                .filter(Membership::isActive)
+                                .orElseThrow(() -> new ProblemException(
+                                                403, "Forbidden",
+                                                "User is not an active member of the requested firm"));
 
-        // Set secure cookie — matches Python's response.set_cookie()
-        Cookie cookie = new Cookie("mesa_active_firm_id", firmId);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(appProperties.isSecureEnvironment());
-        cookie.setPath("/");
-        cookie.setMaxAge(-1); // Session cookie
+                // Set secure cookie — matches Python's response.set_cookie()
+                Cookie cookie = new Cookie("mesa_active_firm_id", firmId);
+                cookie.setHttpOnly(true);
+                cookie.setSecure(appProperties.isSecureEnvironment());
+                cookie.setPath("/");
+                cookie.setMaxAge(-1); // Session cookie
 
-        response.addCookie(cookie);
+                response.addCookie(cookie);
 
-        return new SessionDto.ActiveFirmResponse(
-                "success",
-                firmId,
-                membership.getRole().name()
-        );
-    }
+                return new SessionDto.ActiveFirmResponse(
+                                "success",
+                                firmId,
+                                membership.getRole().name());
+        }
 }

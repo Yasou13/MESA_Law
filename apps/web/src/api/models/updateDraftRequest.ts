@@ -7,6 +7,6 @@
 
 export interface UpdateDraftRequest {
   content?: string | null;
-  expected_version?: number | null;
+  expected_version: number;
   title?: string | null;
 }

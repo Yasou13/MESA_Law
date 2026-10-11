@@ -576,17 +576,6 @@
             "title": "Content",
             "type": "string"
           },
-          "etag": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Etag"
-          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2556,14 +2545,8 @@
             "title": "Content"
           },
           "expected_version": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "minimum": 1,
+            "type": "integer",
             "title": "Expected Version"
           },
           "title": {
@@ -2578,6 +2561,9 @@
             "title": "Title"
           }
         },
+        "required": [
+          "expected_version"
+        ],
         "title": "UpdateDraftRequest",
         "type": "object"
       },

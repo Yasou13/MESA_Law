@@ -38,7 +38,7 @@ public class LegalAuditLog extends BaseEntity {
     @Column(name = "entity_id", nullable = false)
     private String entityId;
 
-    @Column(name = "details", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "details", nullable = false, columnDefinition = "json")
     private String details;
 
     @Column(name = "ip_address")

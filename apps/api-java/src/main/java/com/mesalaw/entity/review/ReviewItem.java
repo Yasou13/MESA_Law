@@ -39,7 +39,7 @@ public class ReviewItem extends BaseEntity {
     @Column(name = "suggestion_id")
     private String suggestionId;
 
-    @Column(name = "proposed_content", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "proposed_content", nullable = false, columnDefinition = "json")
     private String proposedContent;
 
     @Enumerated(EnumType.STRING)
@@ -55,7 +55,7 @@ public class ReviewItem extends BaseEntity {
     @Column(name = "reviewed_at")
     private OffsetDateTime reviewedAt;
 
-    @Column(name = "corrected_content", columnDefinition = "jsonb")
+    @Column(name = "corrected_content", columnDefinition = "json")
     private String correctedContent;
 
     @Column(name = "decision_reason")

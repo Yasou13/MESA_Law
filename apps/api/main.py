@@ -3,6 +3,7 @@ from apps.api.core.errors import (
     ProblemException,
     global_exception_handler,
     problem_exception_handler,
+    stale_data_exception_handler,
 )
 from apps.api.core.middleware import (
     IdempotencyMiddleware,
@@ -37,6 +38,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy.orm.exc import StaleDataError
 
 app = FastAPI(title="MESA Law API", version="0.1.0")
 
@@ -57,6 +59,7 @@ app.add_middleware(TraceMiddleware)
 app.add_middleware(IdempotencyMiddleware)
 app.state.limiter = limiter
 app.add_exception_handler(ProblemException, problem_exception_handler)
+app.add_exception_handler(StaleDataError, stale_data_exception_handler)
 
 
 async def rate_limit_exception_handler(request: Request, exc: Exception) -> Response:

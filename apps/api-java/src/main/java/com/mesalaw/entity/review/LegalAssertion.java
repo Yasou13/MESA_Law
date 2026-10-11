@@ -59,7 +59,7 @@ public class LegalAssertion extends TenantAwareEntity {
     @Column(name = "object_text", columnDefinition = "TEXT")
     private String objectText;
 
-    @Column(name = "object_data", columnDefinition = "jsonb")
+    @Column(name = "object_data", columnDefinition = "json")
     private String objectData;
 
     @Column(name = "polarity")

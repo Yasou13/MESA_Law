@@ -32,9 +32,6 @@ public class Draft extends TenantAwareEntity {
     @Column(name = "version", nullable = false)
     private int version = 1;
 
-    @Column(name = "etag", nullable = false)
-    private String etag = "v1";
-
     @Column(name = "status", nullable = false)
     private String status = "draft";
 }

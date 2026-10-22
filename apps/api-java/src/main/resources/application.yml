@@ -1,5 +1,5 @@
 server:
-  port: ${MESA_LAW_API_PORT:8001}
+  port: ${MESA_LAW_JAVA_PORT:8002}
   shutdown: graceful
   servlet:
     context-path: /
@@ -7,6 +7,15 @@ server:
 spring:
   application:
     name: mesa-law-api
+
+  # ── Local .env (repo root) ──
+  # Loads secrets like MESA_LAW_APP_DB_PASSWORD without manual `export`.
+  # First path: run from apps/api-java (mvn). Second: run from repo root (IDE).
+  # Real OS env vars still take precedence.
+  config:
+    import:
+      - optional:file:../../.env[.properties]
+      - optional:file:./.env[.properties]
 
   # ── JPA / Hibernate ──
   jpa:
@@ -23,9 +32,10 @@ spring:
 
   # ── Database ──
   datasource:
-    url: ${MESA_LAW_DATABASE_URL:jdbc:postgresql://localhost:5432/mesa_law}
+    # Java-specific var: MESA_LAW_DATABASE_URL is the Python (psycopg) format and is not JDBC-compatible.
+    url: ${MESA_LAW_JAVA_DATABASE_URL:jdbc:postgresql://localhost:5432/mesa_law}
     username: ${MESA_LAW_DB_USERNAME:mesa_law_app}
-    password: ${MESA_LAW_DB_PASSWORD:}
+    password: ${MESA_LAW_DB_PASSWORD:${MESA_LAW_APP_DB_PASSWORD:}}
     hikari:
       maximum-pool-size: ${MESA_LAW_DATABASE_POOL_SIZE:5}
       minimum-idle: 2
@@ -35,8 +45,9 @@ spring:
       pool-name: mesa-law-pool
 
   # ── Flyway ──
+  # Alembic owns the schema; mesa_law_app has no CREATE on public, so Flyway is opt-in.
   flyway:
-    enabled: true
+    enabled: ${MESA_LAW_FLYWAY_ENABLED:false}
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: "0"
@@ -57,6 +68,7 @@ spring:
 
   # ── Jackson ──
   jackson:
+    property-naming-strategy: SNAKE_CASE
     serialization:
       write-dates-as-timestamps: false
     default-property-inclusion: non_null

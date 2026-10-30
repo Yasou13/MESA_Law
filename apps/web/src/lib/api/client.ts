@@ -159,6 +159,8 @@ function toFrontendProperty(key: string): string {
   return key.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 }
 
+const REVIEW_JSON_KEYS = new Set(['proposed_content', 'corrected_content', 'proposedContent', 'correctedContent'])
+
 function parseReviewPayloads(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(parseReviewPayloads)
   if (typeof value !== 'object' || value === null) return value
@@ -168,7 +170,7 @@ function parseReviewPayloads(value: unknown): unknown {
 
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => {
-      if ((key === 'proposedContent' || key === 'correctedContent') && typeof item === 'string') {
+      if (REVIEW_JSON_KEYS.has(key) && typeof item === 'string') {
         try {
           return [key, parseReviewPayloads(JSON.parse(item) as unknown)]
         } catch {
@@ -180,17 +182,20 @@ function parseReviewPayloads(value: unknown): unknown {
   )
 }
 
+/**
+ * Spring is configured with Jackson SNAKE_CASE, so JSON bodies are sent as-is (snake_case).
+ * Only query params are camelCased, because @RequestParam binds by Java parameter name.
+ */
 function prepareJavaRequest(value: unknown, path: string): unknown {
   if (/^\/reviews\/[^/]+\/correct$/.test(path) && typeof value === 'object' && value !== null) {
     const request = value as Record<string, unknown>
-    const { corrected_content: correctedContent, ...rest } = request
-    const javaRest = mapObjectKeys(rest, toJavaProperty) as Record<string, unknown>
+    // Java CorrectRequest.correctedContent is a JSON string column.
     return {
-      ...javaRest,
-      correctedContent: JSON.stringify(correctedContent ?? {}),
+      ...request,
+      corrected_content: JSON.stringify(request.corrected_content ?? {}),
     }
   }
-  return mapObjectKeys(value, toJavaProperty)
+  return value
 }
 
 function normalizeJavaResponse(value: unknown, path: string): unknown {
@@ -199,9 +204,9 @@ function normalizeJavaResponse(value: unknown, path: string): unknown {
     if (path.startsWith('/deadlines') && key === 'completed') return 'is_completed'
     if (path === '/firms/members' && key === 'active') return 'is_active'
     if (/^\/matters\/[^/]+\/timeline$/.test(path)) {
-      if (key === 'eventDate') return 'date'
-      if (key === 'eventType') return 'title'
-      if (key === 'sourceType') return 'source'
+      if (key === 'eventDate' || key === 'event_date') return 'date'
+      if (key === 'eventType' || key === 'event_type') return 'title'
+      if (key === 'sourceType' || key === 'source_type') return 'source'
     }
     return toFrontendProperty(key)
   })
@@ -211,7 +216,9 @@ function normalizeJavaResponse(value: unknown, path: string): unknown {
     typeof normalized === 'object' && normalized !== null &&
     typeof value === 'object' && value !== null
   ) {
-    const rawStatuses = (value as Record<string, unknown>).mesaMutationTerminalStatuses
+    // Keep status-name keys verbatim (toFrontendProperty would lowercase them).
+    const raw = value as Record<string, unknown>
+    const rawStatuses = raw.mesa_mutation_terminal_statuses ?? raw.mesaMutationTerminalStatuses
     if (typeof rawStatuses === 'object' && rawStatuses !== null) {
       const metrics = normalized as Record<string, unknown>
       metrics.mesa_mutation_terminal_statuses = rawStatuses
